@@ -9,11 +9,18 @@ One playable browser game per year, starting in 1972. Each folder is a year, eac
 - ...continuing forward through gaming history
 
 ## Stack
-- Phaser 3 via CDN (no bundler, no build step, ever)
+- Phaser 3 via CDN (no bundler, no build step, ever — the game runs by opening index.html)
 - Vanilla JS — readable by a human at all times
 - GitHub Pages — auto-deploys on push to main
 - Claude Code — primary builder
 - Wispr Flow — voice input
+
+## IntelliSense Setup
+`npm` is installed **for type definitions only** — it does not affect how the game runs.
+- `node_modules/phaser` provides hover docs and autocomplete in Cursor/VS Code
+- `jsconfig.json` at the repo root wires up JS type checking
+- Each `game.js` starts with `/// <reference types="phaser" />` so the editor sees Phaser's types
+- `node_modules/` is gitignored — run `npm install` after cloning to restore hover docs
 
 ## Folder Structure
 Each year is self-contained, named `year-game-name`:
@@ -29,7 +36,7 @@ Nick has a CS degree (Stevens, 2006-2012). He reviews code but does not write it
 - Every tunable value (speed, size, timing) must have a comment explaining what it does
 - Prefer readability over cleverness
 - Use the most performant data structures — no bubble sorts, prefer hash maps where appropriate
-- No external dependencies beyond Phaser 3 CDN
+- No runtime dependencies beyond Phaser 3 CDN (npm is for editor types only)
 - Each game must run by simply opening index.html in a browser
 
 ## Game Feel Philosophy
@@ -39,8 +46,8 @@ Small numbers, meaningful increments. Inspired by Paper Mario's damage system �
 After every feature or working state: commit and push. Green light every day is the goal. Commit messages should be descriptive (e.g. "Add ball collision physics" not "update").
 
 ## Running Locally
-Open 1972/index.html directly in any browser. No build step needed.
-Alternatively: npx serve 1972
+Open `1972-pong/index.html` directly in any browser. No build step needed.
+Alternatively: `npx serve 1972-pong`
 
 ## Current Game
 1972 — Pong

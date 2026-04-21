@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "checkJs": false,
+    "target": "ES6",
+    "moduleResolution": "node"
+  },
+  "include": ["**/*.js"],
+  "exclude": ["node_modules"]
+}

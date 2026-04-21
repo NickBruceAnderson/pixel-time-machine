@@ -1,18 +1,20 @@
+/// <reference types="phaser" />
+
 // ─── TUNABLES ────────────────────────────────────────────────────────────────
 // Every magic number lives here. Tweak freely.
 
-const CANVAS_WIDTH        = 800;   // game canvas width in pixels
-const CANVAS_HEIGHT       = 600;   // game canvas height in pixels
+const CANVAS_WIDTH        = 400;   // game canvas width in pixels
+const CANVAS_HEIGHT       = 300;   // game canvas height in pixels
 
-const PADDLE_WIDTH        = 12;    // paddle thickness in pixels
-const PADDLE_HEIGHT       = 80;    // paddle height in pixels
-const PADDLE_SPEED        = 320;   // paddle movement speed in pixels per second
+const PADDLE_WIDTH        = 6;    // paddle thickness in pixels
+const PADDLE_HEIGHT       = 40;    // paddle height in pixels
+const PADDLE_SPEED        = 450;   // paddle movement speed in pixels per second
 const PADDLE_OFFSET       = 40;    // distance from screen edge to paddle center
 
-const BALL_SIZE           = 12;    // ball width and height in pixels
-const BALL_SPEED_START    = 260;   // initial ball speed in pixels per second
-const BALL_SPEED_INCREASE = 20;    // speed added to ball on each paddle hit
-const BALL_SPEED_CAP      = 520;   // ball will never exceed this speed
+const BALL_SIZE           = 6;    // ball width and height in pixels
+const BALL_SPEED_START    = 200;   // initial ball speed in pixels per second
+const BALL_SPEED_INCREASE = 50;    // speed added to ball on each paddle hit
+const BALL_SPEED_CAP      = 450;   // ball will never exceed this speed
 
 const SERVE_ANGLE_MAX     = 30;    // max degrees from horizontal on serve (keeps it fair)
 const DEFLECT_ANGLE_MAX   = 60;    // max degrees from horizontal when deflecting off a paddle
