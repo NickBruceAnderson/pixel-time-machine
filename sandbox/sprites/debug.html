@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Frame Inspector</title>
+  <style>
+    body { margin: 0; background: #1a1a1a; color: #eee; font: 13px monospace; display: flex; gap: 12px; padding: 12px; }
+    #controls { width: 200px; flex-shrink: 0; }
+    label { display: block; margin: 6px 0 2px; }
+    input[type=number] { width: 70px; padding: 2px; background: #333; color: #eee; border: 1px solid #555; }
+    button { margin-top: 8px; padding: 4px 10px; cursor: pointer; }
+    #info { margin-top: 12px; background: #2a2a2a; padding: 8px; line-height: 1.6; border: 1px solid #444; }
+    #info b { color: #ffff00; font-size: 16px; }
+    canvas { cursor: crosshair; image-rendering: pixelated; border: 1px solid #555; }
+  </style>
+</head>
+<body>
+  <div id="controls">
+    <div>Adjust the grid until it lines up with the sprite frames, then click a frame to get its index number.</div>
+    <label>Frame Width (px): <input id="fw" type="number" value="16" min="1" max="128"></label>
+    <label>Frame Height (px): <input id="fh" type="number" value="24" min="1" max="128"></label>
+    <label>Margin (px): <input id="mg" type="number" value="0" min="0" max="200"></label>
+    <label>Scale: <input id="sc" type="number" value="2" min="1" max="4"></label>
+    <button onclick="draw()">Update</button>
+    <div id="info">Click a frame cell to see its index.</div>
+  </div>
+  <div><canvas id="c"></canvas></div>
+  <script>
+    const img = new Image();
+    img.src = 'assets/marle.png';
+    img.onload = draw;
+
+    function draw() {
+      const fw   = +document.getElementById('fw').value;
+      const fh   = +document.getElementById('fh').value;
+      const mg   = +document.getElementById('mg').value;
+      const sc   = +document.getElementById('sc').value;
+      const c    = document.getElementById('c');
+      c.width    = img.width  * sc;
+      c.height   = img.height * sc;
+      const ctx  = c.getContext('2d');
+
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+
+      const cols = Math.floor((img.width  - mg) / fw);
+      const rows = Math.floor((img.height - mg) / fh);
+
+      // Grid lines
+      ctx.strokeStyle = 'rgba(0, 255, 0, 0.6)';
+      ctx.lineWidth = 1;
+      for (let col = 0; col <= cols; col++) {
+        const x = (mg + col * fw) * sc + 0.5;
+        ctx.beginPath(); ctx.moveTo(x, mg * sc); ctx.lineTo(x, (mg + rows * fh) * sc); ctx.stroke();
+      }
+      for (let row = 0; row <= rows; row++) {
+        const y = (mg + row * fh) * sc + 0.5;
+        ctx.beginPath(); ctx.moveTo(mg * sc, y); ctx.lineTo((mg + cols * fw) * sc, y); ctx.stroke();
+      }
+
+      // Frame numbers (only if frames are large enough to read)
+      if (fw * sc >= 16) {
+        ctx.fillStyle = 'rgba(255, 255, 0, 0.85)';
+        ctx.font = `${Math.min(9, fw * sc * 0.35)}px monospace`;
+        for (let r = 0; r < rows; r++) {
+          for (let col = 0; col < cols; col++) {
+            ctx.fillText(r * cols + col, (mg + col * fw) * sc + 1, (mg + r * fh) * sc + 9);
+          }
+        }
+      }
+
+      c.onclick = e => {
+        const rect = c.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / sc - mg;
+        const y = (e.clientY - rect.top)  / sc - mg;
+        if (x < 0 || y < 0) return;
+        const col = Math.floor(x / fw);
+        const row = Math.floor(y / fh);
+        const idx = row * cols + col;
+        document.getElementById('info').innerHTML =
+          `Frame index: <b>${idx}</b><br>` +
+          `Grid position: col ${col}, row ${row}<br>` +
+          `Pixel origin: x=${mg + col * fw}, y=${mg + row * fh}<br>` +
+          `Grid: ${cols} cols × ${rows} rows`;
+      };
+    }
+
+    document.querySelectorAll('input').forEach(el => el.addEventListener('change', draw));
+  </script>
+</body>
+</html>
