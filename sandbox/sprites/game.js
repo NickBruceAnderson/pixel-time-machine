@@ -42,13 +42,25 @@ class MarleScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.spritesheet('marle', 'assets/marle2.png', {
-            frameWidth:  FRAME_WIDTH,
-            frameHeight: FRAME_HEIGHT,
-        });
+        // Load as a plain image — this.load.spritesheet() fails silently under
+        // file:// protocol. We manually register the spritesheet in create().
+        this.load.image('marle_raw', 'assets/marle2.png');
     }
 
     create() {
+        // ── Register spritesheet from the loaded image via canvas ─────────────
+        // marle2.png is RGBA so no pixel processing is needed — just re-register
+        // it with Phaser's spritesheet frame data.
+        const src = this.textures.get('marle_raw').getSourceImage();
+        const canvas = document.createElement('canvas');
+        canvas.width  = src.naturalWidth  || src.width;
+        canvas.height = src.naturalHeight || src.height;
+        canvas.getContext('2d').drawImage(src, 0, 0);
+        this.textures.addSpriteSheet('marle', canvas, {
+            frameWidth:  FRAME_WIDTH,
+            frameHeight: FRAME_HEIGHT,
+        });
+
         // ── Sprite with arcade physics body ───────────────────────────────────
         this.marle = this.physics.add.sprite(
             CANVAS_WIDTH  / 2,
