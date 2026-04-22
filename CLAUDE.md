@@ -12,12 +12,12 @@ One playable browser game per year, starting in 1972. Each folder is a year, eac
 - Phaser 3 via CDN (no bundler, no build step, ever — the game runs by opening index.html)
 - Vanilla JS — readable by a human at all times
 - GitHub Pages — auto-deploys on push to main
-- Claude Code — primary builder
+- Claude Code VS Code extension — primary builder
 - Wispr Flow — voice input
 
 ## IntelliSense Setup
 `npm` is installed **for type definitions only** — it does not affect how the game runs.
-- `node_modules/phaser` provides hover docs and autocomplete in Cursor/VS Code
+- `node_modules/phaser` provides hover docs and autocomplete in VS Code
 - `jsconfig.json` at the repo root wires up JS type checking
 - Each `game.js` starts with `/// <reference types="phaser" />` so the editor sees Phaser's types
 - `node_modules/` is gitignored — run `npm install` after cloning to restore hover docs
