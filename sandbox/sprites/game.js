@@ -27,13 +27,13 @@ const FRAME_HEIGHT = 48;
 
 const ANIMS = {
     walk_down:  { start: 0,  end: 3  },
-    walk_right: { start: 4,  end: 7  },
-    walk_left:  { start: 8,  end: 11 },
+    walk_left:  { start: 4,  end: 7  },
+    walk_right: { start: 8,  end: 11 },
     walk_up:    { start: 12, end: 15 },
 };
 
 // First frame of each direction — shown when standing still
-const IDLE_FRAME = { down: 0, right: 4, left: 8, up: 12 };
+const IDLE_FRAME = { down: 0, left: 4, right: 8, up: 12 };
 
 class MarleScene extends Phaser.Scene {
     constructor() {
@@ -87,18 +87,28 @@ class MarleScene extends Phaser.Scene {
 
         // ── Input ─────────────────────────────────────────────────────────────
         this.keys = this.input.keyboard.createCursorKeys();
+
+        // WASD as alternative movement keys
+        const wasd = this.input.keyboard.addKeys({
+            w: Phaser.Input.Keyboard.KeyCodes.W,
+            a: Phaser.Input.Keyboard.KeyCodes.A,
+            s: Phaser.Input.Keyboard.KeyCodes.S,
+            d: Phaser.Input.Keyboard.KeyCodes.D,
+        });
+        this.wasd = wasd;
     }
 
     update() {
         const { left, right, up, down } = this.keys;
+        const { a, d, w, s } = this.wasd;
 
         let vx = 0;
         let vy = 0;
 
-        if (left.isDown)  vx = -WALK_SPEED;
-        if (right.isDown) vx =  WALK_SPEED;
-        if (up.isDown)    vy = -WALK_SPEED;
-        if (down.isDown)  vy =  WALK_SPEED;
+        if (left.isDown  || a.isDown) vx = -WALK_SPEED;
+        if (right.isDown || d.isDown) vx =  WALK_SPEED;
+        if (up.isDown    || w.isDown) vy = -WALK_SPEED;
+        if (down.isDown  || s.isDown) vy =  WALK_SPEED;
 
         // Normalize diagonal movement so speed is consistent in all directions
         if (vx !== 0 && vy !== 0) {
