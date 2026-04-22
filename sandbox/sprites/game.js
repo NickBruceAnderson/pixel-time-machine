@@ -1,182 +1,129 @@
 /// <reference types="phaser" />
 
 // ─── TUNABLES ────────────────────────────────────────────────────────────────
-// Every magic number lives here. Tweak freely.
 
-const CANVAS_WIDTH  = 680;   // game canvas width in pixels
-const CANVAS_HEIGHT = 420;   // game canvas height in pixels
+const CANVAS_WIDTH    = 400;   // game canvas width in pixels
+const CANVAS_HEIGHT   = 300;   // game canvas height in pixels
 
-// ── Sprite sheet layout ──────────────────────────────────────────────────────
-// Open debug.html and adjust Frame W/H until the grid aligns, then click
-// frames to get their index numbers. marle2.png is 128×192 with real alpha.
-const FRAME_WIDTH        = 32;   // width of one sprite frame in pixels
-const FRAME_HEIGHT       = 32;   // height of one sprite frame in pixels
-const FRAME_MARGIN       = 0;    // pixel gap from sheet edge to first frame
+const WALK_SPEED      = 120;   // movement speed in pixels per second
+const WALK_FRAME_RATE = 8;     // walk animation speed in frames per second
+const SPRITE_SCALE    = 2;     // render scale (1 = original 32×48 px per frame)
 
-// ── Animation frame indices ──────────────────────────────────────────────────
-// Use debug.html or [ / ] in-game to find the right frame numbers.
-const IDLE_FRAME         = 0;    // frame shown when standing still
-const WALK_RIGHT_START   = 8;    // first frame of walk-right cycle (UPDATE ME)
-const WALK_RIGHT_COUNT   = 4;    // number of frames in walk-right cycle
-const WALK_LEFT_START    = 4;    // first frame of walk-left cycle (UPDATE ME)
-const WALK_LEFT_COUNT    = 4;    // number of frames in walk-left cycle
+// Physics body — collision rectangle positioned at Marle's feet.
+// All values are in unscaled sprite pixels (before SPRITE_SCALE is applied).
+const BODY_WIDTH      = 20;    // width of the collision box
+const BODY_HEIGHT     = 12;    // height of the collision box
+const BODY_OFFSET_X   = 6;     // pixels right from the sprite's left edge
+const BODY_OFFSET_Y   = 36;    // pixels down from the sprite's top edge
 
-// ── Sprite behaviour ─────────────────────────────────────────────────────────
-const WALK_FRAME_RATE    = 8;    // animation playback speed in frames per second
-const WALK_SPEED         = 80;   // horizontal pixels moved per second with A / D
-const SPRITE_SCALE       = 4;    // render scale for the large preview on the right
-const SHEET_SCALE        = 2;    // scale at which the full sprite sheet is shown on the left
+const PHYSICS_DEBUG   = false; // true = draw collision boxes on screen
 // ─────────────────────────────────────────────────────────────────────────────
+
+// marle2.png — 128×192, 4 cols × 4 rows, 32×48 px per frame, no margin
+// Row 0: walk-down  (frames  0– 3)   Row 2: walk-left  (frames  8–11)
+// Row 1: walk-right (frames  4– 7)   Row 3: walk-up    (frames 12–15)
+const FRAME_WIDTH  = 32;
+const FRAME_HEIGHT = 48;
+
+const ANIMS = {
+    walk_down:  { start: 0,  end: 3  },
+    walk_right: { start: 4,  end: 7  },
+    walk_left:  { start: 8,  end: 11 },
+    walk_up:    { start: 12, end: 15 },
+};
+
+// First frame of each direction — shown when standing still
+const IDLE_FRAME = { down: 0, right: 4, left: 8, up: 12 };
 
 class MarleScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MarleScene' });
-        this.previewFrame = IDLE_FRAME;
+        this.facing = 'down'; // direction Marle last moved
     }
 
     preload() {
-        // marle2.png is RGBA — load directly as a spritesheet, no processing needed
-        this.load.image('sheet_bg', 'assets/marle2.png');
         this.load.spritesheet('marle', 'assets/marle2.png', {
             frameWidth:  FRAME_WIDTH,
             frameHeight: FRAME_HEIGHT,
-            margin:      FRAME_MARGIN,
         });
     }
 
     create() {
-        // Derive sheet dimensions from the loaded texture
-        const src = this.textures.get('sheet_bg').source[0];
-        this.sheetW    = src.width;
-        this.sheetH    = src.height;
-        this.sheetCols = Math.floor((this.sheetW - FRAME_MARGIN) / FRAME_WIDTH);
-        this.sheetRows = Math.floor((this.sheetH - FRAME_MARGIN) / FRAME_HEIGHT);
-
-        // ── Left panel: full sprite sheet for reference ───────────────────────
-        this.add.image(0, 0, 'sheet_bg').setOrigin(0, 0).setScale(SHEET_SCALE);
-
-        // Yellow highlight box — marks the current frame on the sheet
-        this.highlight = this.add.rectangle(
-            0, 0,
-            FRAME_WIDTH  * SHEET_SCALE,
-            FRAME_HEIGHT * SHEET_SCALE
-        ).setOrigin(0, 0).setFillStyle(0x000000, 0).setStrokeStyle(2, 0xffff00);
-
-        // ── Right panel: large frame preview ─────────────────────────────────
-        const panelLeft = this.sheetW * SHEET_SCALE;
-        const previewX  = panelLeft + (CANVAS_WIDTH - panelLeft) / 2;
-        const previewY  = CANVAS_HEIGHT / 2;
-
-        this.marle = this.add.sprite(previewX, previewY, 'marle', this.previewFrame);
+        // ── Sprite with arcade physics body ───────────────────────────────────
+        this.marle = this.physics.add.sprite(
+            CANVAS_WIDTH  / 2,
+            CANVAS_HEIGHT / 2,
+            'marle',
+            IDLE_FRAME.down
+        );
         this.marle.setScale(SPRITE_SCALE);
+        this.marle.setCollideWorldBounds(true);
 
-        // ── HUD text ──────────────────────────────────────────────────────────
-        const tx = panelLeft + 8;
-        this.frameText = this.add.text(tx, 8, this._frameLabel(), {
-            fontSize: '13px', fill: '#ffff00', fontFamily: 'monospace',
-        });
-        this.add.text(tx, CANVAS_HEIGHT - 40,
-            'A / D — move     [ / ] — prev / next frame', {
-            fontSize: '11px', fill: '#888888', fontFamily: 'monospace',
-        });
+        // Collision box sized to Marle's feet, not her full sprite
+        this.marle.body.setSize(BODY_WIDTH, BODY_HEIGHT);
+        this.marle.body.setOffset(BODY_OFFSET_X, BODY_OFFSET_Y);
 
         // ── Animations ────────────────────────────────────────────────────────
-        this.anims.create({
-            key:       'walk_right',
-            frames:    this.anims.generateFrameNumbers('marle', {
-                start: WALK_RIGHT_START,
-                end:   WALK_RIGHT_START + WALK_RIGHT_COUNT - 1,
-            }),
-            frameRate: WALK_FRAME_RATE,
-            repeat:    -1,
-        });
-
-        this.anims.create({
-            key:       'walk_left',
-            frames:    this.anims.generateFrameNumbers('marle', {
-                start: WALK_LEFT_START,
-                end:   WALK_LEFT_START + WALK_LEFT_COUNT - 1,
-            }),
-            frameRate: WALK_FRAME_RATE,
-            repeat:    -1,
-        });
+        for (const [key, range] of Object.entries(ANIMS)) {
+            this.anims.create({
+                key,
+                frames:    this.anims.generateFrameNumbers('marle', { start: range.start, end: range.end }),
+                frameRate: WALK_FRAME_RATE,
+                repeat:    -1,
+            });
+        }
 
         // ── Input ─────────────────────────────────────────────────────────────
-        this.keys = this.input.keyboard.addKeys({
-            a:         Phaser.Input.Keyboard.KeyCodes.A,
-            d:         Phaser.Input.Keyboard.KeyCodes.D,
-            prevFrame: Phaser.Input.Keyboard.KeyCodes.OPEN_BRACKET,   // [
-            nextFrame: Phaser.Input.Keyboard.KeyCodes.CLOSED_BRACKET, // ]
-        });
-
-        this._updateHighlight();
+        this.keys = this.input.keyboard.createCursorKeys();
     }
 
-    update(time, delta) {
-        const dt = delta / 1000;
+    update() {
+        const { left, right, up, down } = this.keys;
 
-        // ── Frame cycling ([ / ]) ─────────────────────────────────────────────
-        const maxFrame = this.sheetCols * this.sheetRows - 1;
-        if (Phaser.Input.Keyboard.JustDown(this.keys.prevFrame)) {
-            this.previewFrame = Math.max(0, this.previewFrame - 1);
-            this._showFrame();
-        }
-        if (Phaser.Input.Keyboard.JustDown(this.keys.nextFrame)) {
-            this.previewFrame = Math.min(maxFrame, this.previewFrame + 1);
-            this._showFrame();
+        let vx = 0;
+        let vy = 0;
+
+        if (left.isDown)  vx = -WALK_SPEED;
+        if (right.isDown) vx =  WALK_SPEED;
+        if (up.isDown)    vy = -WALK_SPEED;
+        if (down.isDown)  vy =  WALK_SPEED;
+
+        // Normalize diagonal movement so speed is consistent in all directions
+        if (vx !== 0 && vy !== 0) {
+            vx *= Math.SQRT1_2; // 1/√2 ≈ 0.707
+            vy *= Math.SQRT1_2;
         }
 
-        // ── Movement (A / D) ──────────────────────────────────────────────────
-        if (this.keys.d.isDown) {
-            this.marle.x += WALK_SPEED * dt;
-            if (this.marle.anims.getName() !== 'walk_right') {
-                this.marle.play('walk_right');
-                this.frameText.setText('→ walk_right (frames ' + WALK_RIGHT_START + '–' + (WALK_RIGHT_START + WALK_RIGHT_COUNT - 1) + ')');
-            }
-        } else if (this.keys.a.isDown) {
-            this.marle.x -= WALK_SPEED * dt;
-            if (this.marle.anims.getName() !== 'walk_left') {
-                this.marle.play('walk_left');
-                this.frameText.setText('← walk_left (frames ' + WALK_LEFT_START + '–' + (WALK_LEFT_START + WALK_LEFT_COUNT - 1) + ')');
+        this.marle.setVelocity(vx, vy);
+
+        if (vx !== 0 || vy !== 0) {
+            // Vertical direction takes animation priority over horizontal
+            const dir = vy > 0 ? 'down' : vy < 0 ? 'up' : vx > 0 ? 'right' : 'left';
+
+            if (dir !== this.facing) {
+                this.facing = dir;
+                this.marle.play('walk_' + dir);
             }
         } else {
+            // Standing still — stop animation and show the idle frame for current direction
             if (this.marle.anims.isPlaying) {
                 this.marle.anims.stop();
-                this.marle.setFrame(this.previewFrame);
-                this.frameText.setText(this._frameLabel());
+                this.marle.setFrame(IDLE_FRAME[this.facing]);
             }
         }
-    }
-
-    _showFrame() {
-        this.marle.anims.stop();
-        this.marle.setFrame(this.previewFrame);
-        this.frameText.setText(this._frameLabel());
-        this._updateHighlight();
-    }
-
-    _frameLabel() {
-        const col = this.previewFrame % this.sheetCols;
-        const row = Math.floor(this.previewFrame / this.sheetCols);
-        return `Frame: ${this.previewFrame}  (col ${col}, row ${row})`;
-    }
-
-    _updateHighlight() {
-        const col = this.previewFrame % this.sheetCols;
-        const row = Math.floor(this.previewFrame / this.sheetCols);
-        this.highlight.setPosition(
-            (FRAME_MARGIN + col * FRAME_WIDTH)  * SHEET_SCALE,
-            (FRAME_MARGIN + row * FRAME_HEIGHT) * SHEET_SCALE
-        );
     }
 }
 
 const config = {
-    type:            Phaser.AUTO,
-    width:           CANVAS_WIDTH,
-    height:          CANVAS_HEIGHT,
-    backgroundColor: '#111111',
-    scene:           MarleScene,
+    type:   Phaser.AUTO,
+    width:  CANVAS_WIDTH,
+    height: CANVAS_HEIGHT,
+    backgroundColor: '#000000',
+    physics: {
+        default: 'arcade',
+        arcade:  { gravity: { y: 0 }, debug: PHYSICS_DEBUG },
+    },
+    scene: MarleScene,
 };
 
 new Phaser.Game(config);
