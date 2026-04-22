@@ -1,56 +1,74 @@
-# Pixel Time Machine — CLAUDE.md
+# Pixel Time Machine — Project Context
 
-## Project Overview
-One playable browser game per year, starting in 1972. Each folder is a year, each year is a demake of a landmark game from that era. Built to last — the same stack scales from Pong to Vampire Survivors-tier complexity.
-
-## The Vision
-- 1972 — Pong
-- 1973 — (next)
-- ...continuing forward through gaming history
+## What this is
+A browser-based game demake project. One game per year starting 1972. Built with Phaser 3 + Claude Code. Nick drives with voice (Wispr Flow), Claude Code builds, Nick reviews.
 
 ## Stack
-- Phaser 3 via CDN (no bundler, no build step, ever — the game runs by opening index.html)
-- Vanilla JS — readable by a human at all times
-- GitHub Pages — auto-deploys on push to main
-- Claude Code VS Code extension — primary builder
+- Phaser 3 via CDN (no bundler ever)
+- Vanilla JS
+- GitHub Pages (auto-deploys on push to main)
+- Claude Code — primary builder
+- VS Code with Claude Code extension — IDE and code viewer (Cursor removed)
 - Wispr Flow — voice input
 
-## IntelliSense Setup
-`npm` is installed **for type definitions only** — it does not affect how the game runs.
-- `node_modules/phaser` provides hover docs and autocomplete in VS Code
-- `jsconfig.json` at the repo root wires up JS type checking
-- Each `game.js` starts with `/// <reference types="phaser" />` so the editor sees Phaser's types
-- `node_modules/` is gitignored — run `npm install` after cloning to restore hover docs
+## Repo
+https://github.com/NickBruceAnderson/pixel-time-machine
 
-## Folder Structure
-Each year is self-contained, named `year-game-name`:
+## Folder convention
+- Games: `year-game-name` (e.g. 1972-pong, 1973-pong2)
+- Sandbox: `sandbox/topic-name` (e.g. sandbox/sprites) — permanent experiment area, never shipped
 
-    1972-pong/
-      index.html   <- loads Phaser via CDN, entry point
-      game.js      <- all game logic
+## Completed
+- 1972-pong — fully working, shipped, live on GitHub Pages
+- 1973-pong2 — MVP complete, smash mechanic implemented
 
-## Developer Profile
-Nick has a CS degree (Stevens, 2006-2012). He reviews code but does not write it. He should be able to read any file and understand it. He will manually tweak magic numbers himself once he knows where they are.
+## In progress
+- sandbox/sprites — Marle sprite walking demo, learning spritesheet workflow
 
-## Code Philosophy
-- Every tunable value (speed, size, timing) must have a comment explaining what it does
-- Prefer readability over cleverness
-- Use the most performant data structures — no bubble sorts, prefer hash maps where appropriate
-- No runtime dependencies beyond Phaser 3 CDN (npm is for editor types only)
-- Each game must run by simply opening index.html in a browser
+## Nick's profile
+CS degree (Stevens 2006-2012). Reads and reviews code, tweaks tunables manually in VS Code. Does not write code from scratch. Strong optimization instincts, prone to analysis paralysis on open-ended decisions — always push toward smallest next action. Wants pros and cons before recommendations, not just validation.
 
-## Game Feel Philosophy
-Small numbers, meaningful increments. Inspired by Paper Mario's damage system — a +1 feels like something. Avoid inflating numbers. Keep scores, values, and stats human-readable and satisfying at low magnitudes.
+## Claude's role — architect first
+- Flag things Nick hasn't asked about but should know
+- Present tradeoffs before making recommendations
+- Never just confirm what Nick wants to hear
+- Format copy-paste prompts for Claude Code in code blocks
+- Keep answers brief and bulleted
+- If a decision has a wrong answer, say so directly
 
-## Git Workflow
-After every feature or working state: commit and push. Green light every day is the goal. Commit messages should be descriptive (e.g. "Add ball collision physics" not "update").
+## Code philosophy
+- All tunables at top of game.js with comments
+- Readable over clever
+- No dependencies beyond Phaser 3 CDN
+- Every game runs via local server (serve.bat) or GitHub Pages — never file:// protocol
 
-## Running Locally
-Open `1972-pong/index.html` directly in any browser. No build step needed.
-Alternatively: `npx serve 1972-pong`
+## serve.bat convention
+Every folder with an index.html gets a serve.bat for local testing. Contents:
+@echo off
+start chrome http://localhost:8000
+python -m http.server 8000
+serve.bat is in .gitignore — local dev tool only.
 
-## Current Game
-1972 — Pong
-- Two paddles, one ball, score tracking
-- Keyboard controls: W/S for left paddle, Up/Down for right
-- Single index.html + game.js in /1972-pong folder
+## Game feel philosophy
+Paper Mario damage system inspiration — small numbers, meaningful increments. A +1 should feel like something.
+
+## Sprite workflow
+- Frame size: 32x48, no margin
+- Physics body offset always exposed as tunables
+- Marle (marle2.png) animation map:
+  - walk-down: frames 0-3
+  - walk-right: frames 4-7
+  - walk-left: frames 8-11
+  - walk-up: frames 12-15
+
+## Git workflow
+- Commit and push after every working state
+- 365 green lights is the goal
+- Descriptive commit messages
+- node_modules, serve.bat, .claude/ in .gitignore
+
+## Next priorities
+1. Fix Marle moonwalk + add WASD controls in sandbox/sprites
+2. PHASER.md skill file in repo that grows with each game
+3. 1974 game selection TBD
+4. Eventually: Playwright tests for game logic
