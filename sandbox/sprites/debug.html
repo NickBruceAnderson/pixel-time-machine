@@ -17,8 +17,8 @@
 <body>
   <div id="controls">
     <div>Adjust the grid until it lines up with the sprite frames, then click a frame to get its index number.</div>
-    <label>Frame Width (px): <input id="fw" type="number" value="16" min="1" max="128"></label>
-    <label>Frame Height (px): <input id="fh" type="number" value="24" min="1" max="128"></label>
+    <label>Frame Width (px): <input id="fw" type="number" value="32" min="1" max="128"></label>
+    <label>Frame Height (px): <input id="fh" type="number" value="32" min="1" max="128"></label>
     <label>Margin (px): <input id="mg" type="number" value="0" min="0" max="200"></label>
     <label>Scale: <input id="sc" type="number" value="2" min="1" max="4"></label>
     <button onclick="draw()">Update</button>
@@ -27,7 +27,7 @@
   <div><canvas id="c"></canvas></div>
   <script>
     const img = new Image();
-    img.src = 'assets/marle.png';
+    img.src = 'assets/marle2.png';
     img.onload = draw;
 
     function draw() {
