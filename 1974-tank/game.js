@@ -106,25 +106,27 @@ class TankScene extends Phaser.Scene {
             fontFamily: 'monospace',
         }).setOrigin(0.5, 0).setDepth(10);
 
-        // Bullet vs wall: destroy bullet on contact
+        // Bullet vs wall: destroy both bullet and wall on contact
         for (const wall of this.wallObjects) {
-            this.physics.add.overlap(this.playerBullets, wall, (b) => {
-                if (b.active) {
-                    b.destroy();
-                    if (this.playerBullet === b) this.playerBullet = null;
-                }
+            this.physics.add.overlap(this.playerBullets, wall, (b1, b2) => {
+                if (b1.active) b1.destroy();
+                if (b2.active) b2.destroy();
+                if (this.playerBullet && !this.playerBullet.active) this.playerBullet = null;
             });
-            this.physics.add.overlap(this.enemyBullets, wall, (b) => {
-                if (b.active) b.destroy();
+            this.physics.add.overlap(this.enemyBullets, wall, (b1, b2) => {
+                if (b1.active) b1.destroy();
+                if (b2.active) b2.destroy();
             });
             // Player body stops at walls
             this.physics.add.collider(this.player, wall);
         }
 
-        // Player bullet hits enemy — player scores
-        this.physics.add.overlap(this.playerBullets, this.enemy, (b) => {
-            if (this.resetting || !b.active) return;
-            b.destroy();
+        // Player bullet hits enemy — player scores (enemy is never destroyed, only bullet)
+        this.physics.add.overlap(this.playerBullets, this.enemy, (b1, b2) => {
+            if (this.resetting) return;
+            const bullet = (b1 === this.enemy) ? b2 : b1;
+            if (!bullet.active) return;
+            bullet.destroy();
             this.playerBullet = null;
             this.scorePlayer++;
             this.triggerReset();
