@@ -3,8 +3,11 @@
 // ─── TUNABLES ────────────────────────────────────────────────────────────────
 const CANVAS_WIDTH           = 600;    // canvas width in pixels
 const CANVAS_HEIGHT          = 600;    // canvas height in pixels
+const FOOTER_HEIGHT          = 100;    // reserved footer strip at bottom (text only)
+const PLAY_H                 = CANVAS_HEIGHT - FOOTER_HEIGHT; // gameplay area height
 
-const ARENA_COLOR            = 0x111122; // background fill
+const ARENA_COLOR            = 0x111122; // gameplay background fill
+const FOOTER_COLOR           = 0x0a0a14; // footer background fill
 const WALL_COLOR             = 0x445566; // wall fill
 const PLAYER_COLOR           = 0x00dd66; // player tank body
 const PLAYER_BARREL_COLOR    = 0x009944; // player barrel
@@ -15,7 +18,7 @@ const ENEMY_BULLET_COLOR     = 0xff7700; // enemy bullet
 const SCORE_COLOR            = '#ffffff'; // score text color
 
 const PLAYER_START_X         = 120;    // player start x
-const PLAYER_START_Y         = 480;    // player start y
+const PLAYER_START_Y         = 420;    // player start y
 const PLAYER_START_ANGLE     = 0;      // start angle in degrees (0 = facing up, clockwise positive)
 
 const ENEMY_X                = 480;    // enemy turret center x (fixed)
@@ -31,23 +34,38 @@ const ROTATE_SPEED           = 180;    // rotation speed in degrees per second
 
 const BULLET_SIZE            = 4;      // bullet square side in pixels
 const BULLET_SPEED           = 360;    // bullet travel speed in pixels per second
-const BULLET_LIFESPAN_MS     = 2500;   // bullet auto-destroys after this many ms
-const BULLET_COOLDOWN_MS     = 500;    // min ms between player shots
+const BULLET_LIFESPAN_MS     = 1000;   // bullet auto-destroys after this many ms
+const BULLET_COOLDOWN_MS     = 1000;    // min ms between player shots
 
-const ENEMY_FIRE_INTERVAL_MS = 2000;   // base ms between enemy shots
+const ENEMY_FIRE_INTERVAL_MS = 1000;   // base ms between enemy shots
 const ENEMY_FIRE_JITTER_MS   = 800;    // random ms added to each enemy shot interval
 
 const RESET_DELAY_MS         = 1000;   // ms pause before repositioning after a hit
+const SCORE_TO_WIN           = 3;      // first to this score wins
 
-const SCORE_X                = CANVAS_WIDTH / 2;  // score text center x
-const SCORE_Y                = 10;                 // score text top y
+const HIT_STAGE1_ALPHA       = 0.5;   // alpha during first hit flash stage
+const HIT_STAGE1_MS          = 250;   // duration of first hit flash stage in ms
+const HIT_STAGE2_ALPHA       = 0;     // alpha during second hit flash stage
+const HIT_STAGE2_MS          = 250;   // duration of second hit flash stage in ms
+
+const WALL_DESTRUCTIBLE      = 0;      // 0 = indestructible, 1 = bullet destroys wall
+
+// HUD layout (footer area: y = PLAY_H to CANVAS_HEIGHT)
+const HUD_Y                  = PLAY_H + 22;  // center y for score row in footer
+const HUD_LABEL_Y            = PLAY_H + 70;  // center y for footer label
+const BAR_W                  = 70;           // cooldown bar width in pixels
+const BAR_H                  = 8;            // cooldown bar height in pixels
+const PLAYER_BAR_X           = 75;           // player bar left edge x
+const ENEMY_BAR_X            = 525;          // enemy bar right edge x
+const BAR_BG_COLOR           = 0x223333;     // bar background color
+const BAR_FILL_COLOR         = 0x44ff88;     // bar fill color (shot ready)
 
 // Walls: each row is [centerX, centerY, width, height] in pixels
 const WALLS = [
     [300, 160, 180, 16],   // top-center horizontal bar
-    [150, 320,  16, 140],  // left-center vertical bar
-    [450, 320,  16, 140],  // right-center vertical bar
-    [300, 440, 180, 16],   // bottom-center horizontal bar
+    [150, 300,  16, 140],  // left-center vertical bar
+    [450, 300,  16, 140],  // right-center vertical bar
+    [300, 420, 180, 16],   // bottom-center horizontal bar
 ];
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -60,15 +78,27 @@ class TankScene extends Phaser.Scene {
         this.scorePlayer    = 0;
         this.scoreEnemy     = 0;
         this.resetting      = false;
+        this.gameOver       = false;
         this.playerBullet   = null;
-        this.lastPlayerShot = 0;
+        this.lastPlayerShot = -BULLET_COOLDOWN_MS;     // start ready
+        this.lastEnemyShot  = -ENEMY_FIRE_INTERVAL_MS; // start ready
 
-        // Background
+        // Gameplay background (top strip)
         this.add.rectangle(
-            CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2,
-            CANVAS_WIDTH, CANVAS_HEIGHT,
+            CANVAS_WIDTH / 2, PLAY_H / 2,
+            CANVAS_WIDTH, PLAY_H,
             ARENA_COLOR
         );
+
+        // Footer background (bottom strip)
+        this.add.rectangle(
+            CANVAS_WIDTH / 2, PLAY_H + FOOTER_HEIGHT / 2,
+            CANVAS_WIDTH, FOOTER_HEIGHT,
+            FOOTER_COLOR
+        );
+
+        // Restrict physics world to gameplay area so the player can't enter the footer
+        this.physics.world.setBounds(0, 0, CANVAS_WIDTH, PLAY_H);
 
         // Walls (static physics bodies stored for per-wall collision setup)
         this.wallObjects = [];
@@ -99,23 +129,52 @@ class TankScene extends Phaser.Scene {
         this.playerBullets = this.physics.add.group();
         this.enemyBullets  = this.physics.add.group();
 
-        // Score text (depth ensures it renders above all game objects)
-        this.scoreText = this.add.text(SCORE_X, SCORE_Y, 'You 0  —  Enemy 0', {
-            fontSize: '16px',
-            fill: SCORE_COLOR,
-            fontFamily: 'monospace',
-        }).setOrigin(0.5, 0).setDepth(10);
+        // ── HUD footer ────────────────────────────────────────────────────────
 
-        // Bullet vs wall: destroy both bullet and wall on contact
+        // Player score (far left)
+        this.scorePlayerText = this.add.text(10, HUD_Y, 'You: 0', {
+            fontSize: '13px', fill: SCORE_COLOR, fontFamily: 'monospace',
+        }).setOrigin(0, 0.5).setDepth(10);
+
+        // Player cooldown bar (left-anchored, fills rightward)
+        this.add.rectangle(PLAYER_BAR_X, HUD_Y, BAR_W, BAR_H, BAR_BG_COLOR)
+            .setOrigin(0, 0.5).setDepth(10);
+        this.playerBarFill = this.add.rectangle(PLAYER_BAR_X, HUD_Y, BAR_W, BAR_H, BAR_FILL_COLOR)
+            .setOrigin(0, 0.5).setDepth(11);
+
+        // Enemy cooldown bar (right-anchored, fills leftward)
+        this.add.rectangle(ENEMY_BAR_X, HUD_Y, BAR_W, BAR_H, BAR_BG_COLOR)
+            .setOrigin(1, 0.5).setDepth(10);
+        this.enemyBarFill = this.add.rectangle(ENEMY_BAR_X, HUD_Y, BAR_W, BAR_H, BAR_FILL_COLOR)
+            .setOrigin(1, 0.5).setDepth(11);
+
+        // Enemy score (far right)
+        this.scoreEnemyText = this.add.text(CANVAS_WIDTH - 10, HUD_Y, 'Enemy: 0', {
+            fontSize: '13px', fill: SCORE_COLOR, fontFamily: 'monospace',
+        }).setOrigin(1, 0.5).setDepth(10);
+
+        // Footer label (centered)
+        this.add.text(CANVAS_WIDTH / 2, HUD_LABEL_Y, 'Tank, first to three wins', {
+            fontSize: '13px', fill: '#445566', fontFamily: 'monospace',
+        }).setOrigin(0.5, 0.5).setDepth(10);
+
+        // Win / replay message — hidden until game over
+        this.messageText = this.add.text(CANVAS_WIDTH / 2, PLAY_H / 2, '', {
+            fontSize: '28px', fill: '#ffffff', fontFamily: 'monospace', align: 'center',
+        }).setOrigin(0.5, 0.5).setDepth(10);
+
+        // Bullet vs wall: bullet always dies; wall dies only if WALL_DESTRUCTIBLE
         for (const wall of this.wallObjects) {
             this.physics.add.overlap(this.playerBullets, wall, (b1, b2) => {
-                if (b1.active) b1.destroy();
-                if (b2.active) b2.destroy();
+                const bullet = (b1 === wall) ? b2 : b1;
+                if (bullet.active) bullet.destroy();
+                if (WALL_DESTRUCTIBLE && wall.active) wall.destroy();
                 if (this.playerBullet && !this.playerBullet.active) this.playerBullet = null;
             });
             this.physics.add.overlap(this.enemyBullets, wall, (b1, b2) => {
-                if (b1.active) b1.destroy();
-                if (b2.active) b2.destroy();
+                const bullet = (b1 === wall) ? b2 : b1;
+                if (bullet.active) bullet.destroy();
+                if (WALL_DESTRUCTIBLE && wall.active) wall.destroy();
             });
             // Player body stops at walls
             this.physics.add.collider(this.player, wall);
@@ -123,21 +182,23 @@ class TankScene extends Phaser.Scene {
 
         // Player bullet hits enemy — player scores (enemy is never destroyed, only bullet)
         this.physics.add.overlap(this.playerBullets, this.enemy, (b1, b2) => {
-            if (this.resetting) return;
+            if (this.resetting || this.gameOver) return;
             const bullet = (b1 === this.enemy) ? b2 : b1;
             if (!bullet.active) return;
             bullet.destroy();
             this.playerBullet = null;
             this.scorePlayer++;
-            this.triggerReset();
+            this.triggerReset('enemy');
         });
 
         // Enemy bullet hits player — enemy scores
-        this.physics.add.overlap(this.enemyBullets, this.player, (b) => {
-            if (this.resetting || !b.active) return;
-            b.destroy();
+        this.physics.add.overlap(this.enemyBullets, this.player, (b1, b2) => {
+            if (this.resetting || this.gameOver) return;
+            const bullet = (b1 === this.player) ? b2 : b1;
+            if (!bullet.active) return;
+            bullet.destroy();
             this.scoreEnemy++;
-            this.triggerReset();
+            this.triggerReset('player');
         });
 
         // Input
@@ -157,12 +218,13 @@ class TankScene extends Phaser.Scene {
     scheduleEnemyShot() {
         const delay = ENEMY_FIRE_INTERVAL_MS + Phaser.Math.Between(0, ENEMY_FIRE_JITTER_MS);
         this.time.delayedCall(delay, () => {
-            if (!this.resetting) this.fireEnemyBullet();
+            if (!this.resetting && !this.gameOver) this.fireEnemyBullet();
             this.scheduleEnemyShot();
         });
     }
 
     fireEnemyBullet() {
+        this.lastEnemyShot = this.time.now;
         const rad    = this.enemyAimAngle();
         const bullet = this.add.rectangle(ENEMY_X, ENEMY_Y, BULLET_SIZE, BULLET_SIZE, ENEMY_BULLET_COLOR);
         this.physics.add.existing(bullet);
@@ -200,20 +262,58 @@ class TankScene extends Phaser.Scene {
 
     // ── Round management ───────────────────────────────────────────────────────
 
-    triggerReset() {
+    triggerReset(hitTarget) {
         this.resetting = true;
         this.player.body.setVelocity(0, 0);
-        this.scoreText.setText(`You ${this.scorePlayer}  —  Enemy ${this.scoreEnemy}`);
+        this.scorePlayerText.setText(`You: ${this.scorePlayer}`);
+        this.scoreEnemyText.setText(`Enemy: ${this.scoreEnemy}`);
         this.playerBullets.clear(true, true);
         this.enemyBullets.clear(true, true);
         this.playerBullet = null;
+
+        const hitBody   = hitTarget === 'player' ? this.player      : this.enemy;
+        const hitBarrel = hitTarget === 'player' ? this.playerBarrel : this.enemyBarrel;
+        this.playHitFlash(hitBody, hitBarrel);
+
+        if (this.checkWin()) return;
+
         this.time.delayedCall(RESET_DELAY_MS, () => {
+            this.player.setAlpha(1);
+            this.playerBarrel.setAlpha(1);
+            this.enemy.setAlpha(1);
+            this.enemyBarrel.setAlpha(1);
             this.player.x = PLAYER_START_X;
             this.player.y = PLAYER_START_Y;
             this.player.body.reset(PLAYER_START_X, PLAYER_START_Y);
             this.playerAngle = PLAYER_START_ANGLE;
             this.player.rotation = Phaser.Math.DegToRad(this.playerAngle);
             this.resetting = false;
+        });
+    }
+
+    checkWin() {
+        if (this.scorePlayer >= SCORE_TO_WIN) {
+            this.endGame('You win!');
+            return true;
+        }
+        if (this.scoreEnemy >= SCORE_TO_WIN) {
+            this.endGame('Enemy wins!');
+            return true;
+        }
+        return false;
+    }
+
+    endGame(message) {
+        this.gameOver = true;
+        this.messageText.setText(message + '\n\nPress SPACE to play again');
+    }
+
+    playHitFlash(body, barrel) {
+        body.setAlpha(HIT_STAGE1_ALPHA);
+        barrel.setAlpha(HIT_STAGE1_ALPHA);
+        this.time.delayedCall(HIT_STAGE1_MS, () => {
+            body.setAlpha(HIT_STAGE2_ALPHA);
+            barrel.setAlpha(HIT_STAGE2_ALPHA);
         });
     }
 
@@ -237,6 +337,19 @@ class TankScene extends Phaser.Scene {
         // Barrel visuals always track their tanks
         this.placeBarrel(this.playerBarrel, this.player.x, this.player.y, playerRad);
         this.placeBarrel(this.enemyBarrel,  ENEMY_X, ENEMY_Y, this.enemyAimAngle());
+
+        // Cooldown bars update every frame regardless of game state
+        const playerReady = Math.min(1, (time - this.lastPlayerShot) / BULLET_COOLDOWN_MS);
+        const enemyReady  = Math.min(1, (time - this.lastEnemyShot)  / BULLET_COOLDOWN_MS);
+        this.playerBarFill.setSize(Math.max(1, BAR_W * playerReady), BAR_H);
+        this.enemyBarFill.setSize(Math.max(1, BAR_W * enemyReady),  BAR_H);
+
+        if (this.gameOver) {
+            if (Phaser.Input.Keyboard.JustDown(this.keys.space)) {
+                this.scene.restart();
+            }
+            return;
+        }
 
         if (this.resetting) {
             this.player.body.setVelocity(0, 0);
