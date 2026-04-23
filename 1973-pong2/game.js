@@ -70,7 +70,7 @@ const MANA_PIP_MARGIN      = 4;         // gap between legend text edge and firs
 
 const FOOTER_FONT_SIZE     = 11;        // instruction text size in pixels
 const FOOTER_COLOR         = '#888888'; // instruction text color
-const FOOTER_Y_OFFSET      = 16;        // px from canvas bottom to footer text top
+const FOOTER_Y_OFFSET      = 90;        // px from canvas bottom to footer text top
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -106,7 +106,7 @@ class PongScene extends Phaser.Scene {
         this.add.text(
             CANVAS_WIDTH / 2,
             CANVAS_HEIGHT - FOOTER_Y_OFFSET,
-            'Pong — but your mana bar unlocks combos. GROW your paddle, SHRINK theirs, or BURST the ball to double speed.',
+            'Pong — but your mana bar unlocks combos. GROW your paddle, SHRINK theirs, or BURST the ball to double speed.\nPress into the ball to SMASH it for bonus power and a mana boost!',
             { fontSize: FOOTER_FONT_SIZE + 'px', fill: FOOTER_COLOR, fontFamily: 'monospace' }
         ).setDepth(10).setOrigin(0.5, 0);
 
