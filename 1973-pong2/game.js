@@ -3,20 +3,25 @@
 // ─── TUNABLES ────────────────────────────────────────────────────────────────
 
 const CANVAS_WIDTH        = 800;   // game canvas width in pixels
-const CANVAS_HEIGHT       = 600;   // game canvas height in pixels
+const CANVAS_HEIGHT       = 900;   // total canvas height (play zone + UI zone + footer)
+const PLAY_HEIGHT         = 600;   // playable area height; UI zone occupies the rest
+const UI_ZONE_TOP         = 600;   // Y where the UI zone begins (equals PLAY_HEIGHT)
 
 const PADDLE_WIDTH        = 6;     // paddle thickness in pixels
 const PADDLE_HEIGHT       = 60;    // starting paddle height in pixels
 const PADDLE_SPEED        = 500;   // paddle movement speed in pixels per second
 const PADDLE_OFFSET       = 40;    // distance from screen edge to paddle center
-const PADDLE_GROW_PX      = 10;    // pixels added to paddle on SURGE
-const PADDLE_SHRINK_PX    = 10;    // pixels removed from opponent paddle on WITHER
+const PADDLE_GROW_PX      = 10;    // pixels added to paddle on GROW
+const PADDLE_SHRINK_PX    = 10;    // pixels removed from opponent paddle on SHRINK
 const PADDLE_MIN_HEIGHT   = 20;    // paddle can never shrink below this (pixels)
+const PADDLE_GROW_FLASH_COLOR   = 0x0088ff; // tint on growing player's paddle
+const PADDLE_SHRINK_FLASH_COLOR = 0xff2200; // tint on shrinking opponent's paddle
+const PADDLE_FLASH_DURATION_MS  = 200;      // how long the flash tint lasts
 
 const BALL_SIZE           = 6;     // ball width and height in pixels
-const BALL_SPEED_START    = 200;   // initial ball speed in pixels per second
+const BALL_BASE_SPEED     = 200;   // ball speed after every reset (also the launch speed)
 const BALL_SPEED_INCREASE = 20;    // speed added on each paddle hit
-const BALL_SPEED_CAP      = 400;   // ball will never exceed this speed
+const BALL_SPEED_CAP      = 400;   // ball will never exceed this on normal hits
 const BALL_SMASH_TINT     = 0xff2200;  // ball color after a smash hit
 const BALL_NORMAL_TINT    = 0xffffff;  // default ball color
 
@@ -38,24 +43,34 @@ const SMASH_SPEED_MULT    = 1.5;   // speed multiplier on a successful smash
 const MANA_FILL_TIME_MS   = 10000; // ms to fill mana bar from 0 to MANA_MAX
 const MANA_MAX            = 100;   // maximum mana value
 const MANA_HALF           = 50;    // bar color threshold; equals MANA_COST by design
-const MANA_COST           = 50;    // mana spent on SURGE or WITHER
+const MANA_COST           = 50;    // mana spent on GROW  or SHRINK
 const MANA_SMASH_BONUS    = 0.10;  // fraction of MANA_MAX granted on a successful smash
-const MANA_BAR_WIDTH      = 60;    // mana bar width in pixels
-const MANA_BAR_HEIGHT     = 8;     // mana bar height in pixels
+const MANA_BAR_WIDTH      = 180;   // fallback bar width; overridden at runtime by legend measurement
+const MANA_BAR_HEIGHT     = 24;    // mana bar height in pixels
 const MANA_BAR_MARGIN     = 20;    // distance from screen edges to HUD group
 const MANA_COLOR_LOW      = 0x3355ff;  // bar color below MANA_HALF
 const MANA_COLOR_HIGH     = 0x00ccff;  // bar color at or above MANA_HALF
 
 const COMBO_TIMEOUT_MS    = 600;   // combo buffer clears if idle longer than this
 
-const BLITZ_COST          = 100;   // mana cost for BLITZ stratagem
-const BLITZ_SPEED_MULT    = 2.0;   // ball speed multiplier while BLITZ is active
-const BLITZ_TINT          = 0xffff00;  // ball color while BLITZ is active
+const BURST_COST          = 100;   // mana cost for BURST stratagem
+const BURST_SPEED_MULT    = 2.0;   // ball speed multiplier when BURST fires; persists until reset
+const BURST_TINT          = 0xffff00;  // ball color while BURST is active
 
-const HUD_LEGEND_FONT_SIZE = 8;        // legend text size in pixels
+const HUD_LEGEND_FONT_SIZE = 24;        // legend text size in pixels
 const HUD_LEGEND_COLOR     = '#aaaaaa'; // legend text color
-const HUD_LEGEND_LINE_GAP  = 2;        // pixels between legend lines
-const HUD_LEGEND_BAR_GAP   = 4;        // pixels between mana bar bottom and legend top
+const HUD_LEGEND_LINE_GAP  = 6;         // pixels between legend lines
+const HUD_LEGEND_BAR_GAP   = 12;        // pixels between mana bar bottom and legend top
+
+const MANA_PIP_WIDTH       = 8;         // width of each mana cost pip rectangle
+const MANA_PIP_HEIGHT      = 6;         // height of each mana cost pip rectangle
+const MANA_PIP_GAP         = 2;         // horizontal gap between pips
+const MANA_PIP_COLOR       = 0x00ccff;  // pip fill color
+const MANA_PIP_MARGIN      = 4;         // gap between legend text edge and first pip
+
+const FOOTER_FONT_SIZE     = 11;        // instruction text size in pixels
+const FOOTER_COLOR         = '#888888'; // instruction text color
+const FOOTER_Y_OFFSET      = 16;        // px from canvas bottom to footer text top
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -69,8 +84,8 @@ class PongScene extends Phaser.Scene {
         this.scoreRight = 0;
         this.gameOver   = false;
 
-        // ── Center divider ────────────────────────────────────────────────────
-        for (let y = 0; y < CANVAS_HEIGHT; y += DIVIDER_DASH_GAP) {
+        // ── Center divider (play zone only) ───────────────────────────────────
+        for (let y = 0; y < PLAY_HEIGHT; y += DIVIDER_DASH_GAP) {
             this.add.rectangle(
                 CANVAS_WIDTH / 2,
                 y + DIVIDER_DASH_HEIGHT / 2,
@@ -80,30 +95,45 @@ class PongScene extends Phaser.Scene {
             );
         }
 
+        // Play zone / UI zone separator
+        this.add.rectangle(CANVAS_WIDTH / 2, PLAY_HEIGHT, CANVAS_WIDTH, 1, 0x333333).setAlpha(0.6);
+
+        // UI zone / footer separator
+        const footerTop = CANVAS_HEIGHT - 100;
+        this.add.rectangle(CANVAS_WIDTH / 2, footerTop, CANVAS_WIDTH, 1, 0x333333).setAlpha(0.6).setDepth(10);
+
+        // Centered instruction text
+        this.add.text(
+            CANVAS_WIDTH / 2,
+            CANVAS_HEIGHT - FOOTER_Y_OFFSET,
+            'Pong — but your mana bar unlocks combos. GROW your paddle, SHRINK theirs, or BURST the ball to double speed.',
+            { fontSize: FOOTER_FONT_SIZE + 'px', fill: FOOTER_COLOR, fontFamily: 'monospace' }
+        ).setDepth(10).setOrigin(0.5, 0);
+
         // ── Paddles ───────────────────────────────────────────────────────────
         this.paddleLeft = this.add.rectangle(
             PADDLE_OFFSET,
-            CANVAS_HEIGHT / 2,
+            PLAY_HEIGHT / 2,
             PADDLE_WIDTH,
             PADDLE_HEIGHT,
             0xffffff
         );
         this.paddleRight = this.add.rectangle(
             CANVAS_WIDTH - PADDLE_OFFSET,
-            CANVAS_HEIGHT / 2,
+            PLAY_HEIGHT / 2,
             PADDLE_WIDTH,
             PADDLE_HEIGHT,
             0xffffff
         );
 
-        // Live paddle heights — modified by SURGE and WITHER
+        // Live paddle heights — modified by GROW  and SHRINK
         this.paddleLeftHeight  = PADDLE_HEIGHT;
         this.paddleRightHeight = PADDLE_HEIGHT;
 
         // ── Ball ──────────────────────────────────────────────────────────────
         this.ball = this.add.rectangle(
             CANVAS_WIDTH / 2,
-            CANVAS_HEIGHT / 2,
+            PLAY_HEIGHT  / 2,
             BALL_SIZE,
             BALL_SIZE,
             BALL_NORMAL_TINT
@@ -111,29 +141,28 @@ class PongScene extends Phaser.Scene {
 
         this.ballVX    = 0;
         this.ballVY    = 0;
-        this.ballSpeed = BALL_SPEED_START;
+        this.ballSpeed = BALL_BASE_SPEED;
 
-        // ── Blitz / tint state ────────────────────────────────────────────────
-        this.blitzActive          = false;
-        this.ballSpeedBeforeBlitz = BALL_SPEED_START;
-        this.smashTintActive      = false;
+        // ── BURST / tint state ────────────────────────────────────────────────
+        this.BURSTActive     = false;
+        this.smashTintActive = false;
 
-        // ── Scores ────────────────────────────────────────────────────────────
+        // ── Scores (UI zone) ──────────────────────────────────────────────────
         this.scoreLeftText = this.add.text(
-            CANVAS_WIDTH / 2 - 80, 40,
+            CANVAS_WIDTH / 2 - 80, UI_ZONE_TOP + 20,
             '0',
             { fontSize: SCORE_FONT_SIZE, fill: '#ffffff', fontFamily: 'monospace' }
         ).setOrigin(0.5, 0);
 
         this.scoreRightText = this.add.text(
-            CANVAS_WIDTH / 2 + 80, 40,
+            CANVAS_WIDTH / 2 + 80, UI_ZONE_TOP + 20,
             '0',
             { fontSize: SCORE_FONT_SIZE, fill: '#ffffff', fontFamily: 'monospace' }
         ).setOrigin(0.5, 0);
 
         this.messageText = this.add.text(
             CANVAS_WIDTH / 2,
-            CANVAS_HEIGHT / 2 + 60,
+            PLAY_HEIGHT  / 2 + 60,
             '',
             { fontSize: MESSAGE_FONT_SIZE, fill: '#ffffff', fontFamily: 'monospace', align: 'center' }
         ).setOrigin(0.5, 0.5);
@@ -157,30 +186,37 @@ class PongScene extends Phaser.Scene {
         this.manaRight = 0;
 
         // ── Combo buffers ─────────────────────────────────────────────────────
-        // Left player: arrow keys. Right player: WASD.
-        // Keys intentionally cross-map to opponent movement — by design.
+        // Left player: WASD (A=LEFT, W=UP, D=RIGHT, S=DOWN)
+        // Right player: arrow keys (←=LEFT, ↑=UP, →=RIGHT, ↓=DOWN)
         this.comboBufferLeft  = [];
         this.comboBufferRight = [];
         this.comboTimerLeft   = 0;
         this.comboTimerRight  = 0;
 
-        this.input.keyboard.on('keydown-LEFT',  () => this.pushCombo('left',  'LEFT'));
-        this.input.keyboard.on('keydown-UP',    () => this.pushCombo('left',  'UP'));
-        this.input.keyboard.on('keydown-RIGHT', () => this.pushCombo('left',  'RIGHT'));
-        this.input.keyboard.on('keydown-DOWN',  () => this.pushCombo('left',  'DOWN'));
+        this.input.keyboard.on('keydown-A', () => this.pushCombo('left',  'LEFT'));
+        this.input.keyboard.on('keydown-W', () => this.pushCombo('left',  'UP'));
+        this.input.keyboard.on('keydown-D', () => this.pushCombo('left',  'RIGHT'));
+        this.input.keyboard.on('keydown-S', () => this.pushCombo('left',  'DOWN'));
 
-        this.input.keyboard.on('keydown-A', () => this.pushCombo('right', 'LEFT'));
-        this.input.keyboard.on('keydown-W', () => this.pushCombo('right', 'UP'));
-        this.input.keyboard.on('keydown-D', () => this.pushCombo('right', 'RIGHT'));
-        this.input.keyboard.on('keydown-S', () => this.pushCombo('right', 'DOWN'));
+        this.input.keyboard.on('keydown-LEFT',  () => this.pushCombo('right', 'LEFT'));
+        this.input.keyboard.on('keydown-UP',    () => this.pushCombo('right', 'UP'));
+        this.input.keyboard.on('keydown-RIGHT', () => this.pushCombo('right', 'RIGHT'));
+        this.input.keyboard.on('keydown-DOWN',  () => this.pushCombo('right', 'DOWN'));
 
         // ── HUD layout ────────────────────────────────────────────────────────
-        // Bar + gap + legend all fit above MANA_BAR_MARGIN from the bottom edge.
-        const legendTotalH = 3 * HUD_LEGEND_FONT_SIZE + 2 * HUD_LEGEND_LINE_GAP;
-        this._legendY = CANVAS_HEIGHT - MANA_BAR_MARGIN - legendTotalH;
-        this._barTopY = this._legendY - HUD_LEGEND_BAR_GAP - MANA_BAR_HEIGHT;
+        // Bar top-aligns with score; legend stacks directly below bar.
+        this._barTopY = UI_ZONE_TOP + 20;
+        this._legendY = this._barTopY + MANA_BAR_HEIGHT + HUD_LEGEND_BAR_GAP;
 
         this.manaGraphics = this.add.graphics().setDepth(10);
+
+        // Measure widest legend line so the bar aligns with its text block
+        const tmpStyle = { fontSize: HUD_LEGEND_FONT_SIZE + 'px', fontFamily: 'monospace' };
+        const tmpL = this.add.text(-9999, -9999, 'SHRINK  D W D S', tmpStyle);
+        const tmpR = this.add.text(-9999, -9999, 'SHRINK  ← ↑ ← ↓', tmpStyle);
+        this._manaBarWidth = Math.max(tmpL.width, tmpR.width, MANA_BAR_WIDTH);
+        tmpL.destroy();
+        tmpR.destroy();
 
         const legendStyle = {
             fontSize:    HUD_LEGEND_FONT_SIZE + 'px',
@@ -189,20 +225,61 @@ class PongScene extends Phaser.Scene {
             lineSpacing: HUD_LEGEND_LINE_GAP,
         };
 
-        // Unicode: ← ← ↑ ↑ → → ↓ ↓
-        this.add.text(
+        // Left player (WASD): A=back, D=forward, W=up, S=down
+        const legendLeft = this.add.text(
             MANA_BAR_MARGIN,
             this._legendY,
-            'SURGE   ← ↑ ← ↓ \nWITHER  → ↑ → ↓\nBLITZ   → → → → ',
+            'GROW    ← ↑ ← ↓\nSHRINK  → ↑ → ↓\nBURST   → → → →',
             legendStyle
         ).setDepth(10).setOrigin(0, 0);
 
-        this.add.text(
+        // Right player (arrows): ←=back, →=forward, ↑=up, ↓=down
+        const legendRight = this.add.text(
             CANVAS_WIDTH - MANA_BAR_MARGIN,
             this._legendY,
-            'SURGE   → ↑ → ↓ \nWITHER  ← ↑ ← ↓\nBLITZ   ← ← ← ← ',
+            'GROW    → ↑ → ↓\nSHRINK  ← ↑ ← ↓\nBURST   ← ← ← ←',
             legendStyle
         ).setDepth(10).setOrigin(1, 0);
+
+        // ── Mana cost pip indicators ──────────────────────────────────────────
+        // Costs: GROW=1, SHRINK=1, BURST=2 pips
+        const pipCosts = [1, 1, 2];
+        const lineH    = HUD_LEGEND_FONT_SIZE + HUD_LEGEND_LINE_GAP;
+        const pipMidY  = HUD_LEGEND_FONT_SIZE / 2 - MANA_PIP_HEIGHT / 2;
+        const pipG     = this.add.graphics().setDepth(10);
+
+        pipG.fillStyle(MANA_PIP_COLOR, 1);
+
+        // Left legend: pips to the right of each line
+        const leftTextX = MANA_BAR_MARGIN;
+        for (let i = 0; i < pipCosts.length; i++) {
+            const rowY   = this._legendY + i * lineH + pipMidY;
+            const startX = leftTextX + legendLeft.width + MANA_PIP_MARGIN;
+            for (let p = 0; p < pipCosts[i]; p++) {
+                pipG.fillRect(
+                    startX + p * (MANA_PIP_WIDTH + MANA_PIP_GAP),
+                    rowY,
+                    MANA_PIP_WIDTH,
+                    MANA_PIP_HEIGHT
+                );
+            }
+        }
+
+        // Right legend: pips to the left of each line
+        const rightTextX = CANVAS_WIDTH - MANA_BAR_MARGIN;
+        for (let i = 0; i < pipCosts.length; i++) {
+            const rowY    = this._legendY + i * lineH + pipMidY;
+            const blockW  = pipCosts[i] * MANA_PIP_WIDTH + (pipCosts[i] - 1) * MANA_PIP_GAP;
+            const startX  = rightTextX - legendRight.width - MANA_PIP_MARGIN - blockW;
+            for (let p = 0; p < pipCosts[i]; p++) {
+                pipG.fillRect(
+                    startX + p * (MANA_PIP_WIDTH + MANA_PIP_GAP),
+                    rowY,
+                    MANA_PIP_WIDTH,
+                    MANA_PIP_HEIGHT
+                );
+            }
+        }
 
         this.launchBall();
     }
@@ -225,13 +302,13 @@ class PongScene extends Phaser.Scene {
         const mana = player === 'left' ? this.manaLeft         : this.manaRight;
 
         const combos = player === 'left' ? [
-            { name: 'SURGE',  seq: ['LEFT',  'UP', 'LEFT',  'DOWN'],        cost: MANA_COST  },
-            { name: 'WITHER', seq: ['RIGHT', 'UP', 'RIGHT', 'DOWN'],        cost: MANA_COST  },
-            { name: 'BLITZ',  seq: ['RIGHT', 'RIGHT', 'RIGHT', 'RIGHT'],    cost: BLITZ_COST },
+            { name: 'GROW ',  seq: ['LEFT',  'UP', 'LEFT',  'DOWN'],     cost: MANA_COST  },
+            { name: 'SHRINK', seq: ['RIGHT', 'UP', 'RIGHT', 'DOWN'],     cost: MANA_COST  },
+            { name: 'BURST',  seq: ['RIGHT', 'RIGHT', 'RIGHT', 'RIGHT'], cost: BURST_COST },
         ] : [
-            { name: 'SURGE',  seq: ['RIGHT', 'UP', 'RIGHT', 'DOWN'],        cost: MANA_COST  },
-            { name: 'WITHER', seq: ['LEFT',  'UP', 'LEFT',  'DOWN'],        cost: MANA_COST  },
-            { name: 'BLITZ',  seq: ['LEFT',  'LEFT',  'LEFT',  'LEFT'],     cost: BLITZ_COST },
+            { name: 'GROW ',  seq: ['RIGHT', 'UP', 'RIGHT', 'DOWN'],     cost: MANA_COST  },
+            { name: 'SHRINK', seq: ['LEFT',  'UP', 'LEFT',  'DOWN'],     cost: MANA_COST  },
+            { name: 'BURST',  seq: ['LEFT',  'LEFT',  'LEFT',  'LEFT'],  cost: BURST_COST },
         ];
 
         for (const combo of combos) {
@@ -249,30 +326,37 @@ class PongScene extends Phaser.Scene {
         if (player === 'left') this.manaLeft  = Math.max(0, this.manaLeft  - cost);
         else                   this.manaRight = Math.max(0, this.manaRight - cost);
 
-        if (name === 'SURGE') {
+        if (name === 'GROW ') {
             if (player === 'left') {
                 this.paddleLeftHeight = Math.max(PADDLE_MIN_HEIGHT, this.paddleLeftHeight + PADDLE_GROW_PX);
                 this.paddleLeft.height = this.paddleLeftHeight;
+                this.paddleLeft.fillColor = PADDLE_GROW_FLASH_COLOR;
+                this.time.delayedCall(PADDLE_FLASH_DURATION_MS, () => { this.paddleLeft.fillColor  = 0xffffff; });
             } else {
                 this.paddleRightHeight = Math.max(PADDLE_MIN_HEIGHT, this.paddleRightHeight + PADDLE_GROW_PX);
                 this.paddleRight.height = this.paddleRightHeight;
+                this.paddleRight.fillColor = PADDLE_GROW_FLASH_COLOR;
+                this.time.delayedCall(PADDLE_FLASH_DURATION_MS, () => { this.paddleRight.fillColor = 0xffffff; });
             }
-        } else if (name === 'WITHER') {
+        } else if (name === 'SHRINK') {
             if (player === 'left') {
                 this.paddleRightHeight = Math.max(PADDLE_MIN_HEIGHT, this.paddleRightHeight - PADDLE_SHRINK_PX);
                 this.paddleRight.height = this.paddleRightHeight;
+                this.paddleRight.fillColor = PADDLE_SHRINK_FLASH_COLOR;
+                this.time.delayedCall(PADDLE_FLASH_DURATION_MS, () => { this.paddleRight.fillColor = 0xffffff; });
             } else {
                 this.paddleLeftHeight = Math.max(PADDLE_MIN_HEIGHT, this.paddleLeftHeight - PADDLE_SHRINK_PX);
                 this.paddleLeft.height = this.paddleLeftHeight;
+                this.paddleLeft.fillColor = PADDLE_SHRINK_FLASH_COLOR;
+                this.time.delayedCall(PADDLE_FLASH_DURATION_MS, () => { this.paddleLeft.fillColor  = 0xffffff; });
             }
-        } else if (name === 'BLITZ') {
-            this.ballSpeedBeforeBlitz = this.ballSpeed;
-            this.ballSpeed *= BLITZ_SPEED_MULT;
-            this.ballVX    *= BLITZ_SPEED_MULT;
-            this.ballVY    *= BLITZ_SPEED_MULT;
-            this.blitzActive = true;
+        } else if (name === 'BURST') {
+            this.ballSpeed   *= BURST_SPEED_MULT;
+            this.ballVX      *= BURST_SPEED_MULT;
+            this.ballVY      *= BURST_SPEED_MULT;
+            this.BURSTActive  = true;
             if (!this.smashTintActive) {
-                this.ball.fillColor = BLITZ_TINT;
+                this.ball.fillColor = BURST_TINT;
             }
         }
     }
@@ -281,36 +365,37 @@ class PongScene extends Phaser.Scene {
 
     drawManaBars() {
         const g      = this.manaGraphics;
+        const barW   = this._manaBarWidth;
         const barY   = this._barTopY;
         const leftX  = MANA_BAR_MARGIN;
-        const rightX = CANVAS_WIDTH - MANA_BAR_MARGIN - MANA_BAR_WIDTH;
+        const rightX = CANVAS_WIDTH - MANA_BAR_MARGIN - barW;
         g.clear();
 
         // Left bar
         g.fillStyle(0x111111, 1);
-        g.fillRect(leftX, barY, MANA_BAR_WIDTH, MANA_BAR_HEIGHT);
+        g.fillRect(leftX, barY, barW, MANA_BAR_HEIGHT);
         g.fillStyle(this.manaLeft >= MANA_HALF ? MANA_COLOR_HIGH : MANA_COLOR_LOW, 1);
-        g.fillRect(leftX, barY, (this.manaLeft / MANA_MAX) * MANA_BAR_WIDTH, MANA_BAR_HEIGHT);
+        g.fillRect(leftX, barY, (this.manaLeft / MANA_MAX) * barW, MANA_BAR_HEIGHT);
         g.fillStyle(0xffffff, 0.5);
-        g.fillRect(leftX + MANA_BAR_WIDTH / 2, barY, 1, MANA_BAR_HEIGHT);
+        g.fillRect(leftX + barW / 2, barY, 1, MANA_BAR_HEIGHT);
 
         // Right bar
         g.fillStyle(0x111111, 1);
-        g.fillRect(rightX, barY, MANA_BAR_WIDTH, MANA_BAR_HEIGHT);
+        g.fillRect(rightX, barY, barW, MANA_BAR_HEIGHT);
         g.fillStyle(this.manaRight >= MANA_HALF ? MANA_COLOR_HIGH : MANA_COLOR_LOW, 1);
-        g.fillRect(rightX, barY, (this.manaRight / MANA_MAX) * MANA_BAR_WIDTH, MANA_BAR_HEIGHT);
+        g.fillRect(rightX, barY, (this.manaRight / MANA_MAX) * barW, MANA_BAR_HEIGHT);
         g.fillStyle(0xffffff, 0.5);
-        g.fillRect(rightX + MANA_BAR_WIDTH / 2, barY, 1, MANA_BAR_HEIGHT);
+        g.fillRect(rightX + barW / 2, barY, 1, MANA_BAR_HEIGHT);
     }
 
     // ── Ball reset ────────────────────────────────────────────────────────────
 
     launchBall() {
-        this.ball.x    = CANVAS_WIDTH  / 2;
-        this.ball.y    = CANVAS_HEIGHT / 2;
-        this.ballSpeed = BALL_SPEED_START;
+        this.ball.x    = CANVAS_WIDTH / 2;
+        this.ball.y    = PLAY_HEIGHT  / 2;
+        this.ballSpeed = BALL_BASE_SPEED;
 
-        this.blitzActive     = false;
+        this.BURSTActive     = false;
         this.smashTintActive = false;
         this.ball.fillColor  = BALL_NORMAL_TINT;
 
@@ -339,15 +424,15 @@ class PongScene extends Phaser.Scene {
             this.comboBufferRight.length = 0;
         }
 
-        // Smash timestamps
+        // Smash timestamps — D=left smash, LEFT arrow=right smash
         if (Phaser.Input.Keyboard.JustDown(this.keys.d))    this.smashLeftAt  = time;
         if (Phaser.Input.Keyboard.JustDown(this.keys.left)) this.smashRightAt = time;
 
-        // Paddle movement — limits use live heights
-        const topL    = this.paddleLeftHeight  / 2;
-        const botL    = CANVAS_HEIGHT - this.paddleLeftHeight  / 2;
-        const topR    = this.paddleRightHeight / 2;
-        const botR    = CANVAS_HEIGHT - this.paddleRightHeight / 2;
+        // Paddle movement — clamped to play zone, using live heights
+        const topL = this.paddleLeftHeight  / 2;
+        const botL = PLAY_HEIGHT - this.paddleLeftHeight  / 2;
+        const topR = this.paddleRightHeight / 2;
+        const botR = PLAY_HEIGHT - this.paddleRightHeight / 2;
 
         if (this.keys.w.isDown)    this.paddleLeft.y  = Math.max(topL, this.paddleLeft.y  - PADDLE_SPEED * dt);
         if (this.keys.s.isDown)    this.paddleLeft.y  = Math.min(botL, this.paddleLeft.y  + PADDLE_SPEED * dt);
@@ -363,13 +448,13 @@ class PongScene extends Phaser.Scene {
         this.ball.x += this.ballVX * dt;
         this.ball.y += this.ballVY * dt;
 
-        // Wall bounce
+        // Wall bounce — contained in play zone
         const half = BALL_SIZE / 2;
         if (this.ball.y - half <= 0) {
             this.ball.y = half;
             this.ballVY = Math.abs(this.ballVY);
-        } else if (this.ball.y + half >= CANVAS_HEIGHT) {
-            this.ball.y = CANVAS_HEIGHT - half;
+        } else if (this.ball.y + half >= PLAY_HEIGHT) {
+            this.ball.y = PLAY_HEIGHT - half;
             this.ballVY = -Math.abs(this.ballVY);
         }
 
@@ -394,7 +479,7 @@ class PongScene extends Phaser.Scene {
     checkPaddleCollision(paddle, deflectDir, smashAt, currentTime) {
         const half   = BALL_SIZE / 2;
         const halfPW = PADDLE_WIDTH / 2;
-        const halfPH = paddle.height / 2;   // live height, not the constant
+        const halfPH = paddle.height / 2;
 
         const overlapping =
             this.ball.x - half < paddle.x + halfPW &&
@@ -405,13 +490,6 @@ class PongScene extends Phaser.Scene {
         if (!overlapping) return;
         if (deflectDir ===  1 && this.ballVX > 0) return;
         if (deflectDir === -1 && this.ballVX < 0) return;
-
-        // Restore BLITZ speed before applying normal hit math
-        if (this.blitzActive) {
-            this.ballSpeed   = this.ballSpeedBeforeBlitz;
-            this.blitzActive = false;
-            if (!this.smashTintActive) this.ball.fillColor = BALL_NORMAL_TINT;
-        }
 
         this.ballSpeed = Math.min(this.ballSpeed + BALL_SPEED_INCREASE, BALL_SPEED_CAP);
 
@@ -428,8 +506,9 @@ class PongScene extends Phaser.Scene {
             this.smashTintActive = true;
             this.ball.fillColor  = BALL_SMASH_TINT;
         } else if (this.smashTintActive) {
+            // Restore to BURST tint if still active, otherwise default
             this.smashTintActive = false;
-            this.ball.fillColor  = BALL_NORMAL_TINT;
+            this.ball.fillColor  = this.BURSTActive ? BURST_TINT : BALL_NORMAL_TINT;
         }
 
         const hitOffset = (this.ball.y - paddle.y) / halfPH;
