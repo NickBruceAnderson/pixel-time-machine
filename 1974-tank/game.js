@@ -154,7 +154,7 @@ class TankScene extends Phaser.Scene {
         }).setOrigin(1, 0.5).setDepth(10);
 
         // Footer label (centered)
-        this.add.text(CANVAS_WIDTH / 2, HUD_LABEL_Y, 'Tank, first to three wins!/nControls: WASD to move. SPACE to shoot.', {
+        this.add.text(CANVAS_WIDTH / 2, HUD_LABEL_Y, 'Tank, first to three wins!\nControls: WASD to move. SPACE to shoot.', {
             fontSize: '13px', fill: '#445566', fontFamily: 'monospace',
         }).setOrigin(0.5, 0.5).setDepth(10);
 
