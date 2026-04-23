@@ -1,74 +1,50 @@
-# Pixel Time Machine — Project Context
+## Approach
+- Read files before writing. Don't re-read unless changed.
+- Skip files over 100KB unless required.
+- Thorough in reasoning, concise in output.
+- Do not guess APIs, versions, flags, or package names. Verify first.
 
-## What this is
-A browser-based game demake project. One game per year starting 1972. Built with Phaser 3 + Claude Code. Nick drives with voice (Wispr Flow), Claude Code builds, Nick reviews.
+## Core Rules
+Short sentences only. 8-10 words max.
+No filler, no preamble, no pleasantries.
+Tool first. Result first. No explain unless asked.
+Code stays normal. English gets compressed.
 
-## Stack
-- Phaser 3 via CDN (no bundler ever)
-- Vanilla JS
-- GitHub Pages (auto-deploys on push to main)
-- Claude Code — primary builder
-- VS Code with Claude Code extension — IDE and code viewer (Cursor removed)
-- Wispr Flow — voice input
+## Formatting
+Output sounds human. Never AI-generated.
+No em-dashes. No replacement hyphens.
+No parenthetical clauses.
+No emojis.
+Hyphens for standard grammar only.
 
-## Repo
-https://github.com/NickBruceAnderson/pixel-time-machine
+## Scope
+- Current working folder is the scope.
+- Do not read sibling year folders or unrelated sandbox folders unless asked.
+- Targeted reads only. File, function, or section — not broad scans.
 
-## Folder convention
-- Games: `year-game-name` (e.g. 1972-pong, 1973-pong2)
-- Sandbox: `sandbox/topic-name` (e.g. sandbox/sprites) — permanent experiment area, never shipped
+## Bug workflow
+1. State likely root cause.
+2. Propose smallest viable fix.
+3. Apply only that fix.
+- No refactoring unrelated code.
+- No full rewrites unless necessary. If necessary, say why in one sentence first.
 
-## Completed
-- 1972-pong — fully working, shipped, live on GitHub Pages
-- 1973-pong2 — MVP complete, smash mechanic implemented
+## Response format (default)
+- Issue
+- Fix
+- Verify
+- Name exact file. State what to reload or run to verify.
 
-## In progress
-- sandbox/sprites — Marle sprite walking demo, learning spritesheet workflow
+## Output discipline
+- Summarize terminal output. Never paste full logs.
+- Show only: failing lines, counts, actionable takeaway.
+- If output is long, summarize first.
 
-## Nick's profile
-CS degree (Stevens 2006-2012). Reads and reviews code, tweaks tunables manually in VS Code. Does not write code from scratch. Strong optimization instincts, prone to analysis paralysis on open-ended decisions — always push toward smallest next action. Wants pros and cons before recommendations, not just validation.
+## Repo rules
+- Stack: Phaser 3 CDN, vanilla JS, GitHub Pages. No bundler.
+- Local dev: `serve.bat` → `python -m http.server 8000`. Never `file://`.
+- Tunables block at top of every `game.js`. No magic numbers inline.
+- Readable over clever.
 
-## Claude's role — architect first
-- Flag things Nick hasn't asked about but should know
-- Present tradeoffs before making recommendations
-- Never just confirm what Nick wants to hear
-- Format copy-paste prompts for Claude Code in code blocks
-- Keep answers brief and bulleted
-- If a decision has a wrong answer, say so directly
-
-## Code philosophy
-- All tunables at top of game.js with comments
-- Readable over clever
-- No dependencies beyond Phaser 3 CDN
-- Every game runs via local server (serve.bat) or GitHub Pages — never file:// protocol
-
-## serve.bat convention
-Every folder with an index.html gets a serve.bat for local testing. Contents:
-@echo off
-start chrome http://localhost:8000
-python -m http.server 8000
-serve.bat is in .gitignore — local dev tool only.
-
-## Game feel philosophy
-Paper Mario damage system inspiration — small numbers, meaningful increments. A +1 should feel like something.
-
-## Sprite workflow
-- Frame size: 32x48, no margin
-- Physics body offset always exposed as tunables
-- Marle (marle2.png) animation map:
-  - walk-down: frames 0-3
-  - walk-right: frames 4-7
-  - walk-left: frames 8-11
-  - walk-up: frames 12-15
-
-## Git workflow
-- Commit and push after every working state
-- 365 green lights is the goal
-- Descriptive commit messages
-- node_modules, serve.bat, .claude/ in .gitignore
-
-## Next priorities
-1. Fix Marle moonwalk + add WASD controls in sandbox/sprites
-2. PHASER.md skill file in repo that grows with each game
-3. 1974 game selection TBD
-4. Eventually: Playwright tests for game logic
+## Override
+If Nick asks for deep explanation, architecture discussion, or broad brainstorming — ignore terseness for that response only.

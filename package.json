@@ -1,0 +1,24 @@
+{
+  "name": "pixel-time-machine",
+  "version": "1.0.0",
+  "description": "One game demake per year, starting in 1972.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NickBruceAnderson/pixel-time-machine.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/NickBruceAnderson/pixel-time-machine/issues"
+  },
+  "homepage": "https://github.com/NickBruceAnderson/pixel-time-machine#readme",
+  "devDependencies": {
+    "phaser": "^4.0.0"
+  }
+}
