@@ -164,8 +164,8 @@ class TankScene extends Phaser.Scene {
         const rad    = this.enemyAimAngle();
         const bullet = this.add.rectangle(ENEMY_X, ENEMY_Y, BULLET_SIZE, BULLET_SIZE, ENEMY_BULLET_COLOR);
         this.physics.add.existing(bullet);
-        bullet.body.setVelocity(Math.sin(rad) * BULLET_SPEED, -Math.cos(rad) * BULLET_SPEED);
         this.enemyBullets.add(bullet);
+        bullet.body.setVelocity(Math.sin(rad) * BULLET_SPEED, -Math.cos(rad) * BULLET_SPEED);
         this.time.delayedCall(BULLET_LIFESPAN_MS, () => { if (bullet.active) bullet.destroy(); });
     }
 
@@ -186,9 +186,9 @@ class TankScene extends Phaser.Scene {
         const spawnY = this.player.y - Math.cos(rad) * (TANK_H / 2 + BULLET_SIZE);
         const bullet = this.add.rectangle(spawnX, spawnY, BULLET_SIZE, BULLET_SIZE, PLAYER_BULLET_COLOR);
         this.physics.add.existing(bullet);
-        bullet.body.setVelocity(Math.sin(rad) * BULLET_SPEED, -Math.cos(rad) * BULLET_SPEED);
         this.playerBullets.add(bullet);
         this.playerBullet = bullet;
+        bullet.body.setVelocity(Math.sin(rad) * BULLET_SPEED, -Math.cos(rad) * BULLET_SPEED);
 
         this.time.delayedCall(BULLET_LIFESPAN_MS, () => {
             if (bullet.active) bullet.destroy();
