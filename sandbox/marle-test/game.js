@@ -840,7 +840,10 @@ function update(time, delta) {
             }
         }
     } else {
-        runToggled = shiftKey.isDown && stamina >= STAMINA_RUN_MIN;
+        // Hysteresis: stay running until stamina=0, only restart at STAMINA_RUN_MIN.
+        // Without this, stamina oscillates around the threshold and the animation
+        // alternates between run/walk every frame, freezing on frame 0.
+        runToggled = shiftKey.isDown && (runToggled ? stamina > 0 : stamina >= STAMINA_RUN_MIN);
     }
 
     let dx = 0;
