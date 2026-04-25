@@ -83,7 +83,7 @@ const MANA_ICE_COST         = 50;
 const MANA_HASTE_COST       = 100;
 
 // --- AURA SPELL ---
-const AURA_HEAL_AMOUNT = 25;
+const AURA_HEAL_AMOUNT = 1;
 const AURA_COOLDOWN_MS = 800;
 
 // --- ICE SPELL ---
@@ -155,32 +155,33 @@ const SPELL_PIP_GAP           = 3;
 const PLAYER_HEART_KEY = 'playerHeart';
 const PLAYER_HEART_PATH = 'assets/player-heart.png';
 const FLOAT_HEALTH_OFFSET_X = -12;
-const FLOAT_HEALTH_OFFSET_Y = -12;
-const FLOAT_HEART_SCALE = 0.8;
+const FLOAT_HEALTH_OFFSET_Y = -6;
+const FLOAT_HEART_SCALE = 0.6;
 const FLOAT_HEALTH_NUMBER_OFFSET_X = 0;
 const FLOAT_HEALTH_NUMBER_OFFSET_Y = 0;
 const FLOAT_HEALTH_FONT_SIZE        = 8;
 const FLOAT_HEALTH_TEXT_COLOR       = '#ffffff';
-const FLOAT_HEALTH_SHOW_START_MS    = 250;  // how long heart shows on game start
-const FLOAT_HEALTH_SHOW_HIT_MS      = 250;  // how long heart shows after a hit
+const FLOAT_HEALTH_SHOW_START_MS    = 2000;  // how long heart shows on game start
+const FLOAT_HEALTH_SHOW_CHANGE_MS      = 250;  // how long heart shows after a hit
 const FLOAT_HEALTH_FADE_MS          = 150;  // fade-out duration
 
 // --- FLOATING MANA HUD ---
-const FLOAT_MANA_OFFSET_X           = 0;
-const FLOAT_MANA_OFFSET_Y           = -44;
-const FLOAT_MANA_PIP_W              = 3;
-const FLOAT_MANA_PIP_H              = 8;
-const FLOAT_MANA_PIP_GAP            = 3;
+const FLOAT_MANA_OFFSET_X           = -10;
+const FLOAT_MANA_OFFSET_Y           = 12;
+const FLOAT_MANA_PIP_W              = 1;
+const FLOAT_MANA_PIP_H              = 2;
+const FLOAT_MANA_PIP_GAP            = 2;
 const FLOAT_MANA_BOB_AMPLITUDE      = 2;
 const FLOAT_MANA_BOB_SPEED          = 0.006;
 const FLOAT_MANA_PIP_ACTIVE_COLOR   = 0x6699ff;
 const FLOAT_MANA_PIP_EMPTY_COLOR    = 0x333355;
-const FLOAT_MANA_PIP_EMPTY_ALPHA    = 0.35;
+const FLOAT_MANA_PIP_EMPTY_ALPHA    = 0.05;
+const FLOAT_MANA_PIP_ACTIVE_ALPHA   = 1;
 
 // --- FLOATING STAMINA HUD ---
-const FLOAT_STAMINA_OFFSET_X = 12;
-const FLOAT_STAMINA_OFFSET_Y = -12;
-const FLOAT_STAMINA_RADIUS = 4;
+const FLOAT_STAMINA_OFFSET_X = 10;
+const FLOAT_STAMINA_OFFSET_Y = -6;
+const FLOAT_STAMINA_RADIUS = 3;
 const FLOAT_STAMINA_TRACK_COLOR = 0x333333;
 const FLOAT_STAMINA_FILL_COLOR = 0x00cc44;
 const FLOAT_STAMINA_LINE_W = 1;
@@ -297,8 +298,7 @@ let footerControlsObjects = [];
 let floatHealthCircle, floatHealthText;
 let floatHealthVisibleUntil = 0;
 let floatHealthFadeTween    = null;
-let floatManaPip1Bg, floatManaPip1Fill;
-let floatManaPip2Bg, floatManaPip2Fill;
+let floatManaPip1, floatManaPip2;
 let floatStaminaGfx;
 
 function showFloatingHealth(scene, durationMs) {
@@ -509,6 +509,7 @@ function create() {
         pendingSpellDirection = null;
         if (spell === 'aura') {
             health = Math.min(HEALTH_MAX, health + AURA_HEAL_AMOUNT);
+            showFloatingHealth(scene, FLOAT_HEALTH_SHOW_CHANGE_MS);
         } else if (spell === 'ice') {
             const vec = DIR_VECS[dir];
             const proj = scene.add.image(player.x + PLAYER_PROJECTILE_SPAWN_OFFSET_X * SCALE, 
@@ -682,18 +683,14 @@ function create() {
     ).setOrigin(0.5, 0.5).setDepth(21);
     const pipW = FLOAT_MANA_PIP_W * SCALE;
     const pipH = FLOAT_MANA_PIP_H * SCALE;
-    floatManaPip1Bg   = this.add.rectangle(0, 0, pipW, pipH, FLOAT_MANA_PIP_EMPTY_COLOR).setAlpha(FLOAT_MANA_PIP_EMPTY_ALPHA).setDepth(20);
-    floatManaPip1Fill = this.add.rectangle(0, 0, pipW, 1,    FLOAT_MANA_PIP_ACTIVE_COLOR).setOrigin(0.5, 1).setDepth(21);
-    floatManaPip2Bg   = this.add.rectangle(0, 0, pipW, pipH, FLOAT_MANA_PIP_EMPTY_COLOR).setAlpha(FLOAT_MANA_PIP_EMPTY_ALPHA).setDepth(20);
-    floatManaPip2Fill = this.add.rectangle(0, 0, pipW, 1,    FLOAT_MANA_PIP_ACTIVE_COLOR).setOrigin(0.5, 1).setDepth(21);
-    floatStaminaGfx   = this.add.graphics().setDepth(20);
+    floatManaPip1 = this.add.rectangle(0, 0, pipW, pipH, FLOAT_MANA_PIP_EMPTY_COLOR).setAlpha(FLOAT_MANA_PIP_EMPTY_ALPHA).setDepth(20);
+    floatManaPip2 = this.add.rectangle(0, 0, pipW, pipH, FLOAT_MANA_PIP_EMPTY_COLOR).setAlpha(FLOAT_MANA_PIP_EMPTY_ALPHA).setDepth(20);
+    floatStaminaGfx = this.add.graphics().setDepth(20);
     if (!SHOW_FLOAT_HUD) {
         floatHealthCircle.setVisible(false);
         floatHealthText.setVisible(false);
-        floatManaPip1Bg.setVisible(false);
-        floatManaPip1Fill.setVisible(false);
-        floatManaPip2Bg.setVisible(false);
-        floatManaPip2Fill.setVisible(false);
+        floatManaPip1.setVisible(false);
+        floatManaPip2.setVisible(false);
         floatStaminaGfx.setVisible(false);
     } else {
         showFloatingHealth(this, FLOAT_HEALTH_SHOW_START_MS);
@@ -835,7 +832,7 @@ function update(time, delta) {
             ep.obj.destroy();
             enemyProjectiles.splice(i, 1);
             health = Math.max(0, health - ENEMY_PROJECTILE_DAMAGE);
-            showFloatingHealth(this, FLOAT_HEALTH_SHOW_HIT_MS);
+            showFloatingHealth(this, FLOAT_HEALTH_SHOW_CHANGE_MS);
         }
     }
 
@@ -850,10 +847,8 @@ function update(time, delta) {
         for (const s of hasteSprites) s.setVisible(false);
         floatHealthCircle.setVisible(false);
         floatHealthText.setVisible(false);
-        floatManaPip1Bg.setVisible(false);
-        floatManaPip1Fill.setVisible(false);
-        floatManaPip2Bg.setVisible(false);
-        floatManaPip2Fill.setVisible(false);
+        floatManaPip1.setVisible(false);
+        floatManaPip2.setVisible(false);
         floatStaminaGfx.setVisible(false);
         goText.setVisible(true);
         goSub.setVisible(true);
@@ -995,18 +990,12 @@ function update(time, delta) {
         const pipGap      = FLOAT_MANA_PIP_GAP * SCALE;
         const pipHalfSpan = pipW / 2 + pipGap / 2;
         const bob         = Math.sin(time * FLOAT_MANA_BOB_SPEED) * FLOAT_MANA_BOB_AMPLITUDE * SCALE;
-        const p1x         = player.x + FLOAT_MANA_OFFSET_X * SCALE - pipHalfSpan;
-        const p1y         = player.y + FLOAT_MANA_OFFSET_Y * SCALE + bob;
-        const p2x         = player.x + FLOAT_MANA_OFFSET_X * SCALE + pipHalfSpan;
-        const p2y         = player.y + FLOAT_MANA_OFFSET_Y * SCALE - bob;
-        floatManaPip1Bg.setPosition(p1x, p1y);
-        floatManaPip2Bg.setPosition(p2x, p2y);
-        const pip1Ratio = Phaser.Math.Clamp(mana / 50, 0, 1);
-        const pip2Ratio = Phaser.Math.Clamp((mana - 50) / 50, 0, 1);
-        floatManaPip1Fill.setDisplaySize(pipW, Math.max(1, pipH * pip1Ratio));
-        floatManaPip1Fill.setPosition(p1x, p1y + pipH / 2);
-        floatManaPip2Fill.setDisplaySize(pipW, Math.max(1, pipH * pip2Ratio));
-        floatManaPip2Fill.setPosition(p2x, p2y + pipH / 2);
+        floatManaPip1.setPosition(player.x + FLOAT_MANA_OFFSET_X * SCALE - pipHalfSpan, player.y + FLOAT_MANA_OFFSET_Y * SCALE + bob);
+        floatManaPip2.setPosition(player.x + FLOAT_MANA_OFFSET_X * SCALE + pipHalfSpan, player.y + FLOAT_MANA_OFFSET_Y * SCALE - bob);
+        floatManaPip1.setAlpha(mana >= 50       ? FLOAT_MANA_PIP_ACTIVE_ALPHA : FLOAT_MANA_PIP_EMPTY_ALPHA);
+        floatManaPip2.setAlpha(mana >= MANA_MAX ? FLOAT_MANA_PIP_ACTIVE_ALPHA : FLOAT_MANA_PIP_EMPTY_ALPHA);
+        floatManaPip1.setFillStyle(mana >= 50       ? FLOAT_MANA_PIP_ACTIVE_COLOR : FLOAT_MANA_PIP_EMPTY_COLOR);
+        floatManaPip2.setFillStyle(mana >= MANA_MAX ? FLOAT_MANA_PIP_ACTIVE_COLOR : FLOAT_MANA_PIP_EMPTY_COLOR);
 
         floatStaminaGfx.clear();
         const showStamina = isRunning || stamina < STAMINA_MAX;
