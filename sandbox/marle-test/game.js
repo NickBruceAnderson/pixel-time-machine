@@ -113,7 +113,7 @@ const MAP_KEY          = 'forestMap';
 const MAP_PATH         = 'assets/forest-map.tmj';
 const TILESET_KEY      = 'forestTiles';
 const TILESET_PATH     = 'assets/grass.png';
-const TILESET_NAME     = 'grass';        // matches grass.tsx source in the JSON
+const TILESET_NAME     = 'grass';        // matches "name" in forest-map.tmj tilesets
 const WORLD_LAYER_NAME = 'ground';       // layer name in Tiled
 
 // --- HUD MODE ---
@@ -435,12 +435,14 @@ function create() {
     const map     = this.make.tilemap({ key: MAP_KEY });
     const tileset = map.addTilesetImage(TILESET_NAME, TILESET_KEY);
     if (!tileset) {
-        console.error('Tileset not found. Available:', map.tilesets.map(t => t.name));
+        console.error('Missing tileset:', TILESET_NAME);
+        console.error('Available tilesets:', map.tilesets.map(t => t.name));
         return;
     }
     const groundLayer = map.createLayer(WORLD_LAYER_NAME, tileset, 0, 0);
     if (!groundLayer) {
-        console.error('Layer not found. Available:', map.layers.map(l => l.name));
+        console.error('Missing layer:', WORLD_LAYER_NAME);
+        console.error('Available layers:', map.layers.map(l => l.name));
         return;
     }
     groundLayer.setScale(SCALE);
