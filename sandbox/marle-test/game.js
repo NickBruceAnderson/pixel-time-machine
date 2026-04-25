@@ -60,14 +60,15 @@ const RESTART_FONT_SIZE   = '20px';
 const GAME_OVER_COLOR     = '#ffffff';
 
 // --- HUD TUNABLES ---
-const HUD_MODE         = 'floating'; // 'footer' | 'floating'
+const HUD_MODE         = 'show-all'; // 'hide-bars' | 'hide-all' | 'show-all'
+const SHOW_FLOAT_HUD   = false;       // false = hide HP/mana/stamina indicators above Marle
 const GAME_WIDTH       = 1200;
 const GAME_HEIGHT      = 900;
 const FOOTER_HEIGHT    = 96;
 const CANVAS_HEIGHT    = GAME_HEIGHT + FOOTER_HEIGHT;
 const PLAYER_BOUNDS_PADDING_X = 16;
 const PLAYER_BOUNDS_PADDING_Y = 24;
-const FOOTER_BG_COLOR  = '#111111';
+const FOOTER_BG_COLOR  = '#1a1a2e';
 const FOOTER_TEXT_COLOR = '#ffffff';
 const FOOTER_FONT_SIZE = '16px';
 const FOOTER_PADDING_X      = 16;
@@ -75,6 +76,26 @@ const FOOTER_ACTIVE_COLOR   = '#8fd3ff';
 const FOOTER_INACTIVE_COLOR = FOOTER_TEXT_COLOR;
 const BAR_ROW_Y_OFFSET      = 18;
 const CONTROLS_ROW_Y_OFFSET = 72;
+
+// --- FLOATING HUD TUNABLES ---
+const FLOAT_HEALTH_OFFSET_X     = -46;  // from player center, negative = left
+const FLOAT_HEALTH_OFFSET_Y     = -84;  // above player center
+const FLOAT_HEART_RADIUS        = 8;
+const FLOAT_HEART_COLOR         = 0xcc2222;
+const FLOAT_HEALTH_TEXT_GAP     = 2;    // gap between circle edge and health number
+const FLOAT_HEALTH_FONT_SIZE    = '13px';
+const FLOAT_HEALTH_TEXT_COLOR   = '#ffffff';
+const FLOAT_MANA_OFFSET_X       = 0;
+const FLOAT_MANA_OFFSET_Y       = -84;
+const FLOAT_PIP_W               = 10;
+const FLOAT_PIP_H               = 16;
+const FLOAT_PIP_GAP             = 4;
+const FLOAT_STAMINA_OFFSET_X    = 46;   // from player center, positive = right
+const FLOAT_STAMINA_OFFSET_Y    = -84;
+const FLOAT_STAMINA_RADIUS      = 10;
+const FLOAT_STAMINA_TRACK_COLOR = 0x333333;
+const FLOAT_STAMINA_FILL_COLOR  = 0x00cc44;
+const FLOAT_STAMINA_LINE_W      = 3;
 
 // --- HEALTH TUNABLES ---
 const HEALTH_MAX             = 100;
@@ -217,6 +238,12 @@ let gameOver     = false;
 let restartKey;
 let goText, goSub;
 let hitboxDebugRect;
+let footerBg;
+let footerBarObjects      = [];
+let footerControlsObjects = [];
+let floatHealthCircle, floatHealthText;
+let floatManaPip1, floatManaPip2;
+let floatStaminaGfx;
 
 function preload() {
     this.load.spritesheet(SPRITE_KEY, SPRITE_PATH, {
@@ -250,6 +277,8 @@ function create() {
     hasteSprites        = [];
     dummies             = [];
     hitboxDebugRect     = null;
+    footerBarObjects      = [];
+    footerControlsObjects = [];
 
     const anims = this.anims;
 
@@ -469,7 +498,7 @@ function create() {
     });
 
     // Footer HUD — background
-    this.add.rectangle(0, GAME_HEIGHT, GAME_WIDTH, FOOTER_HEIGHT, Phaser.Display.Color.HexStringToColor(FOOTER_BG_COLOR).color)
+    footerBg = this.add.rectangle(0, GAME_HEIGHT, GAME_WIDTH, FOOTER_HEIGHT, Phaser.Display.Color.HexStringToColor(FOOTER_BG_COLOR).color)
         .setOrigin(0, 0)
         .setScrollFactor(0)
         .setDepth(10);
@@ -477,46 +506,49 @@ function create() {
     // --- Health bar ---
     const hbx = HEALTH_BAR_X;
     const hby = GAME_HEIGHT + HEALTH_BAR_Y_OFFSET;
-    this.add.rectangle(hbx, hby, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT, HEALTH_BAR_BG_COLOR)
-        .setOrigin(0, 0).setScrollFactor(0).setDepth(11);
+    footerBarObjects.push(this.add.rectangle(hbx, hby, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT, HEALTH_BAR_BG_COLOR)
+        .setOrigin(0, 0).setScrollFactor(0).setDepth(11));
     healthBarFill = this.add.rectangle(hbx, hby, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT, HEALTH_BAR_FILL_COLOR)
         .setOrigin(0, 0).setScrollFactor(0).setDepth(12);
-    this.add.rectangle(hbx + HEALTH_BAR_WIDTH / 2, hby + HEALTH_BAR_HEIGHT / 2, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT)
+    footerBarObjects.push(healthBarFill);
+    footerBarObjects.push(this.add.rectangle(hbx + HEALTH_BAR_WIDTH / 2, hby + HEALTH_BAR_HEIGHT / 2, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT)
         .setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(13)
         .setFillStyle(0x000000, 0)
-        .setStrokeStyle(1, HEALTH_BAR_BORDER_COLOR);
+        .setStrokeStyle(1, HEALTH_BAR_BORDER_COLOR));
 
     // --- Stamina bar ---
     const sbx = HEALTH_BAR_X;
     const sby = GAME_HEIGHT + STAMINA_BAR_Y_OFFSET;
-    this.add.rectangle(sbx, sby, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT, STAMINA_BAR_BG_COLOR)
-        .setOrigin(0, 0).setScrollFactor(0).setDepth(11);
+    footerBarObjects.push(this.add.rectangle(sbx, sby, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT, STAMINA_BAR_BG_COLOR)
+        .setOrigin(0, 0).setScrollFactor(0).setDepth(11));
     staminaBarFill = this.add.rectangle(sbx, sby, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT, STAMINA_BAR_FILL_COLOR)
         .setOrigin(0, 0).setScrollFactor(0).setDepth(12);
-    this.add.rectangle(sbx + HEALTH_BAR_WIDTH / 2, sby + HEALTH_BAR_HEIGHT / 2, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT)
+    footerBarObjects.push(staminaBarFill);
+    footerBarObjects.push(this.add.rectangle(sbx + HEALTH_BAR_WIDTH / 2, sby + HEALTH_BAR_HEIGHT / 2, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT)
         .setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(13)
         .setFillStyle(0x000000, 0)
-        .setStrokeStyle(1, STAMINA_BAR_BORDER_COLOR);
+        .setStrokeStyle(1, STAMINA_BAR_BORDER_COLOR));
 
     // --- Mana bar ---
     const mbx = MANA_BAR_X;
     const mby = GAME_HEIGHT + MANA_BAR_Y_OFFSET;
-    this.add.rectangle(mbx, mby, MANA_BAR_WIDTH, MANA_BAR_HEIGHT, MANA_BAR_BG_COLOR)
-        .setOrigin(0, 0).setScrollFactor(0).setDepth(11);
+    footerBarObjects.push(this.add.rectangle(mbx, mby, MANA_BAR_WIDTH, MANA_BAR_HEIGHT, MANA_BAR_BG_COLOR)
+        .setOrigin(0, 0).setScrollFactor(0).setDepth(11));
     manaBarFill = this.add.rectangle(mbx, mby, 0, MANA_BAR_HEIGHT, MANA_BAR_FILL_COLOR)
         .setOrigin(0, 0).setScrollFactor(0).setDepth(12);
-    this.add.rectangle(mbx + MANA_BAR_WIDTH / 2, mby + MANA_BAR_HEIGHT / 2, MANA_BAR_WIDTH, MANA_BAR_HEIGHT)
+    footerBarObjects.push(manaBarFill);
+    footerBarObjects.push(this.add.rectangle(mbx + MANA_BAR_WIDTH / 2, mby + MANA_BAR_HEIGHT / 2, MANA_BAR_WIDTH, MANA_BAR_HEIGHT)
         .setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(13)
         .setFillStyle(0x000000, 0)
-        .setStrokeStyle(1, MANA_BAR_BORDER_COLOR);
+        .setStrokeStyle(1, MANA_BAR_BORDER_COLOR));
 
     // --- Mana bar center divider (3 segmented dots at 50%) ---
     const divX  = mbx + MANA_BAR_WIDTH / 2 - 1;
     const segH  = 4;
     const segGap = 3;
     for (let si = 0; si < 3; si++) {
-        this.add.rectangle(divX, mby + si * (segH + segGap), 2, segH, MANA_BAR_DIVIDER_COLOR)
-            .setOrigin(0, 0).setScrollFactor(0).setDepth(14);
+        footerBarObjects.push(this.add.rectangle(divX, mby + si * (segH + segGap), 2, segH, MANA_BAR_DIVIDER_COLOR)
+            .setOrigin(0, 0).setScrollFactor(0).setDepth(14));
     }
 
     // --- Controls row ---
@@ -527,6 +559,7 @@ function create() {
         const t = this.add.text(cx, fy, txt, { ...baseStyle, color: FOOTER_INACTIVE_COLOR })
             .setOrigin(0, 0.5).setScrollFactor(0).setDepth(11);
         cx += t.width;
+        footerControlsObjects.push(t);
         return t;
     };
     const fp = () => {
@@ -534,6 +567,7 @@ function create() {
         const p = this.add.rectangle(cx, fy, SPELL_PIP_WIDTH, SPELL_PIP_HEIGHT, MANA_PIP_COLOR_EMPTY)
             .setOrigin(0, 0.5).setScrollFactor(0).setDepth(12);
         cx += SPELL_PIP_WIDTH;
+        footerControlsObjects.push(p);
         return p;
     };
     footerW        = ft('W');
@@ -551,6 +585,37 @@ function create() {
     footerIce   = ft('2 Ice');   pipIce    = fp();
     ft('  |  ');
     footerHaste = ft('3 Haste'); pipHaste1 = fp(); pipHaste2 = fp();
+
+    // Apply footer visibility based on HUD_MODE
+    if (HUD_MODE === 'hide-bars' || HUD_MODE === 'hide-all') {
+        for (const o of footerBarObjects) o.setVisible(false);
+    }
+    if (HUD_MODE === 'hide-all') {
+        footerBg.setVisible(false);
+        for (const o of footerControlsObjects) o.setVisible(false);
+    }
+
+    // Floating HUD — visible in all modes
+    floatHealthCircle = this.add.circle(
+        player.x + FLOAT_HEALTH_OFFSET_X, player.y + FLOAT_HEALTH_OFFSET_Y,
+        FLOAT_HEART_RADIUS, FLOAT_HEART_COLOR
+    ).setDepth(20);
+    floatHealthText = this.add.text(
+        player.x + FLOAT_HEALTH_OFFSET_X + FLOAT_HEART_RADIUS + FLOAT_HEALTH_TEXT_GAP,
+        player.y + FLOAT_HEALTH_OFFSET_Y,
+        String(Math.ceil(health)),
+        { fontSize: FLOAT_HEALTH_FONT_SIZE, fontFamily: 'monospace', color: FLOAT_HEALTH_TEXT_COLOR }
+    ).setOrigin(0, 0.5).setDepth(21);
+    floatManaPip1 = this.add.rectangle(0, 0, FLOAT_PIP_W, FLOAT_PIP_H, MANA_PIP_COLOR_EMPTY).setDepth(20);
+    floatManaPip2 = this.add.rectangle(0, 0, FLOAT_PIP_W, FLOAT_PIP_H, MANA_PIP_COLOR_EMPTY).setDepth(20);
+    floatStaminaGfx = this.add.graphics().setDepth(20);
+    if (!SHOW_FLOAT_HUD) {
+        floatHealthCircle.setVisible(false);
+        floatHealthText.setVisible(false);
+        floatManaPip1.setVisible(false);
+        floatManaPip2.setVisible(false);
+        floatStaminaGfx.setVisible(false);
+    }
 
     // Game over overlay (hidden until death)
     goText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 30, GAME_OVER_TEXT, {
@@ -700,6 +765,11 @@ function update(time, delta) {
         pendingSpellDirection = null;
         player.setVisible(false);
         for (const s of hasteSprites) s.setVisible(false);
+        floatHealthCircle.setVisible(false);
+        floatHealthText.setVisible(false);
+        floatManaPip1.setVisible(false);
+        floatManaPip2.setVisible(false);
+        floatStaminaGfx.setVisible(false);
         goText.setVisible(true);
         goSub.setVisible(true);
         return;
@@ -807,6 +877,37 @@ function update(time, delta) {
     // Clamp player to gameplay area
     player.x = Phaser.Math.Clamp(player.x, PLAYER_BOUNDS_PADDING_X, GAME_WIDTH  - PLAYER_BOUNDS_PADDING_X);
     player.y = Phaser.Math.Clamp(player.y, PLAYER_BOUNDS_PADDING_Y, GAME_HEIGHT - PLAYER_BOUNDS_PADDING_Y);
+
+    // Floating HUD — follow player each frame
+    if (SHOW_FLOAT_HUD) {
+        floatHealthCircle.setPosition(player.x + FLOAT_HEALTH_OFFSET_X, player.y + FLOAT_HEALTH_OFFSET_Y);
+        floatHealthText.setPosition(
+            player.x + FLOAT_HEALTH_OFFSET_X + FLOAT_HEART_RADIUS + FLOAT_HEALTH_TEXT_GAP,
+            player.y + FLOAT_HEALTH_OFFSET_Y
+        );
+        floatHealthText.setText(String(Math.ceil(health)));
+        const pipHalfSpan = FLOAT_PIP_W / 2 + FLOAT_PIP_GAP / 2;
+        floatManaPip1.setPosition(player.x + FLOAT_MANA_OFFSET_X - pipHalfSpan, player.y + FLOAT_MANA_OFFSET_Y);
+        floatManaPip2.setPosition(player.x + FLOAT_MANA_OFFSET_X + pipHalfSpan, player.y + FLOAT_MANA_OFFSET_Y);
+        floatManaPip1.setFillStyle(mana >= 50       ? MANA_PIP_COLOR_READY : MANA_PIP_COLOR_EMPTY);
+        floatManaPip2.setFillStyle(mana >= MANA_MAX ? MANA_PIP_COLOR_READY : MANA_PIP_COLOR_EMPTY);
+        floatStaminaGfx.clear();
+        const showStamina = isRunning || stamina < STAMINA_MAX;
+        floatStaminaGfx.setVisible(showStamina);
+        if (showStamina) {
+            const sx = player.x + FLOAT_STAMINA_OFFSET_X;
+            const sy = player.y + FLOAT_STAMINA_OFFSET_Y;
+            floatStaminaGfx.lineStyle(FLOAT_STAMINA_LINE_W, FLOAT_STAMINA_TRACK_COLOR, 1);
+            floatStaminaGfx.beginPath();
+            floatStaminaGfx.arc(sx, sy, FLOAT_STAMINA_RADIUS, 0, Math.PI * 2, false);
+            floatStaminaGfx.strokePath();
+            const fillAngle = Math.PI * 2 * (stamina / STAMINA_MAX);
+            floatStaminaGfx.lineStyle(FLOAT_STAMINA_LINE_W, FLOAT_STAMINA_FILL_COLOR, 1);
+            floatStaminaGfx.beginPath();
+            floatStaminaGfx.arc(sx, sy, FLOAT_STAMINA_RADIUS, -Math.PI / 2, -Math.PI / 2 + fillAngle, false);
+            floatStaminaGfx.strokePath();
+        }
+    }
 
     // Direction: horizontal overrides vertical
     if (moving) {
