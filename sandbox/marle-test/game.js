@@ -1,163 +1,198 @@
 // --- TUNABLES ---
+
+// --- GAME CONFIG ---
+const GAME_WIDTH       = 1200;
+const GAME_HEIGHT      = 900;
+const FOOTER_HEIGHT    = 96;
+const CANVAS_HEIGHT    = GAME_HEIGHT + FOOTER_HEIGHT;
+const SCALE            = 3;
+
+// --- PLAYER SPRITE ---
 const SPRITE_KEY       = 'marle';
 const SPRITE_PATH      = 'assets/marle5.png';
 const FRAME_WIDTH      = 32;
 const FRAME_HEIGHT     = 48;
 const FRAMES_PER_ROW   = 17;
-const SCALE            = 3;
 const START_X          = 400;
 const START_Y          = 300;
+
+// --- PLAYER MOVEMENT ---
 const MOVE_SPEED       = 200;
 const RUN_MULTIPLIER   = 3;
+const RUN_TOGGLE_MODE  = false;
+
+// --- PLAYER ANIMATION FRAMES ---
 const IDLE_FRAME       = 0;
 const WALK_START       = 1;
 const WALK_END         = 6;
 const RUN_START        = 7;
 const RUN_END          = 8;
 const RUN_SEQUENCE     = [1, 2, 7, 7, 4, 5, 8, 8];
-const SHOOT_READY_FRAME  = 9;
-const SHOOT_FIRE_FRAME   = 10;
-const SHOOT_FRAME_RATE   = 10;
-const CAST_START              = 11;
-const CAST_END                = 16;
-const CAST_FRAME_RATE         = 10;
-const CAST_RELEASE_FRAME      = 16;
-const CAST_CANCELS_ON_SHOOT   = false;
-const PROJECTILE_SPEED   = 2000;
-const PROJECTILE_SIZE    = 10;
-const PROJECTILE_LIFETIME = 1000;
-const PLAYER_PROJECTILE_SPAWN_OFFSET_X = 0;
-const PLAYER_PROJECTILE_SPAWN_OFFSET_Y = 8;
-const SHOOT_COOLDOWN_MS  = 300;
-const AURA_HEAL_AMOUNT         = 25;
-const AURA_COOLDOWN_MS         = 800;
-const ICE_PROJECTILE_KEY       = 'iceProjectile';
-const ICE_PROJECTILE_PATH      = 'assets/OanIceBlast3.png';
-const ICE_PROJECTILE_ANGLES    = {up: 0, right: 90, down: 180, left: 270};
-const ICE_PROJECTILE_SCALE     = 1;
-const ICE_PROJECTILE_WIDTH     = 48;
-const ICE_PROJECTILE_HEIGHT    = 48;
-const ICE_PROJECTILE_SPEED     = 700;
-const ICE_PROJECTILE_LIFETIME  = 1400;
-const ICE_COOLDOWN_MS          = 1000;
-const HASTE_DURATION_MS  = 10000;
-const HASTE_SHOOT_DIVISOR = 3;
-const HASTE_OUTLINE_COLOR      = 0xffa500;
-const OUTLINE_SOURCE_PIXELS    = 1;
-const BUFF_FLASH_START_MS      = 3000;
-const BUFF_FAST_FLASH_START_MS = 1000;
-const BUFF_FLASH_SLOW_MS       = 300;
-const BUFF_FLASH_FAST_MS       = 100;
-const BASIC_SHOT_DAMAGE           = 1;
-const ICE_DAMAGE                  = 5;
 
-// --- PLAYER HITBOX TUNABLES ---
+const SHOOT_READY_FRAME = 9;
+const SHOOT_FIRE_FRAME  = 10;
+const SHOOT_FRAME_RATE  = 10;
+
+const CAST_START            = 11;
+const CAST_END              = 16;
+const CAST_FRAME_RATE       = 10;
+const CAST_RELEASE_FRAME    = 16;
+const CAST_CANCELS_ON_SHOOT = false;
+
+// --- PLAYER HITBOX ---
 const PLAYER_HITBOX_WIDTH    = 10;
 const PLAYER_HITBOX_HEIGHT   = 32;
 const PLAYER_HITBOX_OFFSET_X = 0;
 const PLAYER_HITBOX_OFFSET_Y = 8;
-const HITBOX_DEBUG           = true;
+const HITBOX_DEBUG           = false;
 const HITBOX_DEBUG_COLOR     = 0xff0000;
+
+// --- PLAYER BOUNDS ---
+const PLAYER_BOUNDS_PADDING_X = 16;
+const PLAYER_BOUNDS_PADDING_Y = 24;
+
+// --- PLAYER COMBAT ---
+const BASIC_SHOT_DAMAGE = 1;
+const ICE_DAMAGE        = 5;
+
+const PROJECTILE_SPEED    = 2000;
+const PROJECTILE_SIZE     = 10;
+const PROJECTILE_LIFETIME = 1000;
+const SHOOT_COOLDOWN_MS   = 300;
+
+const PLAYER_PROJECTILE_SPAWN_OFFSET_X = 0;
+const PLAYER_PROJECTILE_SPAWN_OFFSET_Y = 8;
+
+// --- PLAYER HEALTH ---
+const HEALTH_MAX   = 3;
+const HEALTH_START = 3;
+
+// --- PLAYER STAMINA ---
+const STAMINA_MAX              = 100;
+const STAMINA_START            = 100;
+const STAMINA_DRAIN_PER_SECOND = 25;
+const STAMINA_REGEN_PER_SECOND = 20;
+const STAMINA_RUN_MIN          = 5;
+
+// --- PLAYER MANA ---
+const MANA_MAX              = 100;
+const MANA_START            = 0;
+const MANA_REGEN_PER_SECOND = 20;
+const MANA_AURA_COST        = 50;
+const MANA_ICE_COST         = 50;
+const MANA_HASTE_COST       = 100;
+
+// --- AURA SPELL ---
+const AURA_HEAL_AMOUNT = 25;
+const AURA_COOLDOWN_MS = 800;
+
+// --- ICE SPELL ---
+const ICE_PROJECTILE_KEY      = 'iceProjectile';
+const ICE_PROJECTILE_PATH     = 'assets/OanIceBlast3.png';
+const ICE_PROJECTILE_ANGLES   = { up: 0, right: 90, down: 180, left: 270 };
+const ICE_PROJECTILE_SCALE    = 1;
+const ICE_PROJECTILE_WIDTH    = 48;
+const ICE_PROJECTILE_HEIGHT   = 48;
+const ICE_PROJECTILE_SPEED    = 700;
+const ICE_PROJECTILE_LIFETIME = 1400;
+const ICE_COOLDOWN_MS         = 1000;
+
+// --- HASTE SPELL ---
+const HASTE_DURATION_MS       = 10000;
+const HASTE_SHOOT_DIVISOR    = 3;
+const HASTE_OUTLINE_COLOR    = 0xffa500;
+const OUTLINE_SOURCE_PIXELS  = 1;
+const BUFF_FLASH_START_MS    = 3000;
+const BUFF_FAST_FLASH_START_MS = 1000;
+const BUFF_FLASH_SLOW_MS     = 300;
+const BUFF_FLASH_FAST_MS     = 100;
+
+// --- HUD MODE ---
+const HUD_MODE       = 'hide-bars'; // 'hide-bars' | 'hide-all' | 'show-all'
+const SHOW_FLOAT_HUD = true;
+
+// --- FOOTER HUD ---
+const FOOTER_BG_COLOR        = '#1a1a2e';
+const FOOTER_TEXT_COLOR      = '#ffffff';
+const FOOTER_FONT_SIZE       = '16px';
+const FOOTER_PADDING_X       = 16;
+const FOOTER_ACTIVE_COLOR    = '#8fd3ff';
+const FOOTER_INACTIVE_COLOR  = FOOTER_TEXT_COLOR;
+const BAR_ROW_Y_OFFSET       = 18;
+const CONTROLS_ROW_Y_OFFSET  = 72;
+
+// --- FOOTER HEALTH BAR ---
+const HEALTH_BAR_X            = 16;
+const HEALTH_BAR_Y_OFFSET     = BAR_ROW_Y_OFFSET;
+const HEALTH_BAR_WIDTH        = 240;
+const HEALTH_BAR_HEIGHT       = 18;
+const HEALTH_BAR_BG_COLOR     = 0x221111;
+const HEALTH_BAR_FILL_COLOR   = 0xcc2222;
+const HEALTH_BAR_BORDER_COLOR = 0xffffff;
+
+// --- FOOTER STAMINA BAR ---
+const STAMINA_BAR_Y_OFFSET     = 42;
+const STAMINA_BAR_BG_COLOR     = 0x223322;
+const STAMINA_BAR_FILL_COLOR   = 0x00cc44;
+const STAMINA_BAR_BORDER_COLOR = 0xffffff;
+
+// --- FOOTER MANA BAR ---
+const MANA_BAR_X              = 400;
+const MANA_BAR_Y_OFFSET       = BAR_ROW_Y_OFFSET;
+const MANA_BAR_WIDTH          = 240;
+const MANA_BAR_HEIGHT         = 18;
+const MANA_BAR_BG_COLOR       = 0x222244;
+const MANA_BAR_FILL_COLOR     = 0x3366ff;
+const MANA_BAR_BORDER_COLOR   = 0xffffff;
+const MANA_BAR_DIVIDER_COLOR  = 0x8899cc;
+const MANA_PIP_COLOR_READY    = 0x6699ff;
+const MANA_PIP_COLOR_EMPTY    = 0x333355;
+const SPELL_PIP_WIDTH         = 5;
+const SPELL_PIP_HEIGHT        = 12;
+const SPELL_PIP_GAP           = 3;
+
+// --- FLOATING HEALTH HUD ---
 const PLAYER_HEART_KEY = 'playerHeart';
 const PLAYER_HEART_PATH = 'assets/player-heart.png';
-const FLOAT_HEART_SCALE = 1;
+const FLOAT_HEALTH_OFFSET_X = -12;
+const FLOAT_HEALTH_OFFSET_Y = -12;
+const FLOAT_HEART_SCALE = 0.8;
 const FLOAT_HEALTH_NUMBER_OFFSET_X = 0;
 const FLOAT_HEALTH_NUMBER_OFFSET_Y = 0;
+const FLOAT_HEALTH_FONT_SIZE        = 8;
+const FLOAT_HEALTH_TEXT_COLOR       = '#ffffff';
+const FLOAT_HEALTH_SHOW_START_MS    = 250;  // how long heart shows on game start
+const FLOAT_HEALTH_SHOW_HIT_MS      = 250;  // how long heart shows after a hit
+const FLOAT_HEALTH_FADE_MS          = 150;  // fade-out duration
 
-// --- GAME OVER TUNABLES ---
+// --- FLOATING MANA HUD ---
+const FLOAT_MANA_OFFSET_X           = 0;
+const FLOAT_MANA_OFFSET_Y           = -44;
+const FLOAT_MANA_PIP_W              = 3;
+const FLOAT_MANA_PIP_H              = 8;
+const FLOAT_MANA_PIP_GAP            = 3;
+const FLOAT_MANA_BOB_AMPLITUDE      = 2;
+const FLOAT_MANA_BOB_SPEED          = 0.006;
+const FLOAT_MANA_PIP_ACTIVE_COLOR   = 0x6699ff;
+const FLOAT_MANA_PIP_EMPTY_COLOR    = 0x333355;
+const FLOAT_MANA_PIP_EMPTY_ALPHA    = 0.35;
+
+// --- FLOATING STAMINA HUD ---
+const FLOAT_STAMINA_OFFSET_X = 12;
+const FLOAT_STAMINA_OFFSET_Y = -12;
+const FLOAT_STAMINA_RADIUS = 4;
+const FLOAT_STAMINA_TRACK_COLOR = 0x333333;
+const FLOAT_STAMINA_FILL_COLOR = 0x00cc44;
+const FLOAT_STAMINA_LINE_W = 1;
+
+// --- GAME OVER ---
 const GAME_OVER_TEXT      = 'GAME OVER';
 const RESTART_TEXT        = 'Press R to restart';
 const GAME_OVER_FONT_SIZE = '48px';
 const RESTART_FONT_SIZE   = '20px';
 const GAME_OVER_COLOR     = '#ffffff';
 
-// --- HUD TUNABLES ---
-const HUD_MODE         = 'hide-bars'; // 'hide-bars' | 'hide-all' | 'show-all'
-const SHOW_FLOAT_HUD   = true;       // false = hide HP/mana/stamina indicators above Marle
-const GAME_WIDTH       = 1200;
-const GAME_HEIGHT      = 900;
-const FOOTER_HEIGHT    = 96;
-const CANVAS_HEIGHT    = GAME_HEIGHT + FOOTER_HEIGHT;
-const PLAYER_BOUNDS_PADDING_X = 16;
-const PLAYER_BOUNDS_PADDING_Y = 24;
-const FOOTER_BG_COLOR  = '#1a1a2e';
-const FOOTER_TEXT_COLOR = '#ffffff';
-const FOOTER_FONT_SIZE = '16px';
-const FOOTER_PADDING_X      = 16;
-const FOOTER_ACTIVE_COLOR   = '#8fd3ff';
-const FOOTER_INACTIVE_COLOR = FOOTER_TEXT_COLOR;
-const BAR_ROW_Y_OFFSET      = 18;
-const CONTROLS_ROW_Y_OFFSET = 72;
-
-// --- FLOATING HUD TUNABLES ---
-const FLOAT_HEALTH_OFFSET_X     = -46;  // from player center, negative = left
-const FLOAT_HEALTH_OFFSET_Y     = -84;  // above player center
-const FLOAT_HEART_RADIUS        = 8;
-const FLOAT_HEART_COLOR         = 0xcc2222;
-const FLOAT_HEALTH_TEXT_GAP     = 2;    // gap between circle edge and health number
-const FLOAT_HEALTH_FONT_SIZE    = 13;
-const FLOAT_HEALTH_TEXT_COLOR   = '#ffffff';
-const FLOAT_MANA_OFFSET_X       = 0;
-const FLOAT_MANA_OFFSET_Y       = -84;
-const FLOAT_PIP_W               = 10;
-const FLOAT_PIP_H               = 16;
-const FLOAT_PIP_GAP             = 4;
-const FLOAT_STAMINA_OFFSET_X    = 46;   // from player center, positive = right
-const FLOAT_STAMINA_OFFSET_Y    = -84;
-const FLOAT_STAMINA_RADIUS      = 10;
-const FLOAT_STAMINA_TRACK_COLOR = 0x333333;
-const FLOAT_STAMINA_FILL_COLOR  = 0x00cc44;
-const FLOAT_STAMINA_LINE_W      = 3;
-const FLOAT_MANA_RADIUS         = 10;
-const FLOAT_MANA_TRACK_COLOR    = 0x333355;
-const FLOAT_MANA_FILL_COLOR     = 0x3366ff;
-const FLOAT_MANA_LINE_W         = 3;
-
-// --- HEALTH TUNABLES ---
-const HEALTH_MAX             = 3;
-const HEALTH_START           = 3;
-const HEALTH_BAR_X           = 16;
-const HEALTH_BAR_Y_OFFSET    = BAR_ROW_Y_OFFSET;
-const HEALTH_BAR_WIDTH       = 240;
-const HEALTH_BAR_HEIGHT      = 18;
-const HEALTH_BAR_BG_COLOR    = 0x221111;
-const HEALTH_BAR_FILL_COLOR  = 0xcc2222;
-const HEALTH_BAR_BORDER_COLOR = 0xffffff;
-
-// --- STAMINA TUNABLES ---
-const STAMINA_MAX              = 100;
-const STAMINA_START            = 100;
-const STAMINA_DRAIN_PER_SECOND = 25;
-const STAMINA_REGEN_PER_SECOND = 20;
-const STAMINA_RUN_MIN          = 5;
-const RUN_TOGGLE_MODE          = false;
-const STAMINA_BAR_Y_OFFSET     = 42;
-const STAMINA_BAR_BG_COLOR     = 0x223322;
-const STAMINA_BAR_FILL_COLOR   = 0x00cc44;
-const STAMINA_BAR_BORDER_COLOR = 0xffffff;
-
-// --- MANA TUNABLES ---
-const MANA_MAX               = 100;
-const MANA_START             = 0;
-const MANA_REGEN_PER_SECOND  = 20;
-const MANA_AURA_COST         = 50;
-const MANA_ICE_COST          = 50;
-const MANA_HASTE_COST        = 100;
-const MANA_BAR_X             = 400;
-const MANA_BAR_Y_OFFSET      = BAR_ROW_Y_OFFSET;
-const MANA_BAR_WIDTH         = 240;
-const MANA_BAR_HEIGHT        = 18;
-const MANA_BAR_BG_COLOR      = 0x222244;
-const MANA_BAR_FILL_COLOR    = 0x3366ff;
-const MANA_BAR_BORDER_COLOR  = 0xffffff;
-const MANA_PIP_COLOR_READY     = 0x6699ff;
-const MANA_PIP_COLOR_EMPTY     = 0x333355;
-const MANA_BAR_DIVIDER_COLOR   = 0x8899cc;
-const SPELL_PIP_WIDTH          = 5;
-const SPELL_PIP_HEIGHT         = 12;
-const SPELL_PIP_GAP            = 3;
-
-// --- DUMMY TUNABLES ---
+// --- DUMMY TARGETS ---
 const DUMMY_X                     = 600;
 const DUMMY_Y                     = 300;
 const DUMMY_WIDTH                 = 28;
@@ -178,6 +213,8 @@ const DUMMY_EYE_SMALL_RADIUS      = 2;
 const DUMMY_EYE_COLOR             = 0x000000;
 const DUMMY_MOUTH_COLOR           = 0x000000;
 const TOP_DUMMY_COLOR             = 0xaa4a3a;
+
+// --- ENEMY PROJECTILES ---
 const ENEMY_PROJECTILE_COLOR      = 0xff3333;
 const ENEMY_PROJECTILE_WIDTH      = 10;
 const ENEMY_PROJECTILE_HEIGHT     = 6;
@@ -258,8 +295,19 @@ let footerBg;
 let footerBarObjects      = [];
 let footerControlsObjects = [];
 let floatHealthCircle, floatHealthText;
-let floatManaGfx;
+let floatHealthVisibleUntil = 0;
+let floatHealthFadeTween    = null;
+let floatManaPip1Bg, floatManaPip1Fill;
+let floatManaPip2Bg, floatManaPip2Fill;
 let floatStaminaGfx;
+
+function showFloatingHealth(scene, durationMs) {
+    if (!SHOW_FLOAT_HUD) return;
+    if (floatHealthFadeTween) { floatHealthFadeTween.stop(); floatHealthFadeTween = null; }
+    floatHealthCircle.setAlpha(1).setVisible(true);
+    floatHealthText.setAlpha(1).setVisible(true);
+    floatHealthVisibleUntil = scene.time.now + durationMs;
+}
 
 function preload() {
     this.load.spritesheet(SPRITE_KEY, SPRITE_PATH, {frameWidth:  FRAME_WIDTH, frameHeight: FRAME_HEIGHT});
@@ -632,13 +680,23 @@ function create() {
         String(Math.ceil(health)),
         { fontSize: `${FLOAT_HEALTH_FONT_SIZE * SCALE}px`, fontFamily: 'monospace', color: FLOAT_HEALTH_TEXT_COLOR }
     ).setOrigin(0.5, 0.5).setDepth(21);
-    floatManaGfx    = this.add.graphics().setDepth(20);
-    floatStaminaGfx = this.add.graphics().setDepth(20);
+    const pipW = FLOAT_MANA_PIP_W * SCALE;
+    const pipH = FLOAT_MANA_PIP_H * SCALE;
+    floatManaPip1Bg   = this.add.rectangle(0, 0, pipW, pipH, FLOAT_MANA_PIP_EMPTY_COLOR).setAlpha(FLOAT_MANA_PIP_EMPTY_ALPHA).setDepth(20);
+    floatManaPip1Fill = this.add.rectangle(0, 0, pipW, 1,    FLOAT_MANA_PIP_ACTIVE_COLOR).setOrigin(0.5, 1).setDepth(21);
+    floatManaPip2Bg   = this.add.rectangle(0, 0, pipW, pipH, FLOAT_MANA_PIP_EMPTY_COLOR).setAlpha(FLOAT_MANA_PIP_EMPTY_ALPHA).setDepth(20);
+    floatManaPip2Fill = this.add.rectangle(0, 0, pipW, 1,    FLOAT_MANA_PIP_ACTIVE_COLOR).setOrigin(0.5, 1).setDepth(21);
+    floatStaminaGfx   = this.add.graphics().setDepth(20);
     if (!SHOW_FLOAT_HUD) {
         floatHealthCircle.setVisible(false);
         floatHealthText.setVisible(false);
-        floatManaGfx.setVisible(false);
+        floatManaPip1Bg.setVisible(false);
+        floatManaPip1Fill.setVisible(false);
+        floatManaPip2Bg.setVisible(false);
+        floatManaPip2Fill.setVisible(false);
         floatStaminaGfx.setVisible(false);
+    } else {
+        showFloatingHealth(this, FLOAT_HEALTH_SHOW_START_MS);
     }
 
     // Game over overlay (hidden until death)
@@ -777,6 +835,7 @@ function update(time, delta) {
             ep.obj.destroy();
             enemyProjectiles.splice(i, 1);
             health = Math.max(0, health - ENEMY_PROJECTILE_DAMAGE);
+            showFloatingHealth(this, FLOAT_HEALTH_SHOW_HIT_MS);
         }
     }
 
@@ -791,7 +850,10 @@ function update(time, delta) {
         for (const s of hasteSprites) s.setVisible(false);
         floatHealthCircle.setVisible(false);
         floatHealthText.setVisible(false);
-        floatManaGfx.setVisible(false);
+        floatManaPip1Bg.setVisible(false);
+        floatManaPip1Fill.setVisible(false);
+        floatManaPip2Bg.setVisible(false);
+        floatManaPip2Fill.setVisible(false);
         floatStaminaGfx.setVisible(false);
         goText.setVisible(true);
         goSub.setVisible(true);
@@ -910,25 +972,42 @@ function update(time, delta) {
             player.x + FLOAT_HEALTH_OFFSET_X * SCALE,
             player.y + FLOAT_HEALTH_OFFSET_Y * SCALE
         );
-
         floatHealthText.setPosition(
             player.x + FLOAT_HEALTH_OFFSET_X * SCALE + FLOAT_HEALTH_NUMBER_OFFSET_X * SCALE,
             player.y + FLOAT_HEALTH_OFFSET_Y * SCALE + FLOAT_HEALTH_NUMBER_OFFSET_Y * SCALE
         );
-
         floatHealthText.setText(String(Math.ceil(health)));
-        const mx = player.x + FLOAT_MANA_OFFSET_X * SCALE;
-        const my = player.y + FLOAT_MANA_OFFSET_Y * SCALE;
-        floatManaGfx.clear();
-        floatManaGfx.lineStyle(FLOAT_MANA_LINE_W * SCALE, FLOAT_MANA_TRACK_COLOR, 1);
-        floatManaGfx.beginPath();
-        floatManaGfx.arc(mx, my, FLOAT_MANA_RADIUS * SCALE, 0, Math.PI * 2, false);
-        floatManaGfx.strokePath();
-        const manaFillAngle = Math.PI * 2 * (mana / MANA_MAX);
-        floatManaGfx.lineStyle(FLOAT_MANA_LINE_W * SCALE, FLOAT_MANA_FILL_COLOR, 1);
-        floatManaGfx.beginPath();
-        floatManaGfx.arc(mx, my, FLOAT_MANA_RADIUS * SCALE, -Math.PI / 2, -Math.PI / 2 + manaFillAngle, false);
-        floatManaGfx.strokePath();
+        if (this.time.now >= floatHealthVisibleUntil && floatHealthFadeTween === null && floatHealthCircle.visible) {
+            floatHealthFadeTween = this.tweens.add({
+                targets: [floatHealthCircle, floatHealthText],
+                alpha: 0,
+                duration: FLOAT_HEALTH_FADE_MS,
+                onComplete: () => {
+                    floatHealthCircle.setVisible(false);
+                    floatHealthText.setVisible(false);
+                    floatHealthFadeTween = null;
+                }
+            });
+        }
+
+        const pipW        = FLOAT_MANA_PIP_W   * SCALE;
+        const pipH        = FLOAT_MANA_PIP_H   * SCALE;
+        const pipGap      = FLOAT_MANA_PIP_GAP * SCALE;
+        const pipHalfSpan = pipW / 2 + pipGap / 2;
+        const bob         = Math.sin(time * FLOAT_MANA_BOB_SPEED) * FLOAT_MANA_BOB_AMPLITUDE * SCALE;
+        const p1x         = player.x + FLOAT_MANA_OFFSET_X * SCALE - pipHalfSpan;
+        const p1y         = player.y + FLOAT_MANA_OFFSET_Y * SCALE + bob;
+        const p2x         = player.x + FLOAT_MANA_OFFSET_X * SCALE + pipHalfSpan;
+        const p2y         = player.y + FLOAT_MANA_OFFSET_Y * SCALE - bob;
+        floatManaPip1Bg.setPosition(p1x, p1y);
+        floatManaPip2Bg.setPosition(p2x, p2y);
+        const pip1Ratio = Phaser.Math.Clamp(mana / 50, 0, 1);
+        const pip2Ratio = Phaser.Math.Clamp((mana - 50) / 50, 0, 1);
+        floatManaPip1Fill.setDisplaySize(pipW, Math.max(1, pipH * pip1Ratio));
+        floatManaPip1Fill.setPosition(p1x, p1y + pipH / 2);
+        floatManaPip2Fill.setDisplaySize(pipW, Math.max(1, pipH * pip2Ratio));
+        floatManaPip2Fill.setPosition(p2x, p2y + pipH / 2);
+
         floatStaminaGfx.clear();
         const showStamina = isRunning || stamina < STAMINA_MAX;
         floatStaminaGfx.setVisible(showStamina);
