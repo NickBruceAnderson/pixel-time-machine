@@ -76,7 +76,7 @@ const STAMINA_RUN_MIN          = 5;
 
 // --- PLAYER MANA ---
 const MANA_MAX              = 100;
-const MANA_START            = 0;
+const MANA_START            = 100;
 const MANA_REGEN_PER_SECOND = 20;
 const MANA_AURA_COST        = 50;
 const MANA_ICE_COST         = 50;
@@ -102,7 +102,7 @@ const HASTE_DURATION_MS        = 10000;
 const HASTE_SHOOT_DIVISOR      = 3;
 const HASTE_OUTLINE_COLOR_CSS  = '#ff9900';
 const HASTE_OUTLINE_ALPHA      = 0.8;
-const OUTLINE_SOURCE_PIXELS    = 2;
+const HASTE_OUTLINE_SIZE       = 4;    // glow strength (WebGL) or sprite offset (Canvas fallback)
 const BUFF_FLASH_START_MS      = 3000;
 const BUFF_FAST_FLASH_START_MS = 1000;
 const BUFF_FLASH_SLOW_MS       = 300;
@@ -314,7 +314,8 @@ let pendingSpellDirection = null;
 let hasteEndTime  = -Infinity;
 let lastAuraTime  = -Infinity;
 let lastIceTime   = -Infinity;
-let hasteSprites = [];
+let hasteSprites  = [];
+let hasteGlowFx   = null;
 let key1, key2, key3;
 let footerW, footerA, footerS, footerD, footerShiftRun, footerLmbShoot, footerAura, footerIce, footerHaste;
 let health = HEALTH_START;
@@ -379,6 +380,7 @@ function create() {
     projectiles         = [];
     enemyProjectiles    = [];
     hasteSprites        = [];
+    hasteGlowFx         = null;
     dummies             = [];
     hitboxDebugRect     = null;
     footerBarObjects      = [];
@@ -491,28 +493,25 @@ function create() {
     ).setFillStyle(0x000000, 0).setStrokeStyle(1, HITBOX_DEBUG_COLOR)
      .setDepth(5).setVisible(HITBOX_DEBUG);
 
-    const hasteOutlineColor = Phaser.Display.Color.HexStringToColor(HASTE_OUTLINE_COLOR_CSS).color;
-    const o = OUTLINE_SOURCE_PIXELS * SCALE;
-    const outlineOffsets = [
-        [-o,  0],
-        [ o,  0],
-        [ 0, -o],
-        [ 0,  o],
-        [-o, -o],
-        [ o, -o],
-        [-o,  o],
-        [ o,  o],
-    ];
-    for (const [ox, oy] of outlineOffsets) {
-        const s = this.add.sprite(START_X + ox, START_Y + oy, SPRITE_KEY)
-            .setScale(SCALE)
-            .setTint(hasteOutlineColor)
-            .setAlpha(HASTE_OUTLINE_ALPHA)
-            .setDepth(0)
-            .setVisible(false);
-        s.offsetX = ox;
-        s.offsetY = oy;
-        hasteSprites.push(s);
+    if (player.postFX && player.postFX.addGlow) {
+        const glowColor = Phaser.Display.Color.HexStringToColor(HASTE_OUTLINE_COLOR_CSS).color;
+        hasteGlowFx = player.postFX.addGlow(glowColor, HASTE_OUTLINE_SIZE, 0, false);
+        hasteGlowFx.active = false;
+    } else {
+        // Canvas fallback: 4-direction tinted copies, no diagonals
+        const hasteOutlineColor = Phaser.Display.Color.HexStringToColor(HASTE_OUTLINE_COLOR_CSS).color;
+        const o = HASTE_OUTLINE_SIZE;
+        for (const [ox, oy] of [[-o, 0], [o, 0], [0, -o], [0, o]]) {
+            const s = this.add.sprite(START_X + ox, START_Y + oy, SPRITE_KEY)
+                .setScale(SCALE)
+                .setTint(hasteOutlineColor)
+                .setAlpha(HASTE_OUTLINE_ALPHA)
+                .setDepth(0)
+                .setVisible(false);
+            s.offsetX = ox;
+            s.offsetY = oy;
+            hasteSprites.push(s);
+        }
     }
 
     // Dummies — four cactus-shaped targets
@@ -824,7 +823,22 @@ function update(time, delta) {
             if (s.visible !== show) s.setVisible(show);
         }
     };
-    syncSprites(hasteSprites, hasteEndTime);
+    if (hasteGlowFx) {
+        const hasteRemaining = hasteEndTime - time;
+        let hasteShow;
+        if (hasteRemaining <= 0) {
+            hasteShow = false;
+        } else if (hasteRemaining <= BUFF_FAST_FLASH_START_MS) {
+            hasteShow = Math.floor(time / BUFF_FLASH_FAST_MS) % 2 === 0;
+        } else if (hasteRemaining <= BUFF_FLASH_START_MS) {
+            hasteShow = Math.floor(time / BUFF_FLASH_SLOW_MS) % 2 === 0;
+        } else {
+            hasteShow = true;
+        }
+        hasteGlowFx.active = hasteShow;
+    } else {
+        syncSprites(hasteSprites, hasteEndTime);
+    }
 
     // Mana regen
     mana = Math.min(MANA_MAX, mana + MANA_REGEN_PER_SECOND * dt);
@@ -908,6 +922,7 @@ function update(time, delta) {
         pendingSpellDirection = null;
         player.setVisible(false);
         for (const s of hasteSprites) s.setVisible(false);
+        if (hasteGlowFx) hasteGlowFx.active = false;
         floatHealthCircle.setVisible(false);
         floatHealthText.setVisible(false);
         floatManaPip1.setVisible(false);
