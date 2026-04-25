@@ -110,9 +110,9 @@ const BUFF_FLASH_FAST_MS       = 100;
 
 // --- TILEMAP ---
 const MAP_KEY          = 'forestMap';
-const MAP_PATH         = 'assets/forest-map.json';
+const MAP_PATH         = 'assets/forest-map.tmj';
 const TILESET_KEY      = 'forestTiles';
-const TILESET_PATH     = 'assets/grass1.png';
+const TILESET_PATH     = 'assets/grass.png';
 const TILESET_NAME     = 'grass';        // matches grass.tsx source in the JSON
 const WORLD_LAYER_NAME = 'ground';       // layer name in Tiled
 
@@ -432,9 +432,17 @@ function create() {
     this.textures.get(PLAYER_HEART_KEY).setFilter(Phaser.Textures.FilterMode.NEAREST);
     this.textures.get(TILESET_KEY).setFilter(Phaser.Textures.FilterMode.NEAREST);
 
-    const map        = this.make.tilemap({ key: MAP_KEY });
-    const tileset    = map.addTilesetImage(TILESET_NAME, TILESET_KEY);
+    const map     = this.make.tilemap({ key: MAP_KEY });
+    const tileset = map.addTilesetImage(TILESET_NAME, TILESET_KEY);
+    if (!tileset) {
+        console.error('Tileset not found. Available:', map.tilesets.map(t => t.name));
+        return;
+    }
     const groundLayer = map.createLayer(WORLD_LAYER_NAME, tileset, 0, 0);
+    if (!groundLayer) {
+        console.error('Layer not found. Available:', map.layers.map(l => l.name));
+        return;
+    }
     groundLayer.setScale(SCALE);
     groundLayer.setDepth(0);
 
