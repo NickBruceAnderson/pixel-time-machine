@@ -2,7 +2,7 @@
 
 // --- GAME CONFIG ---
 const GAME_WIDTH       = 1200;
-const GAME_HEIGHT      = 900;
+const GAME_HEIGHT      = 800;
 const FOOTER_HEIGHT    = 96;
 const CANVAS_HEIGHT    = GAME_HEIGHT + FOOTER_HEIGHT;
 const SCALE            = 3;
@@ -45,7 +45,7 @@ const PLAYER_HITBOX_HEIGHT   = 32;
 const PLAYER_HITBOX_OFFSET_X = 0;
 const PLAYER_HITBOX_OFFSET_Y = 8;
 const HITBOX_DEBUG           = false;
-const HITBOX_DEBUG_COLOR     = 0xff0000;
+const HITBOX_DEBUG_COLOR_CSS = '#ff0000';
 
 // --- PLAYER BOUNDS ---
 const PLAYER_BOUNDS_PADDING_X = 16;
@@ -127,35 +127,35 @@ const FOOTER_FONT_SIZE       = '16px';
 const FOOTER_PADDING_X       = 16;
 const FOOTER_ACTIVE_COLOR    = '#8fd3ff';
 const FOOTER_INACTIVE_COLOR  = FOOTER_TEXT_COLOR;
-const BAR_ROW_Y_OFFSET       = 18;
-const CONTROLS_ROW_Y_OFFSET  = 72;
+const BAR_ROW_Y_OFFSET       = 46;
+const CONTROLS_ROW_Y_OFFSET  = 12;
 
 // --- FOOTER HEALTH BAR ---
 const HEALTH_BAR_X            = 16;
 const HEALTH_BAR_Y_OFFSET     = BAR_ROW_Y_OFFSET;
 const HEALTH_BAR_WIDTH        = 240;
 const HEALTH_BAR_HEIGHT       = 18;
-const HEALTH_BAR_BG_COLOR     = 0x221111;
-const HEALTH_BAR_FILL_COLOR   = 0xcc2222;
-const HEALTH_BAR_BORDER_COLOR = 0xffffff;
+const HEALTH_BAR_BG_COLOR_CSS     = '#221111';
+const HEALTH_BAR_FILL_COLOR_CSS   = '#cc2222';
+const HEALTH_BAR_BORDER_COLOR_CSS = '#ffffff';
 
 // --- FOOTER STAMINA BAR ---
-const STAMINA_BAR_Y_OFFSET     = 42;
-const STAMINA_BAR_BG_COLOR     = 0x223322;
-const STAMINA_BAR_FILL_COLOR   = 0x00cc44;
-const STAMINA_BAR_BORDER_COLOR = 0xffffff;
+const STAMINA_BAR_Y_OFFSET         = 70;
+const STAMINA_BAR_BG_COLOR_CSS     = '#223322';
+const STAMINA_BAR_FILL_COLOR_CSS   = '#00cc44';
+const STAMINA_BAR_BORDER_COLOR_CSS = '#ffffff';
 
 // --- FOOTER MANA BAR ---
 const MANA_BAR_X              = 400;
 const MANA_BAR_Y_OFFSET       = BAR_ROW_Y_OFFSET;
 const MANA_BAR_WIDTH          = 240;
 const MANA_BAR_HEIGHT         = 18;
-const MANA_BAR_BG_COLOR       = 0x222244;
-const MANA_BAR_FILL_COLOR     = 0x3366ff;
-const MANA_BAR_BORDER_COLOR   = 0xffffff;
-const MANA_BAR_DIVIDER_COLOR  = 0x8899cc;
-const MANA_PIP_COLOR_READY    = 0x6699ff;
-const MANA_PIP_COLOR_EMPTY    = 0x333355;
+const MANA_BAR_BG_COLOR_CSS       = '#222244';
+const MANA_BAR_FILL_COLOR_CSS     = '#3366ff';
+const MANA_BAR_BORDER_COLOR_CSS   = '#ffffff';
+const MANA_BAR_DIVIDER_COLOR_CSS  = '#8899cc';
+const MANA_PIP_COLOR_READY_CSS    = '#6699ff';
+const MANA_PIP_COLOR_EMPTY_CSS    = '#333355';
 const SPELL_PIP_WIDTH         = 5;
 const SPELL_PIP_HEIGHT        = 12;
 const SPELL_PIP_GAP           = 3;
@@ -177,13 +177,13 @@ const FLOAT_HEALTH_FADE_MS          = 150;  // fade-out duration
 // --- FLOATING MANA HUD ---
 const FLOAT_MANA_OFFSET_X           = -10;
 const FLOAT_MANA_OFFSET_Y           = 12;
-const FLOAT_MANA_PIP_W              = 1;
-const FLOAT_MANA_PIP_H              = 2;
+const FLOAT_MANA_PIP_W              = 2;
+const FLOAT_MANA_PIP_H              = 3;
 const FLOAT_MANA_PIP_GAP            = 2;
 const FLOAT_MANA_BOB_AMPLITUDE      = 2;
 const FLOAT_MANA_BOB_SPEED          = 0.006;
-const FLOAT_MANA_PIP_ACTIVE_COLOR   = 0x6699ff;
-const FLOAT_MANA_PIP_EMPTY_COLOR    = 0x333355;
+const FLOAT_MANA_PIP_ACTIVE_COLOR_CSS = '#6699ff';
+const FLOAT_MANA_PIP_EMPTY_COLOR_CSS  = '#333355';
 const FLOAT_MANA_PIP_EMPTY_ALPHA    = 0.05;
 const FLOAT_MANA_PIP_ACTIVE_ALPHA   = 1;
 
@@ -191,8 +191,8 @@ const FLOAT_MANA_PIP_ACTIVE_ALPHA   = 1;
 const FLOAT_STAMINA_OFFSET_X = 10;
 const FLOAT_STAMINA_OFFSET_Y = -6;
 const FLOAT_STAMINA_RADIUS = 3;
-const FLOAT_STAMINA_TRACK_COLOR = 0x333333;
-const FLOAT_STAMINA_FILL_COLOR = 0x00cc44;
+const FLOAT_STAMINA_TRACK_COLOR_CSS = '#333333';
+const FLOAT_STAMINA_FILL_COLOR_CSS  = '#00cc44';
 const FLOAT_STAMINA_LINE_W = 1;
 
 // --- GAME OVER ---
@@ -207,25 +207,25 @@ const DUMMY_X                     = 600;
 const DUMMY_Y                     = 300;
 const DUMMY_WIDTH                 = 28;
 const DUMMY_HEIGHT                = 52;
-const DUMMY_COLOR                 = 0x8b5a2b;
-const DUMMY_ARM_COLOR             = 0x6b3f1f;
+const DUMMY_COLOR_CSS             = '#8b5a2b';
+const DUMMY_ARM_COLOR_CSS         = '#6b3f1f';
 const DUMMY_MAX_HEALTH            = 5;
 const DUMMY_HIT_MANA_GAIN         = 5;
 const DUMMY_RESPAWN_MS            = 3000;
 const DUMMY_HEALTH_BAR_WIDTH      = 36;
 const DUMMY_HEALTH_BAR_HEIGHT     = 5;
 const DUMMY_HEALTH_BAR_Y_OFFSET   = 34;
-const DUMMY_HEALTH_BAR_BG_COLOR   = 0x331111;
-const DUMMY_HEALTH_BAR_FILL_COLOR = 0x00cc44;
+const DUMMY_HEALTH_BAR_BG_COLOR_CSS   = '#331111';
+const DUMMY_HEALTH_BAR_FILL_COLOR_CSS = '#00cc44';
 const DUMMY_SPACING_Y             = 150;
 const DUMMY_EYE_BIG_RADIUS        = 4;
 const DUMMY_EYE_SMALL_RADIUS      = 2;
-const DUMMY_EYE_COLOR             = 0x000000;
-const DUMMY_MOUTH_COLOR           = 0x000000;
-const TOP_DUMMY_COLOR             = 0xaa4a3a;
+const DUMMY_EYE_COLOR_CSS         = '#000000';
+const DUMMY_MOUTH_COLOR_CSS       = '#000000';
+const TOP_DUMMY_COLOR_CSS         = '#aa4a3a';
 
 // --- ENEMY PROJECTILES ---
-const ENEMY_PROJECTILE_COLOR      = 0xff3333;
+const ENEMY_PROJECTILE_COLOR_CSS  = '#ff3333';
 const ENEMY_PROJECTILE_WIDTH      = 10;
 const ENEMY_PROJECTILE_HEIGHT     = 6;
 const ENEMY_PROJECTILE_SPEED      = 220;
@@ -233,7 +233,7 @@ const ENEMY_PROJECTILE_DAMAGE     = 1;
 const TOP_DUMMY_SHOOT_COOLDOWN_MS = 1200;
 const RIGHT_DUMMY_X               = 1100;
 const RIGHT_DUMMY_Y               = 300;
-const RIGHT_DUMMY_COLOR           = 0xaa4a3a;
+const RIGHT_DUMMY_COLOR_CSS       = '#aa4a3a';
 const RIGHT_DUMMY_SHOOT_COOLDOWN_MS = 1200;
 
 // Row indices
@@ -251,6 +251,36 @@ const DIR_VECS = {
     down:  { x:  0, y:  1 },
     right: { x:  1, y:  0 },
 };
+
+// --- DERIVED NUMERIC COLORS ---
+// Int32 values for Phaser APIs. Derived from CSS tunables above.
+function cssInt(s) { return parseInt(s.slice(1), 16); }
+const HITBOX_DEBUG_COLOR           = cssInt(HITBOX_DEBUG_COLOR_CSS);
+const HEALTH_BAR_BG_COLOR          = cssInt(HEALTH_BAR_BG_COLOR_CSS);
+const HEALTH_BAR_FILL_COLOR        = cssInt(HEALTH_BAR_FILL_COLOR_CSS);
+const HEALTH_BAR_BORDER_COLOR      = cssInt(HEALTH_BAR_BORDER_COLOR_CSS);
+const STAMINA_BAR_BG_COLOR         = cssInt(STAMINA_BAR_BG_COLOR_CSS);
+const STAMINA_BAR_FILL_COLOR       = cssInt(STAMINA_BAR_FILL_COLOR_CSS);
+const STAMINA_BAR_BORDER_COLOR     = cssInt(STAMINA_BAR_BORDER_COLOR_CSS);
+const MANA_BAR_BG_COLOR            = cssInt(MANA_BAR_BG_COLOR_CSS);
+const MANA_BAR_FILL_COLOR          = cssInt(MANA_BAR_FILL_COLOR_CSS);
+const MANA_BAR_BORDER_COLOR        = cssInt(MANA_BAR_BORDER_COLOR_CSS);
+const MANA_BAR_DIVIDER_COLOR       = cssInt(MANA_BAR_DIVIDER_COLOR_CSS);
+const MANA_PIP_COLOR_READY         = cssInt(MANA_PIP_COLOR_READY_CSS);
+const MANA_PIP_COLOR_EMPTY         = cssInt(MANA_PIP_COLOR_EMPTY_CSS);
+const FLOAT_MANA_PIP_ACTIVE_COLOR  = cssInt(FLOAT_MANA_PIP_ACTIVE_COLOR_CSS);
+const FLOAT_MANA_PIP_EMPTY_COLOR   = cssInt(FLOAT_MANA_PIP_EMPTY_COLOR_CSS);
+const FLOAT_STAMINA_TRACK_COLOR    = cssInt(FLOAT_STAMINA_TRACK_COLOR_CSS);
+const FLOAT_STAMINA_FILL_COLOR     = cssInt(FLOAT_STAMINA_FILL_COLOR_CSS);
+const DUMMY_COLOR                  = cssInt(DUMMY_COLOR_CSS);
+const DUMMY_ARM_COLOR              = cssInt(DUMMY_ARM_COLOR_CSS);
+const DUMMY_HEALTH_BAR_BG_COLOR    = cssInt(DUMMY_HEALTH_BAR_BG_COLOR_CSS);
+const DUMMY_HEALTH_BAR_FILL_COLOR  = cssInt(DUMMY_HEALTH_BAR_FILL_COLOR_CSS);
+const DUMMY_EYE_COLOR              = cssInt(DUMMY_EYE_COLOR_CSS);
+const DUMMY_MOUTH_COLOR            = cssInt(DUMMY_MOUTH_COLOR_CSS);
+const TOP_DUMMY_COLOR              = cssInt(TOP_DUMMY_COLOR_CSS);
+const ENEMY_PROJECTILE_COLOR       = cssInt(ENEMY_PROJECTILE_COLOR_CSS);
+const RIGHT_DUMMY_COLOR            = cssInt(RIGHT_DUMMY_COLOR_CSS);
 
 function getFrame(row, col) {
     return row * FRAMES_PER_ROW + col;
