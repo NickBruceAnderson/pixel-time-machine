@@ -1,6 +1,6 @@
 // --- TUNABLES ---
 const SPRITE_KEY       = 'marle';
-const SPRITE_PATH      = 'assets/marle3.png';
+const SPRITE_PATH      = 'assets/marle5.png';
 const FRAME_WIDTH      = 32;
 const FRAME_HEIGHT     = 48;
 const FRAMES_PER_ROW   = 17;
@@ -26,6 +26,8 @@ const CAST_CANCELS_ON_SHOOT   = false;
 const PROJECTILE_SPEED   = 2000;
 const PROJECTILE_SIZE    = 10;
 const PROJECTILE_LIFETIME = 1000;
+const PLAYER_PROJECTILE_SPAWN_OFFSET_X = 0;
+const PLAYER_PROJECTILE_SPAWN_OFFSET_Y = 8;
 const SHOOT_COOLDOWN_MS  = 300;
 const AURA_HEAL_AMOUNT         = 25;
 const AURA_COOLDOWN_MS         = 800;
@@ -46,10 +48,10 @@ const BUFF_FLASH_FAST_MS       = 100;
 
 // --- PLAYER HITBOX TUNABLES ---
 const PLAYER_HITBOX_WIDTH    = 10;
-const PLAYER_HITBOX_HEIGHT   = 30;
-const PLAYER_HITBOX_OFFSET_X = -2;
-const PLAYER_HITBOX_OFFSET_Y = 2;
-const HITBOX_DEBUG           = false;
+const PLAYER_HITBOX_HEIGHT   = 32;
+const PLAYER_HITBOX_OFFSET_X = 0;
+const PLAYER_HITBOX_OFFSET_Y = 8;
+const HITBOX_DEBUG           = true;
 const HITBOX_DEBUG_COLOR     = 0xff0000;
 
 // --- GAME OVER TUNABLES ---
@@ -60,7 +62,7 @@ const RESTART_FONT_SIZE   = '20px';
 const GAME_OVER_COLOR     = '#ffffff';
 
 // --- HUD TUNABLES ---
-const HUD_MODE         = 'show-all'; // 'hide-bars' | 'hide-all' | 'show-all'
+const HUD_MODE         = 'hide-bars'; // 'hide-bars' | 'hide-all' | 'show-all'
 const SHOW_FLOAT_HUD   = false;       // false = hide HP/mana/stamina indicators above Marle
 const GAME_WIDTH       = 1200;
 const GAME_HEIGHT      = 900;
@@ -201,6 +203,8 @@ const config = {
     width: GAME_WIDTH,
     height: CANVAS_HEIGHT,
     backgroundColor: '#000000b0',
+    pixelArt: true,    // disables texture smoothing globally
+    roundPixels: true, // snaps sprites to whole pixels to prevent sub-pixel bleed
     scene: { preload, create, update }
 };
 
@@ -352,6 +356,10 @@ function create() {
         });
     }
 
+    // Force nearest-neighbor filtering; pixelArt:true sets this globally but explicit call
+    // ensures it if the texture was cached before config was applied.
+    this.textures.get(SPRITE_KEY).setFilter(Phaser.Textures.FilterMode.NEAREST);
+
     player = this.add.sprite(START_X, START_Y, SPRITE_KEY);
     player.setScale(SCALE);
     player.setDepth(1);
@@ -367,8 +375,11 @@ function create() {
 
     const o = OUTLINE_SOURCE_PIXELS * SCALE;
     const outlineOffsets = [
-        [-o,  0], [ o,  0], [ 0, -o], [ 0,  o],
-        [-o, -o], [ o, -o], [-o,  o], [ o,  o],
+        [-o,  0],
+        [ o,  0],
+        [ 0,  o],
+        [-o,  o],
+        [ o,  o],
     ];
     for (const [ox, oy] of outlineOffsets) {
         const s = this.add.sprite(START_X + ox, START_Y + oy, SPRITE_KEY)
@@ -440,7 +451,7 @@ function create() {
             health = Math.min(HEALTH_MAX, health + AURA_HEAL_AMOUNT);
         } else if (spell === 'ice') {
             const vec = DIR_VECS[dir];
-            const proj = scene.add.rectangle(player.x, player.y, ICE_PROJECTILE_WIDTH, ICE_PROJECTILE_HEIGHT, ICE_PROJECTILE_COLOR);
+            const proj = scene.add.rectangle(player.x + PLAYER_PROJECTILE_SPAWN_OFFSET_X * SCALE, player.y + PLAYER_PROJECTILE_SPAWN_OFFSET_Y * SCALE, ICE_PROJECTILE_WIDTH, ICE_PROJECTILE_HEIGHT, ICE_PROJECTILE_COLOR);
             projectiles.push({ obj: proj, vx: vec.x * ICE_PROJECTILE_SPEED, vy: vec.y * ICE_PROJECTILE_SPEED, born: scene.time.now, lifetime: ICE_PROJECTILE_LIFETIME, damage: ICE_DAMAGE });
         } else if (spell === 'haste') {
             hasteEndTime = scene.time.now + HASTE_DURATION_MS;
@@ -646,7 +657,7 @@ function create() {
         shooting = true;
         player.play(`shoot_${lastDirection}`);
         const vec  = DIR_VECS[lastDirection];
-        const proj = scene.add.rectangle(player.x, player.y, PROJECTILE_SIZE, PROJECTILE_SIZE, 0xffffff);
+        const proj = scene.add.rectangle(player.x + PLAYER_PROJECTILE_SPAWN_OFFSET_X * SCALE, player.y + PLAYER_PROJECTILE_SPAWN_OFFSET_Y * SCALE, PROJECTILE_SIZE, PROJECTILE_SIZE, 0xffffff);
         projectiles.push({
             obj:    proj,
             vx:     vec.x * PROJECTILE_SPEED,
