@@ -98,14 +98,23 @@ const ICE_PROJECTILE_LIFETIME = 1400;
 const ICE_COOLDOWN_MS         = 1000;
 
 // --- HASTE SPELL ---
-const HASTE_DURATION_MS       = 10000;
-const HASTE_SHOOT_DIVISOR    = 3;
-const HASTE_OUTLINE_COLOR    = 0xffa500;
-const OUTLINE_SOURCE_PIXELS  = 1;
-const BUFF_FLASH_START_MS    = 3000;
+const HASTE_DURATION_MS        = 10000;
+const HASTE_SHOOT_DIVISOR      = 3;
+const HASTE_OUTLINE_COLOR_CSS  = '#ff9900';
+const HASTE_OUTLINE_ALPHA      = 0.8;
+const OUTLINE_SOURCE_PIXELS    = 2;
+const BUFF_FLASH_START_MS      = 3000;
 const BUFF_FAST_FLASH_START_MS = 1000;
-const BUFF_FLASH_SLOW_MS     = 300;
-const BUFF_FLASH_FAST_MS     = 100;
+const BUFF_FLASH_SLOW_MS       = 300;
+const BUFF_FLASH_FAST_MS       = 100;
+
+// --- TILEMAP ---
+const MAP_KEY          = 'forestMap';
+const MAP_PATH         = 'assets/forest-map.json';
+const TILESET_KEY      = 'forestTiles';
+const TILESET_PATH     = 'assets/grass1.png';
+const TILESET_NAME     = 'grass';        // matches grass.tsx source in the JSON
+const WORLD_LAYER_NAME = 'ground';       // layer name in Tiled
 
 // --- HUD MODE ---
 const HUD_MODE       = 'hide-bars'; // 'hide-bars' | 'hide-all' | 'show-all'
@@ -162,7 +171,7 @@ const FLOAT_HEALTH_NUMBER_OFFSET_Y = 0;
 const FLOAT_HEALTH_FONT_SIZE        = 8;
 const FLOAT_HEALTH_TEXT_COLOR       = '#ffffff';
 const FLOAT_HEALTH_SHOW_START_MS    = 2000;  // how long heart shows on game start
-const FLOAT_HEALTH_SHOW_CHANGE_MS      = 250;  // how long heart shows after a hit
+const FLOAT_HEALTH_SHOW_CHANGE_MS   = 500;  // how long heart shows after a hit
 const FLOAT_HEALTH_FADE_MS          = 150;  // fade-out duration
 
 // --- FLOATING MANA HUD ---
@@ -313,6 +322,8 @@ function preload() {
     this.load.spritesheet(SPRITE_KEY, SPRITE_PATH, {frameWidth:  FRAME_WIDTH, frameHeight: FRAME_HEIGHT});
     this.load.image(ICE_PROJECTILE_KEY, ICE_PROJECTILE_PATH);
     this.load.image(PLAYER_HEART_KEY, PLAYER_HEART_PATH);
+    this.load.tilemapTiledJSON(MAP_KEY, MAP_PATH);
+    this.load.image(TILESET_KEY, TILESET_PATH);
 }
 
 function create() {
@@ -419,6 +430,13 @@ function create() {
     // ensures it if the texture was cached before config was applied.
     this.textures.get(SPRITE_KEY).setFilter(Phaser.Textures.FilterMode.NEAREST);
     this.textures.get(PLAYER_HEART_KEY).setFilter(Phaser.Textures.FilterMode.NEAREST);
+    this.textures.get(TILESET_KEY).setFilter(Phaser.Textures.FilterMode.NEAREST);
+
+    const map        = this.make.tilemap({ key: MAP_KEY });
+    const tileset    = map.addTilesetImage(TILESET_NAME, TILESET_KEY);
+    const groundLayer = map.createLayer(WORLD_LAYER_NAME, tileset, 0, 0);
+    groundLayer.setScale(SCALE);
+    groundLayer.setDepth(0);
 
     player = this.add.sprite(START_X, START_Y, SPRITE_KEY);
     player.setScale(SCALE);
@@ -433,18 +451,23 @@ function create() {
     ).setFillStyle(0x000000, 0).setStrokeStyle(1, HITBOX_DEBUG_COLOR)
      .setDepth(5).setVisible(HITBOX_DEBUG);
 
+    const hasteOutlineColor = Phaser.Display.Color.HexStringToColor(HASTE_OUTLINE_COLOR_CSS).color;
     const o = OUTLINE_SOURCE_PIXELS * SCALE;
     const outlineOffsets = [
         [-o,  0],
         [ o,  0],
+        [ 0, -o],
         [ 0,  o],
+        [-o, -o],
+        [ o, -o],
         [-o,  o],
         [ o,  o],
     ];
     for (const [ox, oy] of outlineOffsets) {
         const s = this.add.sprite(START_X + ox, START_Y + oy, SPRITE_KEY)
             .setScale(SCALE)
-            .setTint(HASTE_OUTLINE_COLOR)
+            .setTint(hasteOutlineColor)
+            .setAlpha(HASTE_OUTLINE_ALPHA)
             .setDepth(0)
             .setVisible(false);
         s.offsetX = ox;
