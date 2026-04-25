@@ -95,7 +95,7 @@ const FLOAT_HEALTH_OFFSET_Y     = -84;  // above player center
 const FLOAT_HEART_RADIUS        = 8;
 const FLOAT_HEART_COLOR         = 0xcc2222;
 const FLOAT_HEALTH_TEXT_GAP     = 2;    // gap between circle edge and health number
-const FLOAT_HEALTH_FONT_SIZE    = '13px';
+const FLOAT_HEALTH_FONT_SIZE    = 13;
 const FLOAT_HEALTH_TEXT_COLOR   = '#ffffff';
 const FLOAT_MANA_OFFSET_X       = 0;
 const FLOAT_MANA_OFFSET_Y       = -84;
@@ -622,15 +622,15 @@ function create() {
 
     // Floating HUD — visible in all modes
     floatHealthCircle = this.add.image(
-        player.x + FLOAT_HEALTH_OFFSET_X,
-        player.y + FLOAT_HEALTH_OFFSET_Y,
+        player.x + FLOAT_HEALTH_OFFSET_X * SCALE,
+        player.y + FLOAT_HEALTH_OFFSET_Y * SCALE,
         PLAYER_HEART_KEY
-    ).setScale(FLOAT_HEART_SCALE).setDepth(20);
+    ).setScale(FLOAT_HEART_SCALE * SCALE).setDepth(20);
     floatHealthText = this.add.text(
-        player.x + FLOAT_HEALTH_OFFSET_X + FLOAT_HEALTH_NUMBER_OFFSET_X,
-        player.y + FLOAT_HEALTH_OFFSET_Y + FLOAT_HEALTH_NUMBER_OFFSET_Y,
+        player.x + FLOAT_HEALTH_OFFSET_X * SCALE + FLOAT_HEALTH_NUMBER_OFFSET_X * SCALE,
+        player.y + FLOAT_HEALTH_OFFSET_Y * SCALE + FLOAT_HEALTH_NUMBER_OFFSET_Y * SCALE,
         String(Math.ceil(health)),
-        { fontSize: FLOAT_HEALTH_FONT_SIZE, fontFamily: 'monospace', color: FLOAT_HEALTH_TEXT_COLOR }
+        { fontSize: `${FLOAT_HEALTH_FONT_SIZE * SCALE}px`, fontFamily: 'monospace', color: FLOAT_HEALTH_TEXT_COLOR }
     ).setOrigin(0.5, 0.5).setDepth(21);
     floatManaGfx    = this.add.graphics().setDepth(20);
     floatStaminaGfx = this.add.graphics().setDepth(20);
@@ -907,42 +907,42 @@ function update(time, delta) {
     // Floating HUD — follow player each frame
     if (SHOW_FLOAT_HUD) {
         floatHealthCircle.setPosition(
-            player.x + FLOAT_HEALTH_OFFSET_X,
-            player.y + FLOAT_HEALTH_OFFSET_Y
+            player.x + FLOAT_HEALTH_OFFSET_X * SCALE,
+            player.y + FLOAT_HEALTH_OFFSET_Y * SCALE
         );
 
         floatHealthText.setPosition(
-            player.x + FLOAT_HEALTH_OFFSET_X + FLOAT_HEALTH_NUMBER_OFFSET_X,
-            player.y + FLOAT_HEALTH_OFFSET_Y + FLOAT_HEALTH_NUMBER_OFFSET_Y
+            player.x + FLOAT_HEALTH_OFFSET_X * SCALE + FLOAT_HEALTH_NUMBER_OFFSET_X * SCALE,
+            player.y + FLOAT_HEALTH_OFFSET_Y * SCALE + FLOAT_HEALTH_NUMBER_OFFSET_Y * SCALE
         );
 
         floatHealthText.setText(String(Math.ceil(health)));
-        const mx = player.x + FLOAT_MANA_OFFSET_X;
-        const my = player.y + FLOAT_MANA_OFFSET_Y;
+        const mx = player.x + FLOAT_MANA_OFFSET_X * SCALE;
+        const my = player.y + FLOAT_MANA_OFFSET_Y * SCALE;
         floatManaGfx.clear();
-        floatManaGfx.lineStyle(FLOAT_MANA_LINE_W, FLOAT_MANA_TRACK_COLOR, 1);
+        floatManaGfx.lineStyle(FLOAT_MANA_LINE_W * SCALE, FLOAT_MANA_TRACK_COLOR, 1);
         floatManaGfx.beginPath();
-        floatManaGfx.arc(mx, my, FLOAT_MANA_RADIUS, 0, Math.PI * 2, false);
+        floatManaGfx.arc(mx, my, FLOAT_MANA_RADIUS * SCALE, 0, Math.PI * 2, false);
         floatManaGfx.strokePath();
         const manaFillAngle = Math.PI * 2 * (mana / MANA_MAX);
-        floatManaGfx.lineStyle(FLOAT_MANA_LINE_W, FLOAT_MANA_FILL_COLOR, 1);
+        floatManaGfx.lineStyle(FLOAT_MANA_LINE_W * SCALE, FLOAT_MANA_FILL_COLOR, 1);
         floatManaGfx.beginPath();
-        floatManaGfx.arc(mx, my, FLOAT_MANA_RADIUS, -Math.PI / 2, -Math.PI / 2 + manaFillAngle, false);
+        floatManaGfx.arc(mx, my, FLOAT_MANA_RADIUS * SCALE, -Math.PI / 2, -Math.PI / 2 + manaFillAngle, false);
         floatManaGfx.strokePath();
         floatStaminaGfx.clear();
         const showStamina = isRunning || stamina < STAMINA_MAX;
         floatStaminaGfx.setVisible(showStamina);
         if (showStamina) {
-            const sx = player.x + FLOAT_STAMINA_OFFSET_X;
-            const sy = player.y + FLOAT_STAMINA_OFFSET_Y;
-            floatStaminaGfx.lineStyle(FLOAT_STAMINA_LINE_W, FLOAT_STAMINA_TRACK_COLOR, 1);
+            const sx = player.x + FLOAT_STAMINA_OFFSET_X * SCALE;
+            const sy = player.y + FLOAT_STAMINA_OFFSET_Y * SCALE;
+            floatStaminaGfx.lineStyle(FLOAT_STAMINA_LINE_W * SCALE, FLOAT_STAMINA_TRACK_COLOR, 1);
             floatStaminaGfx.beginPath();
-            floatStaminaGfx.arc(sx, sy, FLOAT_STAMINA_RADIUS, 0, Math.PI * 2, false);
+            floatStaminaGfx.arc(sx, sy, FLOAT_STAMINA_RADIUS * SCALE, 0, Math.PI * 2, false);
             floatStaminaGfx.strokePath();
             const fillAngle = Math.PI * 2 * (stamina / STAMINA_MAX);
-            floatStaminaGfx.lineStyle(FLOAT_STAMINA_LINE_W, FLOAT_STAMINA_FILL_COLOR, 1);
+            floatStaminaGfx.lineStyle(FLOAT_STAMINA_LINE_W * SCALE, FLOAT_STAMINA_FILL_COLOR, 1);
             floatStaminaGfx.beginPath();
-            floatStaminaGfx.arc(sx, sy, FLOAT_STAMINA_RADIUS, -Math.PI / 2, -Math.PI / 2 + fillAngle, false);
+            floatStaminaGfx.arc(sx, sy, FLOAT_STAMINA_RADIUS * SCALE, -Math.PI / 2, -Math.PI / 2 + fillAngle, false);
             floatStaminaGfx.strokePath();
         }
     }
