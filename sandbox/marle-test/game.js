@@ -31,7 +31,10 @@ const PLAYER_PROJECTILE_SPAWN_OFFSET_Y = 8;
 const SHOOT_COOLDOWN_MS  = 300;
 const AURA_HEAL_AMOUNT         = 25;
 const AURA_COOLDOWN_MS         = 800;
-const ICE_PROJECTILE_COLOR     = 0x66ccff;
+const ICE_PROJECTILE_KEY       = 'iceProjectile';
+const ICE_PROJECTILE_PATH      = 'assets/OanIceBlast3.png';
+const ICE_PROJECTILE_ANGLES    = {up: 0, right: 90, down: 180, left: 270};
+const ICE_PROJECTILE_SCALE     = 1;
 const ICE_PROJECTILE_WIDTH     = 48;
 const ICE_PROJECTILE_HEIGHT    = 48;
 const ICE_PROJECTILE_SPEED     = 700;
@@ -45,6 +48,8 @@ const BUFF_FLASH_START_MS      = 3000;
 const BUFF_FAST_FLASH_START_MS = 1000;
 const BUFF_FLASH_SLOW_MS       = 300;
 const BUFF_FLASH_FAST_MS       = 100;
+const BASIC_SHOT_DAMAGE           = 1;
+const ICE_DAMAGE                  = 5;
 
 // --- PLAYER HITBOX TUNABLES ---
 const PLAYER_HITBOX_WIDTH    = 10;
@@ -53,6 +58,11 @@ const PLAYER_HITBOX_OFFSET_X = 0;
 const PLAYER_HITBOX_OFFSET_Y = 8;
 const HITBOX_DEBUG           = true;
 const HITBOX_DEBUG_COLOR     = 0xff0000;
+const PLAYER_HEART_KEY = 'playerHeart';
+const PLAYER_HEART_PATH = 'assets/player-heart.png';
+const FLOAT_HEART_SCALE = 1;
+const FLOAT_HEALTH_NUMBER_OFFSET_X = 0;
+const FLOAT_HEALTH_NUMBER_OFFSET_Y = 0;
 
 // --- GAME OVER TUNABLES ---
 const GAME_OVER_TEXT      = 'GAME OVER';
@@ -63,7 +73,7 @@ const GAME_OVER_COLOR     = '#ffffff';
 
 // --- HUD TUNABLES ---
 const HUD_MODE         = 'hide-bars'; // 'hide-bars' | 'hide-all' | 'show-all'
-const SHOW_FLOAT_HUD   = false;       // false = hide HP/mana/stamina indicators above Marle
+const SHOW_FLOAT_HUD   = true;       // false = hide HP/mana/stamina indicators above Marle
 const GAME_WIDTH       = 1200;
 const GAME_HEIGHT      = 900;
 const FOOTER_HEIGHT    = 96;
@@ -98,10 +108,14 @@ const FLOAT_STAMINA_RADIUS      = 10;
 const FLOAT_STAMINA_TRACK_COLOR = 0x333333;
 const FLOAT_STAMINA_FILL_COLOR  = 0x00cc44;
 const FLOAT_STAMINA_LINE_W      = 3;
+const FLOAT_MANA_RADIUS         = 10;
+const FLOAT_MANA_TRACK_COLOR    = 0x333355;
+const FLOAT_MANA_FILL_COLOR     = 0x3366ff;
+const FLOAT_MANA_LINE_W         = 3;
 
 // --- HEALTH TUNABLES ---
-const HEALTH_MAX             = 100;
-const HEALTH_START           = 100;
+const HEALTH_MAX             = 3;
+const HEALTH_START           = 3;
 const HEALTH_BAR_X           = 16;
 const HEALTH_BAR_Y_OFFSET    = BAR_ROW_Y_OFFSET;
 const HEALTH_BAR_WIDTH       = 240;
@@ -151,8 +165,6 @@ const DUMMY_HEIGHT                = 52;
 const DUMMY_COLOR                 = 0x8b5a2b;
 const DUMMY_ARM_COLOR             = 0x6b3f1f;
 const DUMMY_MAX_HEALTH            = 5;
-const BASIC_SHOT_DAMAGE           = 2;
-const ICE_DAMAGE                  = 5;
 const DUMMY_HIT_MANA_GAIN         = 5;
 const DUMMY_RESPAWN_MS            = 3000;
 const DUMMY_HEALTH_BAR_WIDTH      = 36;
@@ -170,7 +182,7 @@ const ENEMY_PROJECTILE_COLOR      = 0xff3333;
 const ENEMY_PROJECTILE_WIDTH      = 10;
 const ENEMY_PROJECTILE_HEIGHT     = 6;
 const ENEMY_PROJECTILE_SPEED      = 220;
-const ENEMY_PROJECTILE_DAMAGE     = 10;
+const ENEMY_PROJECTILE_DAMAGE     = 1;
 const TOP_DUMMY_SHOOT_COOLDOWN_MS = 1200;
 const RIGHT_DUMMY_X               = 1100;
 const RIGHT_DUMMY_Y               = 300;
@@ -246,14 +258,13 @@ let footerBg;
 let footerBarObjects      = [];
 let footerControlsObjects = [];
 let floatHealthCircle, floatHealthText;
-let floatManaPip1, floatManaPip2;
+let floatManaGfx;
 let floatStaminaGfx;
 
 function preload() {
-    this.load.spritesheet(SPRITE_KEY, SPRITE_PATH, {
-        frameWidth:  FRAME_WIDTH,
-        frameHeight: FRAME_HEIGHT
-    });
+    this.load.spritesheet(SPRITE_KEY, SPRITE_PATH, {frameWidth:  FRAME_WIDTH, frameHeight: FRAME_HEIGHT});
+    this.load.image(ICE_PROJECTILE_KEY, ICE_PROJECTILE_PATH);
+    this.load.image(PLAYER_HEART_KEY, PLAYER_HEART_PATH);
 }
 
 function create() {
@@ -359,6 +370,7 @@ function create() {
     // Force nearest-neighbor filtering; pixelArt:true sets this globally but explicit call
     // ensures it if the texture was cached before config was applied.
     this.textures.get(SPRITE_KEY).setFilter(Phaser.Textures.FilterMode.NEAREST);
+    this.textures.get(PLAYER_HEART_KEY).setFilter(Phaser.Textures.FilterMode.NEAREST);
 
     player = this.add.sprite(START_X, START_Y, SPRITE_KEY);
     player.setScale(SCALE);
@@ -451,7 +463,9 @@ function create() {
             health = Math.min(HEALTH_MAX, health + AURA_HEAL_AMOUNT);
         } else if (spell === 'ice') {
             const vec = DIR_VECS[dir];
-            const proj = scene.add.rectangle(player.x + PLAYER_PROJECTILE_SPAWN_OFFSET_X * SCALE, player.y + PLAYER_PROJECTILE_SPAWN_OFFSET_Y * SCALE, ICE_PROJECTILE_WIDTH, ICE_PROJECTILE_HEIGHT, ICE_PROJECTILE_COLOR);
+            const proj = scene.add.image(player.x + PLAYER_PROJECTILE_SPAWN_OFFSET_X * SCALE, 
+                                         player.y + PLAYER_PROJECTILE_SPAWN_OFFSET_Y * SCALE,
+                                         ICE_PROJECTILE_KEY).setScale(ICE_PROJECTILE_SCALE).setAngle(ICE_PROJECTILE_ANGLES[dir]);
             projectiles.push({ obj: proj, vx: vec.x * ICE_PROJECTILE_SPEED, vy: vec.y * ICE_PROJECTILE_SPEED, born: scene.time.now, lifetime: ICE_PROJECTILE_LIFETIME, damage: ICE_DAMAGE });
         } else if (spell === 'haste') {
             hasteEndTime = scene.time.now + HASTE_DURATION_MS;
@@ -607,24 +621,23 @@ function create() {
     }
 
     // Floating HUD — visible in all modes
-    floatHealthCircle = this.add.circle(
-        player.x + FLOAT_HEALTH_OFFSET_X, player.y + FLOAT_HEALTH_OFFSET_Y,
-        FLOAT_HEART_RADIUS, FLOAT_HEART_COLOR
-    ).setDepth(20);
-    floatHealthText = this.add.text(
-        player.x + FLOAT_HEALTH_OFFSET_X + FLOAT_HEART_RADIUS + FLOAT_HEALTH_TEXT_GAP,
+    floatHealthCircle = this.add.image(
+        player.x + FLOAT_HEALTH_OFFSET_X,
         player.y + FLOAT_HEALTH_OFFSET_Y,
+        PLAYER_HEART_KEY
+    ).setScale(FLOAT_HEART_SCALE).setDepth(20);
+    floatHealthText = this.add.text(
+        player.x + FLOAT_HEALTH_OFFSET_X + FLOAT_HEALTH_NUMBER_OFFSET_X,
+        player.y + FLOAT_HEALTH_OFFSET_Y + FLOAT_HEALTH_NUMBER_OFFSET_Y,
         String(Math.ceil(health)),
         { fontSize: FLOAT_HEALTH_FONT_SIZE, fontFamily: 'monospace', color: FLOAT_HEALTH_TEXT_COLOR }
-    ).setOrigin(0, 0.5).setDepth(21);
-    floatManaPip1 = this.add.rectangle(0, 0, FLOAT_PIP_W, FLOAT_PIP_H, MANA_PIP_COLOR_EMPTY).setDepth(20);
-    floatManaPip2 = this.add.rectangle(0, 0, FLOAT_PIP_W, FLOAT_PIP_H, MANA_PIP_COLOR_EMPTY).setDepth(20);
+    ).setOrigin(0.5, 0.5).setDepth(21);
+    floatManaGfx    = this.add.graphics().setDepth(20);
     floatStaminaGfx = this.add.graphics().setDepth(20);
     if (!SHOW_FLOAT_HUD) {
         floatHealthCircle.setVisible(false);
         floatHealthText.setVisible(false);
-        floatManaPip1.setVisible(false);
-        floatManaPip2.setVisible(false);
+        floatManaGfx.setVisible(false);
         floatStaminaGfx.setVisible(false);
     }
 
@@ -778,8 +791,7 @@ function update(time, delta) {
         for (const s of hasteSprites) s.setVisible(false);
         floatHealthCircle.setVisible(false);
         floatHealthText.setVisible(false);
-        floatManaPip1.setVisible(false);
-        floatManaPip2.setVisible(false);
+        floatManaGfx.setVisible(false);
         floatStaminaGfx.setVisible(false);
         goText.setVisible(true);
         goSub.setVisible(true);
@@ -894,17 +906,29 @@ function update(time, delta) {
 
     // Floating HUD — follow player each frame
     if (SHOW_FLOAT_HUD) {
-        floatHealthCircle.setPosition(player.x + FLOAT_HEALTH_OFFSET_X, player.y + FLOAT_HEALTH_OFFSET_Y);
-        floatHealthText.setPosition(
-            player.x + FLOAT_HEALTH_OFFSET_X + FLOAT_HEART_RADIUS + FLOAT_HEALTH_TEXT_GAP,
+        floatHealthCircle.setPosition(
+            player.x + FLOAT_HEALTH_OFFSET_X,
             player.y + FLOAT_HEALTH_OFFSET_Y
         );
+
+        floatHealthText.setPosition(
+            player.x + FLOAT_HEALTH_OFFSET_X + FLOAT_HEALTH_NUMBER_OFFSET_X,
+            player.y + FLOAT_HEALTH_OFFSET_Y + FLOAT_HEALTH_NUMBER_OFFSET_Y
+        );
+
         floatHealthText.setText(String(Math.ceil(health)));
-        const pipHalfSpan = FLOAT_PIP_W / 2 + FLOAT_PIP_GAP / 2;
-        floatManaPip1.setPosition(player.x + FLOAT_MANA_OFFSET_X - pipHalfSpan, player.y + FLOAT_MANA_OFFSET_Y);
-        floatManaPip2.setPosition(player.x + FLOAT_MANA_OFFSET_X + pipHalfSpan, player.y + FLOAT_MANA_OFFSET_Y);
-        floatManaPip1.setFillStyle(mana >= 50       ? MANA_PIP_COLOR_READY : MANA_PIP_COLOR_EMPTY);
-        floatManaPip2.setFillStyle(mana >= MANA_MAX ? MANA_PIP_COLOR_READY : MANA_PIP_COLOR_EMPTY);
+        const mx = player.x + FLOAT_MANA_OFFSET_X;
+        const my = player.y + FLOAT_MANA_OFFSET_Y;
+        floatManaGfx.clear();
+        floatManaGfx.lineStyle(FLOAT_MANA_LINE_W, FLOAT_MANA_TRACK_COLOR, 1);
+        floatManaGfx.beginPath();
+        floatManaGfx.arc(mx, my, FLOAT_MANA_RADIUS, 0, Math.PI * 2, false);
+        floatManaGfx.strokePath();
+        const manaFillAngle = Math.PI * 2 * (mana / MANA_MAX);
+        floatManaGfx.lineStyle(FLOAT_MANA_LINE_W, FLOAT_MANA_FILL_COLOR, 1);
+        floatManaGfx.beginPath();
+        floatManaGfx.arc(mx, my, FLOAT_MANA_RADIUS, -Math.PI / 2, -Math.PI / 2 + manaFillAngle, false);
+        floatManaGfx.strokePath();
         floatStaminaGfx.clear();
         const showStamina = isRunning || stamina < STAMINA_MAX;
         floatStaminaGfx.setVisible(showStamina);
