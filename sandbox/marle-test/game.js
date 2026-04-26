@@ -341,6 +341,19 @@ let floatHealthFadeTween    = null;
 let floatManaPip1, floatManaPip2;
 let floatStaminaGfx;
 
+function setHasteVisualVisible(show) {
+    if (hasteGlowFx) {
+        hasteGlowFx.active = show;
+        hasteGlowFx.outerStrength = show ? HASTE_OUTLINE_SIZE : 0;
+        if ('innerStrength' in hasteGlowFx) hasteGlowFx.innerStrength = 0;
+        if ('alpha' in hasteGlowFx) hasteGlowFx.alpha = show ? HASTE_OUTLINE_ALPHA : 0;
+    }
+    for (const s of hasteSprites) {
+        s.setVisible(show);
+        s.setAlpha(show ? HASTE_OUTLINE_ALPHA : 0);
+    }
+}
+
 function showFloatingHealth(scene, durationMs) {
     if (!SHOW_FLOAT_HUD) return;
     if (floatHealthFadeTween) { floatHealthFadeTween.stop(); floatHealthFadeTween = null; }
@@ -496,8 +509,6 @@ function create() {
     if (player.postFX && player.postFX.addGlow) {
         const glowColor = Phaser.Display.Color.HexStringToColor(HASTE_OUTLINE_COLOR_CSS).color;
         hasteGlowFx = player.postFX.addGlow(glowColor, HASTE_OUTLINE_SIZE, 0, false);
-        hasteGlowFx.active = false;
-        hasteGlowFx.outerStrength = 0;
     } else {
         // Canvas fallback: 4-direction tinted copies, no diagonals
         const hasteOutlineColor = Phaser.Display.Color.HexStringToColor(HASTE_OUTLINE_COLOR_CSS).color;
@@ -506,14 +517,13 @@ function create() {
             const s = this.add.sprite(START_X + ox, START_Y + oy, SPRITE_KEY)
                 .setScale(SCALE)
                 .setTint(hasteOutlineColor)
-                .setAlpha(HASTE_OUTLINE_ALPHA)
-                .setDepth(0)
-                .setVisible(false);
+                .setDepth(0);
             s.offsetX = ox;
             s.offsetY = oy;
             hasteSprites.push(s);
         }
     }
+    setHasteVisualVisible(false);
 
     // Dummies — four cactus-shaped targets
     const dArmW = Math.round(DUMMY_WIDTH * 0.5);
@@ -804,42 +814,23 @@ function update(time, delta) {
     const dt = delta / 1000;
     const frame = player.frame.name;
 
-    const syncSprites = (sprites, endTime) => {
-        const remaining = endTime - time;
-        let show;
-        if (remaining <= 0) {
-            show = false;
-        } else if (remaining <= BUFF_FAST_FLASH_START_MS) {
-            show = Math.floor(time / BUFF_FLASH_FAST_MS) % 2 === 0;
-        } else if (remaining <= BUFF_FLASH_START_MS) {
-            show = Math.floor(time / BUFF_FLASH_SLOW_MS) % 2 === 0;
-        } else {
-            show = true;
-        }
-        for (const s of sprites) {
-            if (show) {
-                s.setPosition(player.x + s.offsetX, player.y + s.offsetY);
-                s.setFrame(frame);
-            }
-            if (s.visible !== show) s.setVisible(show);
-        }
-    };
-    if (hasteGlowFx) {
-        const hasteRemaining = hasteEndTime - time;
-        let hasteShow;
-        if (hasteRemaining <= 0) {
-            hasteShow = false;
-        } else if (hasteRemaining <= BUFF_FAST_FLASH_START_MS) {
-            hasteShow = Math.floor(time / BUFF_FLASH_FAST_MS) % 2 === 0;
-        } else if (hasteRemaining <= BUFF_FLASH_START_MS) {
-            hasteShow = Math.floor(time / BUFF_FLASH_SLOW_MS) % 2 === 0;
-        } else {
-            hasteShow = true;
-        }
-        hasteGlowFx.active = hasteShow;
-        hasteGlowFx.outerStrength = hasteShow ? HASTE_OUTLINE_SIZE : 0;
+    const hasteRemaining = hasteEndTime - time;
+    let hasteShow;
+    if (hasteRemaining <= 0) {
+        hasteShow = false;
+    } else if (hasteRemaining <= BUFF_FAST_FLASH_START_MS) {
+        hasteShow = Math.floor(time / BUFF_FLASH_FAST_MS) % 2 === 0;
+    } else if (hasteRemaining <= BUFF_FLASH_START_MS) {
+        hasteShow = Math.floor(time / BUFF_FLASH_SLOW_MS) % 2 === 0;
     } else {
-        syncSprites(hasteSprites, hasteEndTime);
+        hasteShow = true;
+    }
+    setHasteVisualVisible(hasteShow);
+    if (hasteShow) {
+        for (const s of hasteSprites) {
+            s.setPosition(player.x + s.offsetX, player.y + s.offsetY);
+            s.setFrame(frame);
+        }
     }
 
     // Mana regen
@@ -923,8 +914,7 @@ function update(time, delta) {
         pendingSpell          = null;
         pendingSpellDirection = null;
         player.setVisible(false);
-        for (const s of hasteSprites) s.setVisible(false);
-        if (hasteGlowFx) hasteGlowFx.active = false;
+        setHasteVisualVisible(false);
         floatHealthCircle.setVisible(false);
         floatHealthText.setVisible(false);
         floatManaPip1.setVisible(false);
