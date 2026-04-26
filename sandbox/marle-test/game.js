@@ -224,6 +224,21 @@ const DUMMY_EYE_COLOR_CSS         = '#000000';
 const DUMMY_MOUTH_COLOR_CSS       = '#000000';
 const TOP_DUMMY_COLOR_CSS         = '#aa4a3a';
 
+// --- SLIME ENEMY ---
+const SLIME_ASSET_KEY     = 'slime';
+const SLIME_ASSET_PATH    = 'assets/slime.png';
+const SLIME_FRAME_WIDTH   = 16;
+const SLIME_FRAME_HEIGHT  = 16;
+const SLIME_FRAME_START   = 0;
+const SLIME_FRAME_END     = 8;
+const SLIME_FRAME_RATE    = 8;
+const SLIME_SCALE         = 3;
+const SLIME_BODY_WIDTH    = 40;  // collision width (screen pixels)
+const SLIME_BODY_HEIGHT   = 30;  // collision height (screen pixels)
+const SLIME_BODY_OFFSET_X = 0;
+const SLIME_BODY_OFFSET_Y = 0;
+const SLIME_ANIM_KEY      = 'slime-idle';
+
 // --- ENEMY PROJECTILES ---
 const ENEMY_PROJECTILE_COLOR_CSS  = '#ff3333';
 const ENEMY_PROJECTILE_WIDTH      = 10;
@@ -364,6 +379,7 @@ function showFloatingHealth(scene, durationMs) {
 
 function preload() {
     this.load.spritesheet(SPRITE_KEY, SPRITE_PATH, {frameWidth:  FRAME_WIDTH, frameHeight: FRAME_HEIGHT});
+    this.load.spritesheet(SLIME_ASSET_KEY, SLIME_ASSET_PATH, { frameWidth: SLIME_FRAME_WIDTH, frameHeight: SLIME_FRAME_HEIGHT });
     this.load.image(ICE_PROJECTILE_KEY, ICE_PROJECTILE_PATH);
     this.load.image(PLAYER_HEART_KEY, PLAYER_HEART_PATH);
     this.load.tilemapTiledJSON(MAP_KEY, MAP_PATH);
@@ -476,6 +492,7 @@ function create() {
     this.textures.get(SPRITE_KEY).setFilter(Phaser.Textures.FilterMode.NEAREST);
     this.textures.get(PLAYER_HEART_KEY).setFilter(Phaser.Textures.FilterMode.NEAREST);
     this.textures.get(TILESET_KEY).setFilter(Phaser.Textures.FilterMode.NEAREST);
+    this.textures.get(SLIME_ASSET_KEY).setFilter(Phaser.Textures.FilterMode.NEAREST);
 
     const map     = this.make.tilemap({ key: MAP_KEY });
     const tileset = map.addTilesetImage(TILESET_NAME, TILESET_KEY);
@@ -525,25 +542,26 @@ function create() {
     }
     setHasteVisualVisible(false);
 
-    // Dummies — four cactus-shaped targets
-    const dArmW = Math.round(DUMMY_WIDTH * 0.5);
-    const dArmH = Math.round(DUMMY_HEIGHT * 0.19);
+    // Slime idle animation
+    anims.create({
+        key: SLIME_ANIM_KEY,
+        frames: anims.generateFrameNumbers(SLIME_ASSET_KEY, { start: SLIME_FRAME_START, end: SLIME_FRAME_END }),
+        frameRate: SLIME_FRAME_RATE,
+        repeat: -1
+    });
+
+    // Dummies — four slime enemies
     const dummyPositions = [
-        { x: DUMMY_X,       y: DUMMY_Y - DUMMY_SPACING_Y, bodyColor: TOP_DUMMY_COLOR   },
-        { x: DUMMY_X,       y: DUMMY_Y,                   bodyColor: DUMMY_COLOR        },
-        { x: DUMMY_X,       y: DUMMY_Y + DUMMY_SPACING_Y, bodyColor: DUMMY_COLOR        },
-        { x: RIGHT_DUMMY_X, y: RIGHT_DUMMY_Y,             bodyColor: RIGHT_DUMMY_COLOR  },
+        { x: DUMMY_X,       y: DUMMY_Y - DUMMY_SPACING_Y },
+        { x: DUMMY_X,       y: DUMMY_Y                   },
+        { x: DUMMY_X,       y: DUMMY_Y + DUMMY_SPACING_Y },
+        { x: RIGHT_DUMMY_X, y: RIGHT_DUMMY_Y             },
     ];
-    for (const pos of dummyPositions) {
-        const { x, y, bodyColor } = pos;
+    for (const { x, y } of dummyPositions) {
         const parts = [];
-        const dArmY = y - Math.round(DUMMY_HEIGHT * 0.2);
-        parts.push(this.add.rectangle(x, y, DUMMY_WIDTH, DUMMY_HEIGHT, bodyColor).setDepth(1));
-        parts.push(this.add.rectangle(x - DUMMY_WIDTH / 2 - dArmW / 2, dArmY, dArmW, dArmH, DUMMY_ARM_COLOR).setDepth(1));
-        parts.push(this.add.rectangle(x + DUMMY_WIDTH / 2 + dArmW / 2, dArmY, dArmW, dArmH, DUMMY_ARM_COLOR).setDepth(1));
-        parts.push(this.add.circle(x - 6, y - 12, DUMMY_EYE_BIG_RADIUS,   DUMMY_EYE_COLOR).setDepth(2));
-        parts.push(this.add.circle(x + 5, y - 14, DUMMY_EYE_SMALL_RADIUS, DUMMY_EYE_COLOR).setDepth(2));
-        parts.push(this.add.rectangle(x + 1, y - 4, 8, 3, DUMMY_MOUTH_COLOR).setDepth(2));
+        const sprite = this.add.sprite(x, y, SLIME_ASSET_KEY).setScale(SLIME_SCALE).setDepth(1);
+        sprite.play(SLIME_ANIM_KEY);
+        parts.push(sprite);
         const hbBg   = this.add.rectangle(x, y - DUMMY_HEALTH_BAR_Y_OFFSET, DUMMY_HEALTH_BAR_WIDTH, DUMMY_HEALTH_BAR_HEIGHT, DUMMY_HEALTH_BAR_BG_COLOR).setDepth(2);
         const hbFill = this.add.rectangle(x - DUMMY_HEALTH_BAR_WIDTH / 2, y - DUMMY_HEALTH_BAR_Y_OFFSET, DUMMY_HEALTH_BAR_WIDTH, DUMMY_HEALTH_BAR_HEIGHT, DUMMY_HEALTH_BAR_FILL_COLOR).setOrigin(0, 0.5).setDepth(3);
         parts.push(hbBg, hbFill);
@@ -944,9 +962,9 @@ function update(time, delta) {
         let hit = false;
         for (const d of dummies) {
             if (!d.alive) continue;
-            const hw = p.obj.width  / 2 + DUMMY_WIDTH  / 2;
-            const hh = p.obj.height / 2 + DUMMY_HEIGHT / 2;
-            if (Math.abs(p.obj.x - d.x) < hw && Math.abs(p.obj.y - d.y) < hh) {
+            const hw = p.obj.width  / 2 + SLIME_BODY_WIDTH  / 2;
+            const hh = p.obj.height / 2 + SLIME_BODY_HEIGHT / 2;
+            if (Math.abs(p.obj.x - (d.x + SLIME_BODY_OFFSET_X)) < hw && Math.abs(p.obj.y - (d.y + SLIME_BODY_OFFSET_Y)) < hh) {
                 p.obj.destroy();
                 projectiles.splice(i, 1);
                 mana = Math.min(MANA_MAX, mana + DUMMY_HIT_MANA_GAIN);
