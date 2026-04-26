@@ -497,6 +497,7 @@ function create() {
         const glowColor = Phaser.Display.Color.HexStringToColor(HASTE_OUTLINE_COLOR_CSS).color;
         hasteGlowFx = player.postFX.addGlow(glowColor, HASTE_OUTLINE_SIZE, 0, false);
         hasteGlowFx.active = false;
+        hasteGlowFx.outerStrength = 0;
     } else {
         // Canvas fallback: 4-direction tinted copies, no diagonals
         const hasteOutlineColor = Phaser.Display.Color.HexStringToColor(HASTE_OUTLINE_COLOR_CSS).color;
@@ -836,6 +837,7 @@ function update(time, delta) {
             hasteShow = true;
         }
         hasteGlowFx.active = hasteShow;
+        hasteGlowFx.outerStrength = hasteShow ? HASTE_OUTLINE_SIZE : 0;
     } else {
         syncSprites(hasteSprites, hasteEndTime);
     }
