@@ -113,6 +113,13 @@ const HIT_PAUSE_MS                 = 40;
 const DEATH_POP_SCALE              = 2.5;
 const DEATH_POP_MS                 = 200;
 
+// --- PLAYER HURT FEEDBACK ---
+const PLAYER_HURT_MS                  = 150;
+const PLAYER_HURT_KNOCKBACK_DISTANCE  = 18;
+const PLAYER_HURT_KNOCKBACK_MS        = 100;
+const PLAYER_INVULN_MS                = 600;
+const PLAYER_INVULN_BLINK_INTERVAL_MS = 80;
+
 // --- DERIVED NUMERIC COLORS ---
 function cssInt(s) { return parseInt(s.slice(1), 16); }
 const HEALTH_BAR_BG_COLOR         = cssInt(HEALTH_BAR_BG_COLOR_CSS);
@@ -200,7 +207,12 @@ let floatHealthVisibleUntil = 0;
 let floatHealthFadeTween    = null;
 let floatManaPip1, floatManaPip2;
 let floatStaminaGfx;
-let hitPauseEndTime = -Infinity;
+let hitPauseEndTime        = -Infinity;
+let playerHurtEndTime      = -Infinity;
+let playerInvulnEndTime    = -Infinity;
+let playerKnockbackVx      = 0;
+let playerKnockbackVy      = 0;
+let playerKnockbackEndTime = -Infinity;
 
 function setHasteVisualVisible(show) {
     const haste = PLAYER.spells.haste;
@@ -258,7 +270,12 @@ function create() {
     hasteEndTime        = -Infinity;
     lastAuraTime        = -Infinity;
     lastIceTime         = -Infinity;
-    hitPauseEndTime     = -Infinity;
+    hitPauseEndTime        = -Infinity;
+    playerHurtEndTime      = -Infinity;
+    playerInvulnEndTime    = -Infinity;
+    playerKnockbackVx      = 0;
+    playerKnockbackVy      = 0;
+    playerKnockbackEndTime = -Infinity;
     projectiles         = [];
     enemyProjectiles    = [];
     hasteSprites        = [];
@@ -906,8 +923,31 @@ function update(time, delta) {
         if (Math.abs(ep.obj.x - hbcx) < phw + ew && Math.abs(ep.obj.y - hbcy) < phh + eh) {
             ep.obj.destroy();
             enemyProjectiles.splice(i, 1);
+            if (time < playerInvulnEndTime) continue;
+
             health = Math.max(0, health - (ep.damage ?? 1));
             showFloatingHealth(this, FLOAT_HEALTH_SHOW_CHANGE_MS);
+
+            // Hurt frame
+            shooting              = false;
+            casting               = false;
+            pendingSpell          = null;
+            pendingSpellDirection = null;
+            player.stop();
+            player.setFrame(PLAYER.animations.hurtFrame);
+            playerHurtEndTime = time + PLAYER_HURT_MS;
+
+            // Knockback in projectile direction
+            const epLen = Math.sqrt(ep.vx * ep.vx + ep.vy * ep.vy);
+            if (epLen > 0) {
+                const kbSpd = PLAYER_HURT_KNOCKBACK_DISTANCE / (PLAYER_HURT_KNOCKBACK_MS / 1000);
+                playerKnockbackVx      = (ep.vx / epLen) * kbSpd;
+                playerKnockbackVy      = (ep.vy / epLen) * kbSpd;
+                playerKnockbackEndTime = time + PLAYER_HURT_KNOCKBACK_MS;
+            }
+
+            // Invulnerability
+            playerInvulnEndTime = time + PLAYER_INVULN_MS;
         }
     }
 
@@ -1085,6 +1125,11 @@ function update(time, delta) {
     player.x += dx * speed * dt;
     player.y += dy * speed * dt;
 
+    if (playerKnockbackEndTime > time) {
+        player.x += playerKnockbackVx * dt;
+        player.y += playerKnockbackVy * dt;
+    }
+
     // Clamp player to gameplay area
     player.x = Phaser.Math.Clamp(player.x, PLAYER_BOUNDS_PADDING_X, GAME_WIDTH  - PLAYER_BOUNDS_PADDING_X);
     player.y = Phaser.Math.Clamp(player.y, PLAYER_BOUNDS_PADDING_Y, GAME_HEIGHT - PLAYER_BOUNDS_PADDING_Y);
@@ -1151,8 +1196,18 @@ function update(time, delta) {
         else if (dy > 0)  lastDirection = 'down';
     }
 
-    // Shoot or cast animation overrides movement animation until complete
-    if (shooting || casting) return;
+    // Invulnerability blink
+    if (time < playerInvulnEndTime) {
+        player.setVisible(Math.floor(time / PLAYER_INVULN_BLINK_INTERVAL_MS) % 2 === 0);
+    } else {
+        player.setVisible(true);
+    }
+
+    // Clear hurt when duration expires
+    if (playerHurtEndTime > -Infinity && time >= playerHurtEndTime) playerHurtEndTime = -Infinity;
+
+    // Shoot, cast, or hurt overrides movement animation
+    if (shooting || casting || time < playerHurtEndTime) return;
 
     const prefix  = moving ? (isRunning ? 'run' : 'walk') : 'idle';
     const animKey = `${prefix}_${lastDirection}`;

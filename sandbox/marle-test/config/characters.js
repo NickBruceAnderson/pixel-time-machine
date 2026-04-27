@@ -3,10 +3,10 @@ export const ACTIVE_CHARACTER = 'marle';
 export const CHARACTERS = {
     marle: {
         assetKey:     'marle',
-        assetPath:    'assets/marle5.png',
+        assetPath:    'assets/marle6.png',
         frameWidth:   32,
         frameHeight:  48,
-        framesPerRow: 17,
+        framesPerRow: 22,
         startX:       400,
         startY:       300,
 
@@ -32,18 +32,27 @@ export const CHARACTERS = {
                 down:  2,
                 right: 3,
             },
-            idleFrame:         0,
-            walkStart:         1,
-            walkEnd:           6,
-            runSequence:       [1, 2, 7, 7, 4, 5, 8, 8],
-            shootReadyFrame:   9,
-            shootFireFrame:    10,
-            shootFrameRate:    10,
-            castStart:         11,
-            castEnd:           16,
-            castFrameRate:     10,
-            castReleaseFrame:  16,
+            idleFrame:          0,
+            walkStart:          1,
+            walkEnd:            6,
+            runSequence:        [1, 2, 7, 7, 4, 5, 8, 8],
+
+            shootReadyFrame:    9,
+            shootFireFrame:     10,
+            shootFrameRate:     10,
+
+            castStart:          11,
+            castEnd:            16,
+            castFrameRate:      10,
+            castReleaseFrame:   16,
             castCancelsOnShoot: false,
+
+            hurtFrame:          17,
+            dodgeStartFrame:    18,
+            dodgeEndFrame:      19,
+            dodgeFrameRate:     14,
+            blockFrame:         20,
+            parryFrame:         21,
         },
 
         combat: {
