@@ -12,10 +12,6 @@ const GAME_HEIGHT   = WORLD.gameHeight;
 const FOOTER_HEIGHT = WORLD.footerHeight;
 const CANVAS_HEIGHT = GAME_HEIGHT + FOOTER_HEIGHT;
 
-// Player bounds (not in character config)
-const PLAYER_BOUNDS_PADDING_X = 16;
-const PLAYER_BOUNDS_PADDING_Y = 24;
-
 // --- HUD MODE ---
 const HUD_MODE       = 'hide-bars'; // 'hide-bars' | 'hide-all' | 'show-all'
 const SHOW_FLOAT_HUD = true;
@@ -61,8 +57,6 @@ const SPELL_PIP_HEIGHT           = 12;
 const SPELL_PIP_GAP              = 3;
 
 // --- FLOATING HEALTH HUD ---
-const PLAYER_HEART_KEY              = 'playerHeart';
-const PLAYER_HEART_PATH             = 'assets/player-heart.png';
 const FLOAT_HEALTH_OFFSET_X         = -12;
 const FLOAT_HEALTH_OFFSET_Y         = -6;
 const FLOAT_HEART_SCALE             = 0.6;
@@ -113,24 +107,11 @@ const HIT_PAUSE_MS                 = 40;
 const DEATH_POP_SCALE              = 2.5;
 const DEATH_POP_MS                 = 100;
 
-// --- PLAYER HURT FEEDBACK ---
-const PLAYER_HURT_MS                  = 150;
-const PLAYER_HURT_KNOCKBACK_DISTANCE  = 18;
-const PLAYER_HURT_KNOCKBACK_MS        = 100;
-const PLAYER_INVULN_MS                = 600;
-const PLAYER_INVULN_BLINK_INTERVAL_MS = 80;
+// --- SHOOTING ---
+const SHOOT_MOUSE_DEADZONE_PX = 8; // use facing fallback if pointer is this close to player
 
 // --- BLOCK / PARRY ---
-const BLOCK_FRAME                        = PLAYER.animations.blockFrame;
-const PARRY_FRAME                        = PLAYER.animations.parryFrame;
-const PARRY_WINDOW_MS                    = 170;
-const PARRY_FLASH_MS                     = 120;
-const BLOCK_STAMINA_DRAIN_PER_SECOND     = 1;
-const BLOCK_HIT_STAMINA_COST             = 20;
-const MIN_STAMINA_TO_BLOCK               = 20;
-const REFLECTED_BULLET_COLOR_CSS         = '#ffee00';
-const REFLECTED_BULLET_SPEED_MULTIPLIER  = 4;
-const REFLECTED_BULLET_DAMAGE_MULTIPLIER = 1;
+const BLOCK = PLAYER.block;
 
 // --- DERIVED NUMERIC COLORS ---
 function cssInt(s) { return parseInt(s.slice(1), 16); }
@@ -150,7 +131,7 @@ const FLOAT_MANA_PIP_ACTIVE_COLOR = cssInt(FLOAT_MANA_PIP_ACTIVE_COLOR_CSS);
 const FLOAT_MANA_PIP_EMPTY_COLOR  = cssInt(FLOAT_MANA_PIP_EMPTY_COLOR_CSS);
 const FLOAT_STAMINA_TRACK_COLOR   = cssInt(FLOAT_STAMINA_TRACK_COLOR_CSS);
 const FLOAT_STAMINA_FILL_COLOR    = cssInt(FLOAT_STAMINA_FILL_COLOR_CSS);
-const REFLECTED_BULLET_COLOR      = cssInt(REFLECTED_BULLET_COLOR_CSS);
+const REFLECTED_BULLET_COLOR = cssInt(BLOCK.reflectedProjectile.colorCss);
 
 // Runtime helpers derived from PLAYER config
 function getFrame(row, col) {
@@ -264,9 +245,11 @@ function preload() {
     }
     const iceCfg = PROJECTILE_TYPES.ice;
     this.load.image(iceCfg.assetKey, iceCfg.assetPath);
-    this.load.image(PLAYER_HEART_KEY, PLAYER_HEART_PATH);
+    this.load.image(PLAYER.hud.heartKey, PLAYER.hud.heartPath);
     this.load.tilemapTiledJSON(WORLD.tilemap.mapKey, WORLD.tilemap.mapPath);
-    this.load.image(WORLD.tilemap.tilesetKey, WORLD.tilemap.tilesetPath);
+    for (const tileset of WORLD.tilemap.tilesets) {
+        this.load.image(tileset.key, tileset.path);
+    }
 }
 
 function create() {
@@ -389,20 +372,28 @@ function create() {
     }
 
     this.textures.get(PLAYER.assetKey).setFilter(Phaser.Textures.FilterMode.NEAREST);
-    this.textures.get(PLAYER_HEART_KEY).setFilter(Phaser.Textures.FilterMode.NEAREST);
-    this.textures.get(WORLD.tilemap.tilesetKey).setFilter(Phaser.Textures.FilterMode.NEAREST);
+    this.textures.get(PLAYER.hud.heartKey).setFilter(Phaser.Textures.FilterMode.NEAREST);
+    for (const tileset of WORLD.tilemap.tilesets) {
+        this.textures.get(tileset.key).setFilter(Phaser.Textures.FilterMode.NEAREST);
+    }
     for (const cfg of Object.values(ENEMY_TYPES)) {
         this.textures.get(cfg.assetKey).setFilter(Phaser.Textures.FilterMode.NEAREST);
     }
 
-    const map     = this.make.tilemap({ key: WORLD.tilemap.mapKey });
-    const tileset = map.addTilesetImage(WORLD.tilemap.tilesetName, WORLD.tilemap.tilesetKey);
-    if (!tileset) {
-        console.error('Missing tileset:', WORLD.tilemap.tilesetName);
+    const map = this.make.tilemap({ key: WORLD.tilemap.mapKey });
+
+    const tilesets = WORLD.tilemap.tilesets.map(tileset =>
+        map.addTilesetImage(tileset.name, tileset.key)
+    );
+
+    if (tilesets.some(tileset => !tileset)) {
+        console.error('Missing one or more tilesets.');
+        console.error('Expected tilesets:', WORLD.tilemap.tilesets.map(t => t.name));
         console.error('Available tilesets:', map.tilesets.map(t => t.name));
         return;
     }
-    const groundLayer = map.createLayer(WORLD.tilemap.worldLayerName, tileset, 0, 0);
+
+    const groundLayer = map.createLayer(WORLD.tilemap.worldLayerName, tilesets, 0, 0);
     if (!groundLayer) {
         console.error('Missing layer:', WORLD.tilemap.worldLayerName);
         console.error('Available layers:', map.layers.map(l => l.name));
@@ -821,7 +812,7 @@ function create() {
     floatHealthCircle = this.add.image(
         player.x + FLOAT_HEALTH_OFFSET_X * SCALE,
         player.y + FLOAT_HEALTH_OFFSET_Y * SCALE,
-        PLAYER_HEART_KEY
+        PLAYER.hud.heartKey
     ).setScale(FLOAT_HEART_SCALE * SCALE).setDepth(20);
     floatHealthText = this.add.text(
         player.x + FLOAT_HEALTH_OFFSET_X * SCALE + FLOAT_HEALTH_NUMBER_OFFSET_X * SCALE,
@@ -857,48 +848,14 @@ function create() {
         if (gameOver) scene.scene.restart();
     });
 
-    // Left click shoots; right click blocks
+    // Right click blocks. Left click auto-shoots in update().
     this.input.on('pointerdown', (pointer) => {
         if (pointer.rightButtonDown()) {
-            if (!gameOver && stamina >= MIN_STAMINA_TO_BLOCK) {
-                isBlocking       = true;
+            if (!gameOver && stamina >= BLOCK.minStaminaToBlock) {
+                isBlocking = true;
                 blockStartedAtMs = scene.time.now;
             }
-            return;
         }
-        if (!pointer.leftButtonDown()) return;
-        if (isBlocking) return;
-        if (dodging) return;
-        if (casting) {
-            if (!anim.castCancelsOnShoot) return;
-            casting = false;
-            pendingSpell          = null;
-            pendingSpellDirection = null;
-            player.stop();
-        }
-        const activeCooldown = scene.time.now < hasteEndTime
-            ? PLAYER.combat.shootCooldownMs / haste.shootDivisor
-            : PLAYER.combat.shootCooldownMs;
-        if (scene.time.now - lastShotTime < activeCooldown) return;
-        lastShotTime = scene.time.now;
-        shooting = true;
-        player.play(`shoot_${lastDirection}`);
-        const vec   = DIR_VECS[lastDirection];
-        const ptCfg = PROJECTILE_TYPES[PLAYER.combat.projectileType];
-        const proj  = scene.add.rectangle(
-            player.x + PLAYER.combat.projectileSpawnOffsetX * SCALE,
-            player.y + PLAYER.combat.projectileSpawnOffsetY * SCALE,
-            ptCfg.width, ptCfg.height,
-            cssInt(ptCfg.colorCss)
-        );
-        projectiles.push({
-            obj:      proj,
-            vx:       vec.x * ptCfg.speed,
-            vy:       vec.y * ptCfg.speed,
-            born:     scene.time.now,
-            lifetime: ptCfg.lifetimeMs,
-            damage:   ptCfg.damage
-        });
     });
 
     this.input.on('pointerup', (pointer) => {
@@ -906,9 +863,70 @@ function create() {
     });
 }
 
+function tryShootAtPointer(scene, pointer, now) {
+    if (!pointer.leftButtonDown()) return;
+    if (gameOver) return;
+    if (isBlocking) return;
+    if (dodging) return;
+
+    if (casting) {
+        if (!PLAYER.animations.castCancelsOnShoot) return;
+
+        casting = false;
+        pendingSpell = null;
+        pendingSpellDirection = null;
+        player.stop();
+    }
+
+    const activeCooldown = now < hasteEndTime
+        ? PLAYER.combat.shootCooldownMs / PLAYER.spells.haste.shootDivisor
+        : PLAYER.combat.shootCooldownMs;
+
+    if (now - lastShotTime < activeCooldown) return;
+
+    lastShotTime = now;
+    shooting = true;
+    player.play(`shoot_${lastDirection}`);
+
+    const ddx = pointer.x - player.x;
+    const ddy = pointer.y - player.y;
+    const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+
+    let aimX;
+    let aimY;
+
+    if (dist < SHOOT_MOUSE_DEADZONE_PX) {
+        aimX = DIR_VECS[lastDirection].x;
+        aimY = DIR_VECS[lastDirection].y;
+    } else {
+        aimX = ddx / dist;
+        aimY = ddy / dist;
+    }
+
+    const ptCfg = PROJECTILE_TYPES[PLAYER.combat.projectileType];
+
+    const proj = scene.add.rectangle(
+        player.x + PLAYER.combat.projectileSpawnOffsetX * SCALE,
+        player.y + PLAYER.combat.projectileSpawnOffsetY * SCALE,
+        ptCfg.width,
+        ptCfg.height,
+        cssInt(ptCfg.colorCss)
+    );
+
+    projectiles.push({
+        obj: proj,
+        vx: aimX * ptCfg.speed,
+        vy: aimY * ptCfg.speed,
+        born: now,
+        lifetime: ptCfg.lifetimeMs,
+        damage: ptCfg.damage
+    });
+}
+
 function update(time, delta) {
     if (gameOver) return;
-    const dt    = delta / 1000;
+    tryShootAtPointer(this, this.input.activePointer, time);
+    const dt = delta / 1000;
     const frame = player.frame.name;
     const res   = PLAYER.resources;
     const mov   = PLAYER.movement;
@@ -1047,15 +1065,15 @@ function update(time, delta) {
             if (time < playerInvulnEndTime) continue;
 
             if (isBlocking) {
-                stamina = Math.max(0, stamina - BLOCK_HIT_STAMINA_COST);
+                stamina = Math.max(0, stamina - BLOCK.hitStaminaCost);
                 if (stamina <= 0) isBlocking = false;
-                const isParry = (time - blockStartedAtMs) <= PARRY_WINDOW_MS;
+                const isParry = (time - blockStartedAtMs) <= BLOCK.parryWindowMs;
                 if (isParry) {
-                    parryFlashUntilMs = time + PARRY_FLASH_MS;
+                    parryFlashUntilMs = time + BLOCK.parryFlashMs;
                     player.stop();
-                    player.setFrame(getFrame(ROWS[lastDirection], PARRY_FRAME));
+                    player.setFrame(getFrame(ROWS[lastDirection], BLOCK.parryFrame));
                     const epLen  = Math.sqrt(epVx * epVx + epVy * epVy);
-                    const reflSpd = epLen * REFLECTED_BULLET_SPEED_MULTIPLIER;
+                    const reflSpd = epLen * BLOCK.reflectedProjectile.speedMultiplier;
                     const rvx = epLen > 0 ? (-epVx / epLen) * reflSpd : 0;
                     const rvy = epLen > 0 ? (-epVy / epLen) * reflSpd : 0;
                     const reflProj = scene.add.rectangle(epX, epY, epW, epH, REFLECTED_BULLET_COLOR).setDepth(1);
@@ -1065,7 +1083,7 @@ function update(time, delta) {
                         vy:       rvy,
                         born:     time,
                         lifetime: 1400,
-                        damage:   Math.ceil(epDmg * REFLECTED_BULLET_DAMAGE_MULTIPLIER),
+                        damage:   Math.ceil(epDmg * BLOCK.reflectedProjectile.damageMultiplier),
                     });
                 }
                 continue;
@@ -1081,19 +1099,19 @@ function update(time, delta) {
             pendingSpellDirection = null;
             player.stop();
             player.setFrame(getFrame(ROWS[lastDirection], PLAYER.animations.hurtFrame));
-            playerHurtEndTime = time + PLAYER_HURT_MS;
+            playerHurtEndTime = time + PLAYER.hurt.durationMs;
 
             // Knockback in projectile direction
             const epLen = Math.sqrt(epVx * epVx + epVy * epVy);
             if (epLen > 0) {
-                const kbSpd = PLAYER_HURT_KNOCKBACK_DISTANCE / (PLAYER_HURT_KNOCKBACK_MS / 1000);
+                const kbSpd = PLAYER.hurt.knockbackDistance / (PLAYER.hurt.knockbackMs / 1000);
                 playerKnockbackVx      = (epVx / epLen) * kbSpd;
                 playerKnockbackVy      = (epVy / epLen) * kbSpd;
-                playerKnockbackEndTime = time + PLAYER_HURT_KNOCKBACK_MS;
+                playerKnockbackEndTime = time + PLAYER.hurt.knockbackMs;
             }
 
             // Invulnerability
-            playerInvulnEndTime = time + PLAYER_INVULN_MS;
+            playerInvulnEndTime = time + PLAYER.hurt.invulnMs;
         }
     }
 
@@ -1184,8 +1202,11 @@ function update(time, delta) {
                 if (d.health <= 0) {
                     d.health    = 0;
                     d.alive     = false;
-                    d.respawnAt = time + cfg.stats.respawnMs;
-                    for (const dp of d.parts) dp.setVisible(false);
+                    if (cfg.stats.respawn) {
+                        d.respawnAt = time + cfg.stats.respawnMs;
+                    } else {
+                        d.respawnAt = Infinity;
+                    }                    for (const dp of d.parts) dp.setVisible(false);
                     if (d.hitboxDebugRect) d.hitboxDebugRect.setVisible(false);
                     if (d.flashTimer) { d.flashTimer.remove(); d.flashTimer = null; }
                     d.sprite.clearTint();
@@ -1248,7 +1269,7 @@ function update(time, delta) {
         stamina = Math.min(res.staminaMax, stamina + res.staminaRegenPerSecond * dt);
     }
     if (isBlocking) {
-        stamina = Math.max(0, stamina - BLOCK_STAMINA_DRAIN_PER_SECOND * dt);
+        stamina = Math.max(0, stamina - BLOCK.staminaDrainPerSecond * dt);
         if (stamina <= 0) isBlocking = false;
     }
     staminaBarFill.width = HEALTH_BAR_WIDTH * (stamina / res.staminaMax);
@@ -1279,11 +1300,16 @@ function update(time, delta) {
             player.x += dodgeDirX * dodgeSpd * dt;
             player.y += dodgeDirY * dodgeSpd * dt;
         }
-    } else {
-        const speed = mov.moveSpeed * (!shooting && isRunning ? mov.runMultiplier : 1);
-        player.x += dx * speed * dt;
-        player.y += dy * speed * dt;
-    }
+        } else {
+            let speed = mov.moveSpeed * (!shooting && isRunning ? mov.runMultiplier : 1);
+
+            if (isBlocking) {
+                speed *= BLOCK.moveSpeedMultiplier;
+            }
+
+            player.x += dx * speed * dt;
+            player.y += dy * speed * dt;
+        }
 
     if (playerKnockbackEndTime > time) {
         player.x += playerKnockbackVx * dt;
@@ -1291,8 +1317,8 @@ function update(time, delta) {
     }
 
     // Clamp player to gameplay area
-    player.x = Phaser.Math.Clamp(player.x, PLAYER_BOUNDS_PADDING_X, GAME_WIDTH  - PLAYER_BOUNDS_PADDING_X);
-    player.y = Phaser.Math.Clamp(player.y, PLAYER_BOUNDS_PADDING_Y, GAME_HEIGHT - PLAYER_BOUNDS_PADDING_Y);
+    player.x = Phaser.Math.Clamp(player.x, PLAYER.bounds.paddingX, GAME_WIDTH  - PLAYER.bounds.paddingX);
+    player.y = Phaser.Math.Clamp(player.y, PLAYER.bounds.paddingY, GAME_HEIGHT - PLAYER.bounds.paddingY);
 
     // Floating HUD — follow player each frame
     if (SHOW_FLOAT_HUD) {
@@ -1360,13 +1386,23 @@ function update(time, delta) {
     if (dodging || time < playerHurtEndTime) {
         player.setVisible(true);
     } else if (time < playerInvulnEndTime) {
-        player.setVisible(Math.floor(time / PLAYER_INVULN_BLINK_INTERVAL_MS) % 2 === 0);
+        player.setVisible(Math.floor(time / PLAYER.hurt.invulnBlinkIntervalMs) % 2 === 0);
     } else {
         player.setVisible(true);
     }
 
     // Clear hurt when duration expires
     if (playerHurtEndTime > -Infinity && time >= playerHurtEndTime) playerHurtEndTime = -Infinity;
+
+    // Block/parry visual override
+    if (isBlocking) {
+        player.stop();
+
+        const blockVisualFrame = time < parryFlashUntilMs ? BLOCK.parryFrame : BLOCK.frame;
+        player.setFrame(getFrame(ROWS[lastDirection], blockVisualFrame));
+
+        return;
+    }
 
     // Shoot, cast, hurt, or dodge overrides movement animation
     if (shooting || casting || time < playerHurtEndTime || dodging) return;

@@ -22,7 +22,7 @@ export const PROJECTILE_TYPES = {
     ice: {
         kind:       'image',
         assetKey:   'iceProjectile',
-        assetPath:  'assets/OanIceBlast3.png',
+        assetPath:  'assets/ice-blast.png',
         width:      48,
         height:     48,
         speed:      700,

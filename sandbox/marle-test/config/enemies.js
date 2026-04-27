@@ -21,7 +21,7 @@ export const ENEMY_TYPES = {
             damage:      1,
             armor:       0,
             moveSpeed:   25,
-            respawnMs:   3000,
+            respawnMs:   0,
             hitManaGain: 5,
         },
 
@@ -52,8 +52,8 @@ export const ENEMY_TYPES = {
         },
 
         attack: {
-            cooldownMs:            650,
-            projectileSpeed:       140,
+            cooldownMs:            1000,
+            projectileSpeed:       250,
             projectileType:        'enemyBullet',
             projectileSpawnOffsetX: 0,
             projectileSpawnOffsetY: 16,
@@ -62,8 +62,11 @@ export const ENEMY_TYPES = {
 };
 
 export const ENEMY_SPAWNS = [
-    { type: 'slime', x: 600,  y: 150, shootDirection: 'left', ai: { aimMode: 'fixed' } },
-    { type: 'slime', x: 600,  y: 300 },
-    { type: 'slime', x: 600,  y: 450, ai: { aimMode: 'none' } },
-    { type: 'slime', x: 1100, y: 300 },
+    //{ type: 'slime', x: 1000, y: 150, shootDirection: 'left', ai: { aimMode: 'fixed' } },
+    //{ type: 'slime', x: 950, y: 450, ai: { aimMode: 'none' } },
+    { type: 'slime', x: 790, y: 430 },
+    { type: 'slime', x: 865, y: 555 },
+    { type: 'slime', x: 1140, y: 610 },
+    { type: 'slime', x: 980, y: 120 },
+    { type: 'slime', x: 1130, y: 185 },
 ];
