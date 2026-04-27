@@ -123,13 +123,13 @@ const PLAYER_INVULN_BLINK_INTERVAL_MS = 80;
 // --- BLOCK / PARRY ---
 const BLOCK_FRAME                        = PLAYER.animations.blockFrame;
 const PARRY_FRAME                        = PLAYER.animations.parryFrame;
-const PARRY_WINDOW_MS                    = 34;
+const PARRY_WINDOW_MS                    = 170;
 const PARRY_FLASH_MS                     = 120;
 const BLOCK_STAMINA_DRAIN_PER_SECOND     = 1;
 const BLOCK_HIT_STAMINA_COST             = 20;
-const MIN_STAMINA_TO_BLOCK               = 1;
+const MIN_STAMINA_TO_BLOCK               = 20;
 const REFLECTED_BULLET_COLOR_CSS         = '#ffee00';
-const REFLECTED_BULLET_SPEED_MULTIPLIER  = 1.25;
+const REFLECTED_BULLET_SPEED_MULTIPLIER  = 4;
 const REFLECTED_BULLET_DAMAGE_MULTIPLIER = 1;
 
 // --- DERIVED NUMERIC COLORS ---

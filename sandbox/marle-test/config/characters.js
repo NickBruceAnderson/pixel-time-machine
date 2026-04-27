@@ -62,7 +62,7 @@ export const CHARACTERS = {
             castCancelsOnShoot: false,
 
             hurtFrame:          17,
-            dodgeSequence:      [1, 18, 19],
+            dodgeSequence:      [18, 19],
             dodgeFrameRate:     12,
             blockFrame:         20,
             parryFrame:         21,
