@@ -120,13 +120,17 @@ const PLAYER_HURT_KNOCKBACK_MS        = 100;
 const PLAYER_INVULN_MS                = 600;
 const PLAYER_INVULN_BLINK_INTERVAL_MS = 80;
 
-// --- PLAYER DODGE ---
-const PLAYER_DODGE_KEY          = 'SPACE';
-const PLAYER_DODGE_DISTANCE     = 72;
-const PLAYER_DODGE_MS           = 160;
-const PLAYER_DODGE_COOLDOWN_MS  = 450;
-const PLAYER_DODGE_STAMINA_COST = 20;
-const PLAYER_DODGE_INVULN_MS    = 140;
+// --- BLOCK / PARRY ---
+const BLOCK_FRAME                        = PLAYER.animations.blockFrame;
+const PARRY_FRAME                        = PLAYER.animations.parryFrame;
+const PARRY_WINDOW_MS                    = 34;
+const PARRY_FLASH_MS                     = 120;
+const BLOCK_STAMINA_DRAIN_PER_SECOND     = 1;
+const BLOCK_HIT_STAMINA_COST             = 20;
+const MIN_STAMINA_TO_BLOCK               = 1;
+const REFLECTED_BULLET_COLOR_CSS         = '#ffee00';
+const REFLECTED_BULLET_SPEED_MULTIPLIER  = 1.25;
+const REFLECTED_BULLET_DAMAGE_MULTIPLIER = 1;
 
 // --- DERIVED NUMERIC COLORS ---
 function cssInt(s) { return parseInt(s.slice(1), 16); }
@@ -146,6 +150,7 @@ const FLOAT_MANA_PIP_ACTIVE_COLOR = cssInt(FLOAT_MANA_PIP_ACTIVE_COLOR_CSS);
 const FLOAT_MANA_PIP_EMPTY_COLOR  = cssInt(FLOAT_MANA_PIP_EMPTY_COLOR_CSS);
 const FLOAT_STAMINA_TRACK_COLOR   = cssInt(FLOAT_STAMINA_TRACK_COLOR_CSS);
 const FLOAT_STAMINA_FILL_COLOR    = cssInt(FLOAT_STAMINA_FILL_COLOR_CSS);
+const REFLECTED_BULLET_COLOR      = cssInt(REFLECTED_BULLET_COLOR_CSS);
 
 // Runtime helpers derived from PLAYER config
 function getFrame(row, col) {
@@ -226,6 +231,9 @@ let dodgeEndTime  = -Infinity;
 let dodgeLastTime = -Infinity;
 let dodgeDirX     = 0;
 let dodgeDirY     = 0;
+let isBlocking        = false;
+let blockStartedAtMs  = -Infinity;
+let parryFlashUntilMs = -Infinity;
 
 function setHasteVisualVisible(show) {
     const haste = PLAYER.spells.haste;
@@ -263,9 +271,11 @@ function preload() {
 
 function create() {
     scene = this;
+    this.game.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     const res   = PLAYER.resources;
     const mov   = PLAYER.movement;
     const anim  = PLAYER.animations;
+    const dodge = PLAYER.dodge;
     const haste = PLAYER.spells.haste;
 
     // Reset mutable globals on each create (handles scene.restart())
@@ -294,6 +304,9 @@ function create() {
     dodgeLastTime = -Infinity;
     dodgeDirX     = 0;
     dodgeDirY     = 0;
+    isBlocking        = false;
+    blockStartedAtMs  = -Infinity;
+    parryFlashUntilMs = -Infinity;
     projectiles         = [];
     enemyProjectiles    = [];
     hasteSprites        = [];
@@ -316,7 +329,7 @@ function create() {
         anims.create({
             key,
             frames: [{ key: PLAYER.assetKey, frame: getFrame(row, anim.idleFrame) }],
-            frameRate: 1,
+            frameRate: anim.idleFrameRate,
             repeat: 0
         });
     }
@@ -335,7 +348,7 @@ function create() {
                 start: getFrame(row, anim.walkStart),
                 end:   getFrame(row, anim.walkEnd)
             }),
-            frameRate: 8,
+            frameRate: anim.walkFrameRate,
             repeat: -1
         });
     }
@@ -351,7 +364,7 @@ function create() {
         anims.create({
             key,
             frames: anim.runSequence.map(col => ({ key: PLAYER.assetKey, frame: getFrame(row, col) })),
-            frameRate: 12,
+            frameRate: anim.runFrameRate,
             repeat: -1
         });
     }
@@ -559,22 +572,23 @@ function create() {
         });
     }
 
-    // Dodge animations (2 frames, play once)
+    // Dodge animations
     const dodgeDirs = [
         ['dodge_up',    ROWS.up],
         ['dodge_left',  ROWS.left],
         ['dodge_down',  ROWS.down],
         ['dodge_right', ROWS.right],
     ];
+
     for (const [key, row] of dodgeDirs) {
         anims.create({
             key,
-            frames: [
-                { key: PLAYER.assetKey, frame: getFrame(row, anim.dodgeStartFrame) },
-                { key: PLAYER.assetKey, frame: getFrame(row, anim.dodgeEndFrame)   },
-            ],
+            frames: anim.dodgeSequence.map(col => ({
+                key: PLAYER.assetKey,
+                frame: getFrame(row, col)
+            })),
             frameRate: anim.dodgeFrameRate,
-            repeat: 0
+            repeat: -1
         });
     }
 
@@ -632,6 +646,7 @@ function create() {
 
     this.input.keyboard.on('keydown-ONE', () => {
         if (dodging) return;
+        if (isBlocking) return;
         if (mana < PLAYER.spells.aura.manaCost) return;
         if (scene.time.now - lastAuraTime < PLAYER.spells.aura.cooldownMs) return;
         mana -= PLAYER.spells.aura.manaCost;
@@ -644,6 +659,7 @@ function create() {
 
     this.input.keyboard.on('keydown-TWO', () => {
         if (dodging) return;
+        if (isBlocking) return;
         if (mana < PLAYER.spells.ice.manaCost) return;
         if (scene.time.now - lastIceTime < PLAYER.spells.ice.cooldownMs) return;
         mana -= PLAYER.spells.ice.manaCost;
@@ -656,6 +672,7 @@ function create() {
 
     this.input.keyboard.on('keydown-THREE', () => {
         if (dodging) return;
+        if (isBlocking) return;
         if (mana < PLAYER.spells.haste.manaCost) return;
         mana -= PLAYER.spells.haste.manaCost;
         casting = true;
@@ -664,12 +681,12 @@ function create() {
         player.play(`cast_${lastDirection}`);
     });
 
-    this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes[PLAYER_DODGE_KEY]);
-    this.input.keyboard.on(`keydown-${PLAYER_DODGE_KEY}`, () => {
+    this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes[dodge.key]);
+    this.input.keyboard.on(`keydown-${dodge.key}`, () => {
         if (gameOver) return;
         if (dodging) return;
-        if (scene.time.now - dodgeLastTime < PLAYER_DODGE_COOLDOWN_MS) return;
-        if (stamina < PLAYER_DODGE_STAMINA_COST) return;
+        if (scene.time.now - dodgeLastTime < dodge.cooldownMS) return;
+        if (stamina < dodge.staminaCost) return;
 
         let ddx = 0, ddy = 0;
         if (wasd.left.isDown)  ddx -= 1;
@@ -693,16 +710,17 @@ function create() {
             dodgeDir = ddy < 0 ? 'up' : 'down';
         }
 
-        stamina               = Math.max(0, stamina - PLAYER_DODGE_STAMINA_COST);
+        stamina               = Math.max(0, stamina - dodge.staminaCost);
         dodgeLastTime         = scene.time.now;
+        isBlocking            = false;
         dodging               = true;
-        dodgeEndTime          = scene.time.now + PLAYER_DODGE_MS;
+        dodgeEndTime          = scene.time.now + dodge.durationMs;
         shooting              = false;
         casting               = false;
         pendingSpell          = null;
         pendingSpellDirection = null;
         player.play(`dodge_${dodgeDir}`);
-        playerInvulnEndTime = Math.max(playerInvulnEndTime, scene.time.now + PLAYER_DODGE_INVULN_MS);
+        playerInvulnEndTime = Math.max(playerInvulnEndTime, scene.time.now + dodge.invulnMs);
     });
 
     // Footer HUD — background
@@ -839,9 +857,17 @@ function create() {
         if (gameOver) scene.scene.restart();
     });
 
-    // Left click shoots in lastDirection
+    // Left click shoots; right click blocks
     this.input.on('pointerdown', (pointer) => {
+        if (pointer.rightButtonDown()) {
+            if (!gameOver && stamina >= MIN_STAMINA_TO_BLOCK) {
+                isBlocking       = true;
+                blockStartedAtMs = scene.time.now;
+            }
+            return;
+        }
         if (!pointer.leftButtonDown()) return;
+        if (isBlocking) return;
         if (dodging) return;
         if (casting) {
             if (!anim.castCancelsOnShoot) return;
@@ -874,6 +900,10 @@ function create() {
             damage:   ptCfg.damage
         });
     });
+
+    this.input.on('pointerup', (pointer) => {
+        if (pointer.rightButtonReleased()) isBlocking = false;
+    });
 }
 
 function update(time, delta) {
@@ -882,6 +912,7 @@ function update(time, delta) {
     const frame = player.frame.name;
     const res   = PLAYER.resources;
     const mov   = PLAYER.movement;
+    const dodge = PLAYER.dodge;
     const haste = PLAYER.spells.haste;
 
     const hasteRemaining = hasteEndTime - time;
@@ -1004,11 +1035,43 @@ function update(time, delta) {
         const ew = ep.obj.width  / 2;
         const eh = ep.obj.height / 2;
         if (Math.abs(ep.obj.x - hbcx) < phw + ew && Math.abs(ep.obj.y - hbcy) < phh + eh) {
+            const epX   = ep.obj.x;
+            const epY   = ep.obj.y;
+            const epVx  = ep.vx;
+            const epVy  = ep.vy;
+            const epW   = ep.obj.width;
+            const epH   = ep.obj.height;
+            const epDmg = ep.damage ?? 1;
             ep.obj.destroy();
             enemyProjectiles.splice(i, 1);
             if (time < playerInvulnEndTime) continue;
 
-            health = Math.max(0, health - (ep.damage ?? 1));
+            if (isBlocking) {
+                stamina = Math.max(0, stamina - BLOCK_HIT_STAMINA_COST);
+                if (stamina <= 0) isBlocking = false;
+                const isParry = (time - blockStartedAtMs) <= PARRY_WINDOW_MS;
+                if (isParry) {
+                    parryFlashUntilMs = time + PARRY_FLASH_MS;
+                    player.stop();
+                    player.setFrame(getFrame(ROWS[lastDirection], PARRY_FRAME));
+                    const epLen  = Math.sqrt(epVx * epVx + epVy * epVy);
+                    const reflSpd = epLen * REFLECTED_BULLET_SPEED_MULTIPLIER;
+                    const rvx = epLen > 0 ? (-epVx / epLen) * reflSpd : 0;
+                    const rvy = epLen > 0 ? (-epVy / epLen) * reflSpd : 0;
+                    const reflProj = scene.add.rectangle(epX, epY, epW, epH, REFLECTED_BULLET_COLOR).setDepth(1);
+                    projectiles.push({
+                        obj:      reflProj,
+                        vx:       rvx,
+                        vy:       rvy,
+                        born:     time,
+                        lifetime: 1400,
+                        damage:   Math.ceil(epDmg * REFLECTED_BULLET_DAMAGE_MULTIPLIER),
+                    });
+                }
+                continue;
+            }
+
+            health = Math.max(0, health - epDmg);
             showFloatingHealth(this, FLOAT_HEALTH_SHOW_CHANGE_MS);
 
             // Hurt frame
@@ -1021,11 +1084,11 @@ function update(time, delta) {
             playerHurtEndTime = time + PLAYER_HURT_MS;
 
             // Knockback in projectile direction
-            const epLen = Math.sqrt(ep.vx * ep.vx + ep.vy * ep.vy);
+            const epLen = Math.sqrt(epVx * epVx + epVy * epVy);
             if (epLen > 0) {
                 const kbSpd = PLAYER_HURT_KNOCKBACK_DISTANCE / (PLAYER_HURT_KNOCKBACK_MS / 1000);
-                playerKnockbackVx      = (ep.vx / epLen) * kbSpd;
-                playerKnockbackVy      = (ep.vy / epLen) * kbSpd;
+                playerKnockbackVx      = (epVx / epLen) * kbSpd;
+                playerKnockbackVy      = (epVy / epLen) * kbSpd;
                 playerKnockbackEndTime = time + PLAYER_HURT_KNOCKBACK_MS;
             }
 
@@ -1181,8 +1244,12 @@ function update(time, delta) {
     if (isRunning) {
         stamina = Math.max(0, stamina - res.staminaDrainPerSecond * dt);
         if (mov.runToggleMode && stamina === 0) runToggled = false;
-    } else {
+    } else if (!isBlocking) {
         stamina = Math.min(res.staminaMax, stamina + res.staminaRegenPerSecond * dt);
+    }
+    if (isBlocking) {
+        stamina = Math.max(0, stamina - BLOCK_STAMINA_DRAIN_PER_SECOND * dt);
+        if (stamina <= 0) isBlocking = false;
     }
     staminaBarFill.width = HEALTH_BAR_WIDTH * (stamina / res.staminaMax);
 
@@ -1208,7 +1275,7 @@ function update(time, delta) {
         if (time >= dodgeEndTime) {
             dodging = false;
         } else {
-            const dodgeSpd = PLAYER_DODGE_DISTANCE / (PLAYER_DODGE_MS / 1000);
+            const dodgeSpd = dodge.distance / (dodge.durationMs / 1000);
             player.x += dodgeDirX * dodgeSpd * dt;
             player.y += dodgeDirY * dodgeSpd * dt;
         }
@@ -1290,7 +1357,7 @@ function update(time, delta) {
     }
 
     // Invulnerability blink
-    if (time < playerHurtEndTime) {
+    if (dodging || time < playerHurtEndTime) {
         player.setVisible(true);
     } else if (time < playerInvulnEndTime) {
         player.setVisible(Math.floor(time / PLAYER_INVULN_BLINK_INTERVAL_MS) % 2 === 0);

@@ -16,6 +16,15 @@ export const CHARACTERS = {
             runToggleMode:  false,
         },
 
+        dodge: {
+            key:         'SPACE',
+            distance:    250,
+            durationMs:  250,
+            cooldownMs:  500,
+            staminaCost: 20,
+            invulnMs:    250,
+        },
+
         hitbox: {
             width:         10,
             height:        32,
@@ -33,9 +42,14 @@ export const CHARACTERS = {
                 right: 3,
             },
             idleFrame:          0,
+            idleFrameRate:      1,
+
             walkStart:          1,
             walkEnd:            6,
+            walkFrameRate:      8,
+
             runSequence:        [1, 2, 7, 7, 4, 5, 8, 8],
+            runFrameRate:       12,
 
             shootReadyFrame:    9,
             shootFireFrame:     10,
@@ -48,9 +62,8 @@ export const CHARACTERS = {
             castCancelsOnShoot: false,
 
             hurtFrame:          17,
-            dodgeStartFrame:    18,
-            dodgeEndFrame:      19,
-            dodgeFrameRate:     14,
+            dodgeSequence:      [1, 18, 19],
+            dodgeFrameRate:     12,
             blockFrame:         20,
             parryFrame:         21,
         },
