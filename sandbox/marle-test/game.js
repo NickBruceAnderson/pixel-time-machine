@@ -106,12 +106,12 @@ const GAME_OVER_COLOR     = '#ffffff';
 const ENEMY_HIT_FLASH_MS           = 80;
 const ENEMY_HIT_KNOCKBACK_DISTANCE = 20;
 const ENEMY_HIT_KNOCKBACK_MS       = 120;
-const FLOATING_DAMAGE_Y_OFFSET     = -70;
+const FLOATING_DAMAGE_Y_OFFSET     =  -10;
 const FLOATING_DAMAGE_MS           = 600;
 const FLOATING_DAMAGE_TEXT         = '-';
 const HIT_PAUSE_MS                 = 40;
 const DEATH_POP_SCALE              = 2.5;
-const DEATH_POP_MS                 = 200;
+const DEATH_POP_MS                 = 100;
 
 // --- PLAYER HURT FEEDBACK ---
 const PLAYER_HURT_MS                  = 150;
@@ -119,6 +119,14 @@ const PLAYER_HURT_KNOCKBACK_DISTANCE  = 18;
 const PLAYER_HURT_KNOCKBACK_MS        = 100;
 const PLAYER_INVULN_MS                = 600;
 const PLAYER_INVULN_BLINK_INTERVAL_MS = 80;
+
+// --- PLAYER DODGE ---
+const PLAYER_DODGE_KEY          = 'SPACE';
+const PLAYER_DODGE_DISTANCE     = 72;
+const PLAYER_DODGE_MS           = 160;
+const PLAYER_DODGE_COOLDOWN_MS  = 450;
+const PLAYER_DODGE_STAMINA_COST = 20;
+const PLAYER_DODGE_INVULN_MS    = 140;
 
 // --- DERIVED NUMERIC COLORS ---
 function cssInt(s) { return parseInt(s.slice(1), 16); }
@@ -213,6 +221,11 @@ let playerInvulnEndTime    = -Infinity;
 let playerKnockbackVx      = 0;
 let playerKnockbackVy      = 0;
 let playerKnockbackEndTime = -Infinity;
+let dodging       = false;
+let dodgeEndTime  = -Infinity;
+let dodgeLastTime = -Infinity;
+let dodgeDirX     = 0;
+let dodgeDirY     = 0;
 
 function setHasteVisualVisible(show) {
     const haste = PLAYER.spells.haste;
@@ -276,6 +289,11 @@ function create() {
     playerKnockbackVx      = 0;
     playerKnockbackVy      = 0;
     playerKnockbackEndTime = -Infinity;
+    dodging       = false;
+    dodgeEndTime  = -Infinity;
+    dodgeLastTime = -Infinity;
+    dodgeDirX     = 0;
+    dodgeDirY     = 0;
     projectiles         = [];
     enemyProjectiles    = [];
     hasteSprites        = [];
@@ -541,9 +559,29 @@ function create() {
         });
     }
 
+    // Dodge animations (2 frames, play once)
+    const dodgeDirs = [
+        ['dodge_up',    ROWS.up],
+        ['dodge_left',  ROWS.left],
+        ['dodge_down',  ROWS.down],
+        ['dodge_right', ROWS.right],
+    ];
+    for (const [key, row] of dodgeDirs) {
+        anims.create({
+            key,
+            frames: [
+                { key: PLAYER.assetKey, frame: getFrame(row, anim.dodgeStartFrame) },
+                { key: PLAYER.assetKey, frame: getFrame(row, anim.dodgeEndFrame)   },
+            ],
+            frameRate: anim.dodgeFrameRate,
+            repeat: 0
+        });
+    }
+
     player.on('animationcomplete', (anim) => {
         if (anim.key.startsWith('shoot_')) shooting = false;
         if (anim.key.startsWith('cast_'))  casting  = false;
+        if (anim.key.startsWith('dodge_')) dodging  = false;
     });
 
     const resolveSpell = () => {
@@ -593,6 +631,7 @@ function create() {
     key3     = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.THREE);
 
     this.input.keyboard.on('keydown-ONE', () => {
+        if (dodging) return;
         if (mana < PLAYER.spells.aura.manaCost) return;
         if (scene.time.now - lastAuraTime < PLAYER.spells.aura.cooldownMs) return;
         mana -= PLAYER.spells.aura.manaCost;
@@ -604,6 +643,7 @@ function create() {
     });
 
     this.input.keyboard.on('keydown-TWO', () => {
+        if (dodging) return;
         if (mana < PLAYER.spells.ice.manaCost) return;
         if (scene.time.now - lastIceTime < PLAYER.spells.ice.cooldownMs) return;
         mana -= PLAYER.spells.ice.manaCost;
@@ -615,12 +655,54 @@ function create() {
     });
 
     this.input.keyboard.on('keydown-THREE', () => {
+        if (dodging) return;
         if (mana < PLAYER.spells.haste.manaCost) return;
         mana -= PLAYER.spells.haste.manaCost;
         casting = true;
         pendingSpell          = 'haste';
         pendingSpellDirection = lastDirection;
         player.play(`cast_${lastDirection}`);
+    });
+
+    this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes[PLAYER_DODGE_KEY]);
+    this.input.keyboard.on(`keydown-${PLAYER_DODGE_KEY}`, () => {
+        if (gameOver) return;
+        if (dodging) return;
+        if (scene.time.now - dodgeLastTime < PLAYER_DODGE_COOLDOWN_MS) return;
+        if (stamina < PLAYER_DODGE_STAMINA_COST) return;
+
+        let ddx = 0, ddy = 0;
+        if (wasd.left.isDown)  ddx -= 1;
+        if (wasd.right.isDown) ddx += 1;
+        if (wasd.up.isDown)    ddy -= 1;
+        if (wasd.down.isDown)  ddy += 1;
+        if (ddx === 0 && ddy === 0) {
+            const v = DIR_VECS[lastDirection];
+            ddx = v.x; ddy = v.y;
+        } else if (ddx !== 0 && ddy !== 0) {
+            const dlen = Math.sqrt(ddx * ddx + ddy * ddy);
+            ddx /= dlen; ddy /= dlen;
+        }
+        dodgeDirX = ddx;
+        dodgeDirY = ddy;
+
+        let dodgeDir;
+        if (Math.abs(ddx) >= Math.abs(ddy)) {
+            dodgeDir = ddx < 0 ? 'left' : 'right';
+        } else {
+            dodgeDir = ddy < 0 ? 'up' : 'down';
+        }
+
+        stamina               = Math.max(0, stamina - PLAYER_DODGE_STAMINA_COST);
+        dodgeLastTime         = scene.time.now;
+        dodging               = true;
+        dodgeEndTime          = scene.time.now + PLAYER_DODGE_MS;
+        shooting              = false;
+        casting               = false;
+        pendingSpell          = null;
+        pendingSpellDirection = null;
+        player.play(`dodge_${dodgeDir}`);
+        playerInvulnEndTime = Math.max(playerInvulnEndTime, scene.time.now + PLAYER_DODGE_INVULN_MS);
     });
 
     // Footer HUD — background
@@ -760,6 +842,7 @@ function create() {
     // Left click shoots in lastDirection
     this.input.on('pointerdown', (pointer) => {
         if (!pointer.leftButtonDown()) return;
+        if (dodging) return;
         if (casting) {
             if (!anim.castCancelsOnShoot) return;
             casting = false;
@@ -934,7 +1017,7 @@ function update(time, delta) {
             pendingSpell          = null;
             pendingSpellDirection = null;
             player.stop();
-            player.setFrame(PLAYER.animations.hurtFrame);
+            player.setFrame(getFrame(ROWS[lastDirection], PLAYER.animations.hurtFrame));
             playerHurtEndTime = time + PLAYER_HURT_MS;
 
             // Knockback in projectile direction
@@ -1121,9 +1204,19 @@ function update(time, delta) {
         dy /= len;
     }
 
-    const speed = mov.moveSpeed * (!shooting && isRunning ? mov.runMultiplier : 1);
-    player.x += dx * speed * dt;
-    player.y += dy * speed * dt;
+    if (dodging) {
+        if (time >= dodgeEndTime) {
+            dodging = false;
+        } else {
+            const dodgeSpd = PLAYER_DODGE_DISTANCE / (PLAYER_DODGE_MS / 1000);
+            player.x += dodgeDirX * dodgeSpd * dt;
+            player.y += dodgeDirY * dodgeSpd * dt;
+        }
+    } else {
+        const speed = mov.moveSpeed * (!shooting && isRunning ? mov.runMultiplier : 1);
+        player.x += dx * speed * dt;
+        player.y += dy * speed * dt;
+    }
 
     if (playerKnockbackEndTime > time) {
         player.x += playerKnockbackVx * dt;
@@ -1197,7 +1290,9 @@ function update(time, delta) {
     }
 
     // Invulnerability blink
-    if (time < playerInvulnEndTime) {
+    if (time < playerHurtEndTime) {
+        player.setVisible(true);
+    } else if (time < playerInvulnEndTime) {
         player.setVisible(Math.floor(time / PLAYER_INVULN_BLINK_INTERVAL_MS) % 2 === 0);
     } else {
         player.setVisible(true);
@@ -1206,8 +1301,8 @@ function update(time, delta) {
     // Clear hurt when duration expires
     if (playerHurtEndTime > -Infinity && time >= playerHurtEndTime) playerHurtEndTime = -Infinity;
 
-    // Shoot, cast, or hurt overrides movement animation
-    if (shooting || casting || time < playerHurtEndTime) return;
+    // Shoot, cast, hurt, or dodge overrides movement animation
+    if (shooting || casting || time < playerHurtEndTime || dodging) return;
 
     const prefix  = moving ? (isRunning ? 'run' : 'walk') : 'idle';
     const animKey = `${prefix}_${lastDirection}`;
