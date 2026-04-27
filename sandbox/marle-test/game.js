@@ -1,140 +1,40 @@
-// --- TUNABLES ---
+import { WORLD }                         from './config/world.js';
+import { ACTIVE_CHARACTER, CHARACTERS }  from './config/characters.js';
+import { ENEMY_TYPES, ENEMY_SPAWNS }     from './config/enemies.js';
+import { PROJECTILE_TYPES }              from './config/projectiles.js';
 
-// --- GAME CONFIG ---
-const GAME_WIDTH       = 1200;
-const GAME_HEIGHT      = 800;
-const FOOTER_HEIGHT    = 96;
-const CANVAS_HEIGHT    = GAME_HEIGHT + FOOTER_HEIGHT;
-const SCALE            = 3;
+// Convenience aliases
+const SCALE         = WORLD.scale;
+const PLAYER        = CHARACTERS[ACTIVE_CHARACTER];
+const ROWS          = PLAYER.animations.rows;
+const GAME_WIDTH    = WORLD.gameWidth;
+const GAME_HEIGHT   = WORLD.gameHeight;
+const FOOTER_HEIGHT = WORLD.footerHeight;
+const CANVAS_HEIGHT = GAME_HEIGHT + FOOTER_HEIGHT;
 
-// --- PLAYER SPRITE ---
-const SPRITE_KEY       = 'marle';
-const SPRITE_PATH      = 'assets/marle5.png';
-const FRAME_WIDTH      = 32;
-const FRAME_HEIGHT     = 48;
-const FRAMES_PER_ROW   = 17;
-const START_X          = 400;
-const START_Y          = 300;
-
-// --- PLAYER MOVEMENT ---
-const MOVE_SPEED       = 200;
-const RUN_MULTIPLIER   = 3;
-const RUN_TOGGLE_MODE  = false;
-
-// --- PLAYER ANIMATION FRAMES ---
-const IDLE_FRAME       = 0;
-const WALK_START       = 1;
-const WALK_END         = 6;
-const RUN_START        = 7;
-const RUN_END          = 8;
-const RUN_SEQUENCE     = [1, 2, 7, 7, 4, 5, 8, 8];
-
-const SHOOT_READY_FRAME = 9;
-const SHOOT_FIRE_FRAME  = 10;
-const SHOOT_FRAME_RATE  = 10;
-
-const CAST_START            = 11;
-const CAST_END              = 16;
-const CAST_FRAME_RATE       = 10;
-const CAST_RELEASE_FRAME    = 16;
-const CAST_CANCELS_ON_SHOOT = false;
-
-// --- PLAYER HITBOX ---
-const PLAYER_HITBOX_WIDTH    = 10;
-const PLAYER_HITBOX_HEIGHT   = 32;
-const PLAYER_HITBOX_OFFSET_X = 0;
-const PLAYER_HITBOX_OFFSET_Y = 8;
-const HITBOX_DEBUG           = false;
-const HITBOX_DEBUG_COLOR_CSS = '#ff0000';
-
-// --- PLAYER BOUNDS ---
+// Player bounds (not in character config)
 const PLAYER_BOUNDS_PADDING_X = 16;
 const PLAYER_BOUNDS_PADDING_Y = 24;
-
-// --- PLAYER COMBAT ---
-const BASIC_SHOT_DAMAGE = 1;
-const ICE_DAMAGE        = 5;
-
-const PROJECTILE_SPEED    = 2000;
-const PROJECTILE_SIZE     = 10;
-const PROJECTILE_LIFETIME = 1000;
-const SHOOT_COOLDOWN_MS   = 300;
-
-const PLAYER_PROJECTILE_SPAWN_OFFSET_X = 0;
-const PLAYER_PROJECTILE_SPAWN_OFFSET_Y = 8;
-
-// --- PLAYER HEALTH ---
-const HEALTH_MAX   = 3;
-const HEALTH_START = 3;
-
-// --- PLAYER STAMINA ---
-const STAMINA_MAX              = 100;
-const STAMINA_START            = 100;
-const STAMINA_DRAIN_PER_SECOND = 25;
-const STAMINA_REGEN_PER_SECOND = 20;
-const STAMINA_RUN_MIN          = 5;
-
-// --- PLAYER MANA ---
-const MANA_MAX              = 100;
-const MANA_START            = 100;
-const MANA_REGEN_PER_SECOND = 20;
-const MANA_AURA_COST        = 50;
-const MANA_ICE_COST         = 50;
-const MANA_HASTE_COST       = 100;
-
-// --- AURA SPELL ---
-const AURA_HEAL_AMOUNT = 1;
-const AURA_COOLDOWN_MS = 800;
-
-// --- ICE SPELL ---
-const ICE_PROJECTILE_KEY      = 'iceProjectile';
-const ICE_PROJECTILE_PATH     = 'assets/OanIceBlast3.png';
-const ICE_PROJECTILE_ANGLES   = { up: 0, right: 90, down: 180, left: 270 };
-const ICE_PROJECTILE_SCALE    = 1;
-const ICE_PROJECTILE_WIDTH    = 48;
-const ICE_PROJECTILE_HEIGHT   = 48;
-const ICE_PROJECTILE_SPEED    = 700;
-const ICE_PROJECTILE_LIFETIME = 1400;
-const ICE_COOLDOWN_MS         = 1000;
-
-// --- HASTE SPELL ---
-const HASTE_DURATION_MS        = 10000;
-const HASTE_SHOOT_DIVISOR      = 3;
-const HASTE_OUTLINE_COLOR_CSS  = '#ff9900';
-const HASTE_OUTLINE_ALPHA      = 0.8;
-const HASTE_OUTLINE_SIZE       = 4;    // glow strength (WebGL) or sprite offset (Canvas fallback)
-const BUFF_FLASH_START_MS      = 3000;
-const BUFF_FAST_FLASH_START_MS = 1000;
-const BUFF_FLASH_SLOW_MS       = 300;
-const BUFF_FLASH_FAST_MS       = 100;
-
-// --- TILEMAP ---
-const MAP_KEY          = 'forestMap';
-const MAP_PATH         = 'assets/forest-map.tmj';
-const TILESET_KEY      = 'forestTiles';
-const TILESET_PATH     = 'assets/grass.png';
-const TILESET_NAME     = 'grass';        // matches "name" in forest-map.tmj tilesets
-const WORLD_LAYER_NAME = 'ground';       // layer name in Tiled
 
 // --- HUD MODE ---
 const HUD_MODE       = 'hide-bars'; // 'hide-bars' | 'hide-all' | 'show-all'
 const SHOW_FLOAT_HUD = true;
 
 // --- FOOTER HUD ---
-const FOOTER_BG_COLOR        = '#1a1a2e';
-const FOOTER_TEXT_COLOR      = '#ffffff';
-const FOOTER_FONT_SIZE       = '16px';
-const FOOTER_PADDING_X       = 16;
-const FOOTER_ACTIVE_COLOR    = '#8fd3ff';
-const FOOTER_INACTIVE_COLOR  = FOOTER_TEXT_COLOR;
-const BAR_ROW_Y_OFFSET       = 46;
-const CONTROLS_ROW_Y_OFFSET  = 12;
+const FOOTER_BG_COLOR       = '#1a1a2e';
+const FOOTER_TEXT_COLOR     = '#ffffff';
+const FOOTER_FONT_SIZE      = '16px';
+const FOOTER_PADDING_X      = 16;
+const FOOTER_ACTIVE_COLOR   = '#8fd3ff';
+const FOOTER_INACTIVE_COLOR = FOOTER_TEXT_COLOR;
+const BAR_ROW_Y_OFFSET      = 46;
+const CONTROLS_ROW_Y_OFFSET = 12;
 
 // --- FOOTER HEALTH BAR ---
-const HEALTH_BAR_X            = 16;
-const HEALTH_BAR_Y_OFFSET     = BAR_ROW_Y_OFFSET;
-const HEALTH_BAR_WIDTH        = 240;
-const HEALTH_BAR_HEIGHT       = 18;
+const HEALTH_BAR_X                = 16;
+const HEALTH_BAR_Y_OFFSET         = BAR_ROW_Y_OFFSET;
+const HEALTH_BAR_WIDTH            = 240;
+const HEALTH_BAR_HEIGHT           = 18;
 const HEALTH_BAR_BG_COLOR_CSS     = '#221111';
 const HEALTH_BAR_FILL_COLOR_CSS   = '#cc2222';
 const HEALTH_BAR_BORDER_COLOR_CSS = '#ffffff';
@@ -146,33 +46,33 @@ const STAMINA_BAR_FILL_COLOR_CSS   = '#00cc44';
 const STAMINA_BAR_BORDER_COLOR_CSS = '#ffffff';
 
 // --- FOOTER MANA BAR ---
-const MANA_BAR_X              = 400;
-const MANA_BAR_Y_OFFSET       = BAR_ROW_Y_OFFSET;
-const MANA_BAR_WIDTH          = 240;
-const MANA_BAR_HEIGHT         = 18;
-const MANA_BAR_BG_COLOR_CSS       = '#222244';
-const MANA_BAR_FILL_COLOR_CSS     = '#3366ff';
-const MANA_BAR_BORDER_COLOR_CSS   = '#ffffff';
-const MANA_BAR_DIVIDER_COLOR_CSS  = '#8899cc';
-const MANA_PIP_COLOR_READY_CSS    = '#6699ff';
-const MANA_PIP_COLOR_EMPTY_CSS    = '#333355';
-const SPELL_PIP_WIDTH         = 5;
-const SPELL_PIP_HEIGHT        = 12;
-const SPELL_PIP_GAP           = 3;
+const MANA_BAR_X                 = 400;
+const MANA_BAR_Y_OFFSET          = BAR_ROW_Y_OFFSET;
+const MANA_BAR_WIDTH             = 240;
+const MANA_BAR_HEIGHT            = 18;
+const MANA_BAR_BG_COLOR_CSS      = '#222244';
+const MANA_BAR_FILL_COLOR_CSS    = '#3366ff';
+const MANA_BAR_BORDER_COLOR_CSS  = '#ffffff';
+const MANA_BAR_DIVIDER_COLOR_CSS = '#8899cc';
+const MANA_PIP_COLOR_READY_CSS   = '#6699ff';
+const MANA_PIP_COLOR_EMPTY_CSS   = '#333355';
+const SPELL_PIP_WIDTH            = 5;
+const SPELL_PIP_HEIGHT           = 12;
+const SPELL_PIP_GAP              = 3;
 
 // --- FLOATING HEALTH HUD ---
-const PLAYER_HEART_KEY = 'playerHeart';
-const PLAYER_HEART_PATH = 'assets/player-heart.png';
-const FLOAT_HEALTH_OFFSET_X = -12;
-const FLOAT_HEALTH_OFFSET_Y = -6;
-const FLOAT_HEART_SCALE = 0.6;
-const FLOAT_HEALTH_NUMBER_OFFSET_X = 0;
-const FLOAT_HEALTH_NUMBER_OFFSET_Y = 0;
+const PLAYER_HEART_KEY              = 'playerHeart';
+const PLAYER_HEART_PATH             = 'assets/player-heart.png';
+const FLOAT_HEALTH_OFFSET_X         = -12;
+const FLOAT_HEALTH_OFFSET_Y         = -6;
+const FLOAT_HEART_SCALE             = 0.6;
+const FLOAT_HEALTH_NUMBER_OFFSET_X  = 0;
+const FLOAT_HEALTH_NUMBER_OFFSET_Y  = 0;
 const FLOAT_HEALTH_FONT_SIZE        = 8;
 const FLOAT_HEALTH_TEXT_COLOR       = '#ffffff';
-const FLOAT_HEALTH_SHOW_START_MS    = 2000;  // how long heart shows on game start
-const FLOAT_HEALTH_SHOW_CHANGE_MS   = 500;  // how long heart shows after a hit
-const FLOAT_HEALTH_FADE_MS          = 150;  // fade-out duration
+const FLOAT_HEALTH_SHOW_START_MS    = 2000;
+const FLOAT_HEALTH_SHOW_CHANGE_MS   = 500;
+const FLOAT_HEALTH_FADE_MS          = 150;
 
 // --- FLOATING MANA HUD ---
 const FLOAT_MANA_OFFSET_X           = -10;
@@ -188,12 +88,12 @@ const FLOAT_MANA_PIP_EMPTY_ALPHA    = 0.05;
 const FLOAT_MANA_PIP_ACTIVE_ALPHA   = 1;
 
 // --- FLOATING STAMINA HUD ---
-const FLOAT_STAMINA_OFFSET_X = 10;
-const FLOAT_STAMINA_OFFSET_Y = -6;
-const FLOAT_STAMINA_RADIUS = 3;
+const FLOAT_STAMINA_OFFSET_X        = 10;
+const FLOAT_STAMINA_OFFSET_Y        = -6;
+const FLOAT_STAMINA_RADIUS          = 3;
 const FLOAT_STAMINA_TRACK_COLOR_CSS = '#333333';
 const FLOAT_STAMINA_FILL_COLOR_CSS  = '#00cc44';
-const FLOAT_STAMINA_LINE_W = 1;
+const FLOAT_STAMINA_LINE_W          = 1;
 
 // --- GAME OVER ---
 const GAME_OVER_TEXT      = 'GAME OVER';
@@ -202,63 +102,33 @@ const GAME_OVER_FONT_SIZE = '48px';
 const RESTART_FONT_SIZE   = '20px';
 const GAME_OVER_COLOR     = '#ffffff';
 
-// --- DUMMY TARGETS ---
-const DUMMY_X                     = 600;
-const DUMMY_Y                     = 300;
-const DUMMY_WIDTH                 = 28;
-const DUMMY_HEIGHT                = 52;
-const DUMMY_COLOR_CSS             = '#8b5a2b';
-const DUMMY_ARM_COLOR_CSS         = '#6b3f1f';
-const DUMMY_MAX_HEALTH            = 5;
-const DUMMY_HIT_MANA_GAIN         = 5;
-const DUMMY_RESPAWN_MS            = 3000;
-const DUMMY_HEALTH_BAR_WIDTH      = 36;
-const DUMMY_HEALTH_BAR_HEIGHT     = 5;
-const DUMMY_HEALTH_BAR_Y_OFFSET   = 34;
-const DUMMY_HEALTH_BAR_BG_COLOR_CSS   = '#331111';
-const DUMMY_HEALTH_BAR_FILL_COLOR_CSS = '#00cc44';
-const DUMMY_SPACING_Y             = 150;
-const DUMMY_EYE_BIG_RADIUS        = 4;
-const DUMMY_EYE_SMALL_RADIUS      = 2;
-const DUMMY_EYE_COLOR_CSS         = '#000000';
-const DUMMY_MOUTH_COLOR_CSS       = '#000000';
-const TOP_DUMMY_COLOR_CSS         = '#aa4a3a';
+// --- DERIVED NUMERIC COLORS ---
+function cssInt(s) { return parseInt(s.slice(1), 16); }
+const HEALTH_BAR_BG_COLOR         = cssInt(HEALTH_BAR_BG_COLOR_CSS);
+const HEALTH_BAR_FILL_COLOR       = cssInt(HEALTH_BAR_FILL_COLOR_CSS);
+const HEALTH_BAR_BORDER_COLOR     = cssInt(HEALTH_BAR_BORDER_COLOR_CSS);
+const STAMINA_BAR_BG_COLOR        = cssInt(STAMINA_BAR_BG_COLOR_CSS);
+const STAMINA_BAR_FILL_COLOR      = cssInt(STAMINA_BAR_FILL_COLOR_CSS);
+const STAMINA_BAR_BORDER_COLOR    = cssInt(STAMINA_BAR_BORDER_COLOR_CSS);
+const MANA_BAR_BG_COLOR           = cssInt(MANA_BAR_BG_COLOR_CSS);
+const MANA_BAR_FILL_COLOR         = cssInt(MANA_BAR_FILL_COLOR_CSS);
+const MANA_BAR_BORDER_COLOR       = cssInt(MANA_BAR_BORDER_COLOR_CSS);
+const MANA_BAR_DIVIDER_COLOR      = cssInt(MANA_BAR_DIVIDER_COLOR_CSS);
+const MANA_PIP_COLOR_READY        = cssInt(MANA_PIP_COLOR_READY_CSS);
+const MANA_PIP_COLOR_EMPTY        = cssInt(MANA_PIP_COLOR_EMPTY_CSS);
+const FLOAT_MANA_PIP_ACTIVE_COLOR = cssInt(FLOAT_MANA_PIP_ACTIVE_COLOR_CSS);
+const FLOAT_MANA_PIP_EMPTY_COLOR  = cssInt(FLOAT_MANA_PIP_EMPTY_COLOR_CSS);
+const FLOAT_STAMINA_TRACK_COLOR   = cssInt(FLOAT_STAMINA_TRACK_COLOR_CSS);
+const FLOAT_STAMINA_FILL_COLOR    = cssInt(FLOAT_STAMINA_FILL_COLOR_CSS);
 
-// --- SLIME ENEMY ---
-const SLIME_ASSET_KEY     = 'slime';
-const SLIME_ASSET_PATH    = 'assets/slime.png';
-const SLIME_FRAME_WIDTH   = 16;
-const SLIME_FRAME_HEIGHT  = 16;
-const SLIME_FRAME_START   = 0;
-const SLIME_FRAME_END     = 8;
-const SLIME_FRAME_RATE    = 8;
-const SLIME_SCALE         = 3;
-const SLIME_BODY_WIDTH    = 40;  // collision width (screen pixels)
-const SLIME_BODY_HEIGHT   = 30;  // collision height (screen pixels)
-const SLIME_BODY_OFFSET_X = 0;
-const SLIME_BODY_OFFSET_Y = 0;
-const SLIME_ANIM_KEY      = 'slime-idle';
+// Runtime helpers derived from PLAYER config
+function getFrame(row, col) {
+    return row * PLAYER.framesPerRow + col;
+}
 
-// --- ENEMY PROJECTILES ---
-const ENEMY_PROJECTILE_COLOR_CSS  = '#ff3333';
-const ENEMY_PROJECTILE_WIDTH      = 10;
-const ENEMY_PROJECTILE_HEIGHT     = 6;
-const ENEMY_PROJECTILE_SPEED      = 220;
-const ENEMY_PROJECTILE_DAMAGE     = 1;
-const TOP_DUMMY_SHOOT_COOLDOWN_MS = 1200;
-const RIGHT_DUMMY_X               = 1100;
-const RIGHT_DUMMY_Y               = 300;
-const RIGHT_DUMMY_COLOR_CSS       = '#aa4a3a';
-const RIGHT_DUMMY_SHOOT_COOLDOWN_MS = 1200;
-
-// Row indices
-const ROW_UP    = 0;
-const ROW_LEFT  = 1;
-const ROW_DOWN  = 2;
-const ROW_RIGHT = 3;
-
-// Precomputed set of textureFrame indices that trigger spell release (one per direction)
-const CAST_RELEASE_FRAMES = new Set([ROW_UP, ROW_LEFT, ROW_DOWN, ROW_RIGHT].map(r => r * FRAMES_PER_ROW + CAST_RELEASE_FRAME));
+const CAST_RELEASE_FRAMES = new Set(
+    Object.values(ROWS).map(r => r * PLAYER.framesPerRow + PLAYER.animations.castReleaseFrame)
+);
 
 const DIR_VECS = {
     up:    { x:  0, y: -1 },
@@ -267,48 +137,14 @@ const DIR_VECS = {
     right: { x:  1, y:  0 },
 };
 
-// --- DERIVED NUMERIC COLORS ---
-// Int32 values for Phaser APIs. Derived from CSS tunables above.
-function cssInt(s) { return parseInt(s.slice(1), 16); }
-const HITBOX_DEBUG_COLOR           = cssInt(HITBOX_DEBUG_COLOR_CSS);
-const HEALTH_BAR_BG_COLOR          = cssInt(HEALTH_BAR_BG_COLOR_CSS);
-const HEALTH_BAR_FILL_COLOR        = cssInt(HEALTH_BAR_FILL_COLOR_CSS);
-const HEALTH_BAR_BORDER_COLOR      = cssInt(HEALTH_BAR_BORDER_COLOR_CSS);
-const STAMINA_BAR_BG_COLOR         = cssInt(STAMINA_BAR_BG_COLOR_CSS);
-const STAMINA_BAR_FILL_COLOR       = cssInt(STAMINA_BAR_FILL_COLOR_CSS);
-const STAMINA_BAR_BORDER_COLOR     = cssInt(STAMINA_BAR_BORDER_COLOR_CSS);
-const MANA_BAR_BG_COLOR            = cssInt(MANA_BAR_BG_COLOR_CSS);
-const MANA_BAR_FILL_COLOR          = cssInt(MANA_BAR_FILL_COLOR_CSS);
-const MANA_BAR_BORDER_COLOR        = cssInt(MANA_BAR_BORDER_COLOR_CSS);
-const MANA_BAR_DIVIDER_COLOR       = cssInt(MANA_BAR_DIVIDER_COLOR_CSS);
-const MANA_PIP_COLOR_READY         = cssInt(MANA_PIP_COLOR_READY_CSS);
-const MANA_PIP_COLOR_EMPTY         = cssInt(MANA_PIP_COLOR_EMPTY_CSS);
-const FLOAT_MANA_PIP_ACTIVE_COLOR  = cssInt(FLOAT_MANA_PIP_ACTIVE_COLOR_CSS);
-const FLOAT_MANA_PIP_EMPTY_COLOR   = cssInt(FLOAT_MANA_PIP_EMPTY_COLOR_CSS);
-const FLOAT_STAMINA_TRACK_COLOR    = cssInt(FLOAT_STAMINA_TRACK_COLOR_CSS);
-const FLOAT_STAMINA_FILL_COLOR     = cssInt(FLOAT_STAMINA_FILL_COLOR_CSS);
-const DUMMY_COLOR                  = cssInt(DUMMY_COLOR_CSS);
-const DUMMY_ARM_COLOR              = cssInt(DUMMY_ARM_COLOR_CSS);
-const DUMMY_HEALTH_BAR_BG_COLOR    = cssInt(DUMMY_HEALTH_BAR_BG_COLOR_CSS);
-const DUMMY_HEALTH_BAR_FILL_COLOR  = cssInt(DUMMY_HEALTH_BAR_FILL_COLOR_CSS);
-const DUMMY_EYE_COLOR              = cssInt(DUMMY_EYE_COLOR_CSS);
-const DUMMY_MOUTH_COLOR            = cssInt(DUMMY_MOUTH_COLOR_CSS);
-const TOP_DUMMY_COLOR              = cssInt(TOP_DUMMY_COLOR_CSS);
-const ENEMY_PROJECTILE_COLOR       = cssInt(ENEMY_PROJECTILE_COLOR_CSS);
-const RIGHT_DUMMY_COLOR            = cssInt(RIGHT_DUMMY_COLOR_CSS);
-
-function getFrame(row, col) {
-    return row * FRAMES_PER_ROW + col;
-}
-
 // --- PHASER CONFIG ---
 const config = {
     type: Phaser.AUTO,
     width: GAME_WIDTH,
     height: CANVAS_HEIGHT,
     backgroundColor: '#000000b0',
-    pixelArt: true,    // disables texture smoothing globally
-    roundPixels: true, // snaps sprites to whole pixels to prevent sub-pixel bleed
+    pixelArt: true,
+    roundPixels: true,
     scene: { preload, create, update }
 };
 
@@ -333,16 +169,14 @@ let hasteSprites  = [];
 let hasteGlowFx   = null;
 let key1, key2, key3;
 let footerW, footerA, footerS, footerD, footerShiftRun, footerLmbShoot, footerAura, footerIce, footerHaste;
-let health = HEALTH_START;
-let mana   = MANA_START;
+let health  = PLAYER.resources.healthStart;
+let mana    = PLAYER.resources.manaStart;
 let healthBarFill, manaBarFill, staminaBarFill;
-let stamina     = STAMINA_START;
-let runToggled  = false;
+let stamina    = PLAYER.resources.staminaStart;
+let runToggled = false;
 let pipAura, pipIce, pipHaste1, pipHaste2;
 let dummies = [];
-let enemyProjectiles       = [];
-let topDummyLastShotTime   = -Infinity;
-let rightDummyLastShotTime = -Infinity;
+let enemyProjectiles = [];
 let gameOver     = false;
 let restartKey;
 let goText, goSub;
@@ -357,15 +191,16 @@ let floatManaPip1, floatManaPip2;
 let floatStaminaGfx;
 
 function setHasteVisualVisible(show) {
+    const haste = PLAYER.spells.haste;
     if (hasteGlowFx) {
         hasteGlowFx.active = show;
-        hasteGlowFx.outerStrength = show ? HASTE_OUTLINE_SIZE : 0;
+        hasteGlowFx.outerStrength = show ? haste.outlineSize : 0;
         if ('innerStrength' in hasteGlowFx) hasteGlowFx.innerStrength = 0;
-        if ('alpha' in hasteGlowFx) hasteGlowFx.alpha = show ? HASTE_OUTLINE_ALPHA : 0;
+        if ('alpha' in hasteGlowFx) hasteGlowFx.alpha = show ? haste.outlineAlpha : 0;
     }
     for (const s of hasteSprites) {
         s.setVisible(show);
-        s.setAlpha(show ? HASTE_OUTLINE_ALPHA : 0);
+        s.setAlpha(show ? haste.outlineAlpha : 0);
     }
 }
 
@@ -378,21 +213,28 @@ function showFloatingHealth(scene, durationMs) {
 }
 
 function preload() {
-    this.load.spritesheet(SPRITE_KEY, SPRITE_PATH, {frameWidth:  FRAME_WIDTH, frameHeight: FRAME_HEIGHT});
-    this.load.spritesheet(SLIME_ASSET_KEY, SLIME_ASSET_PATH, { frameWidth: SLIME_FRAME_WIDTH, frameHeight: SLIME_FRAME_HEIGHT });
-    this.load.image(ICE_PROJECTILE_KEY, ICE_PROJECTILE_PATH);
+    this.load.spritesheet(PLAYER.assetKey, PLAYER.assetPath, { frameWidth: PLAYER.frameWidth, frameHeight: PLAYER.frameHeight });
+    for (const cfg of Object.values(ENEMY_TYPES)) {
+        this.load.spritesheet(cfg.assetKey, cfg.assetPath, { frameWidth: cfg.frameWidth, frameHeight: cfg.frameHeight });
+    }
+    const iceCfg = PROJECTILE_TYPES.ice;
+    this.load.image(iceCfg.assetKey, iceCfg.assetPath);
     this.load.image(PLAYER_HEART_KEY, PLAYER_HEART_PATH);
-    this.load.tilemapTiledJSON(MAP_KEY, MAP_PATH);
-    this.load.image(TILESET_KEY, TILESET_PATH);
+    this.load.tilemapTiledJSON(WORLD.tilemap.mapKey, WORLD.tilemap.mapPath);
+    this.load.image(WORLD.tilemap.tilesetKey, WORLD.tilemap.tilesetPath);
 }
 
 function create() {
     scene = this;
+    const res   = PLAYER.resources;
+    const mov   = PLAYER.movement;
+    const anim  = PLAYER.animations;
+    const haste = PLAYER.spells.haste;
 
     // Reset mutable globals on each create (handles scene.restart())
-    health              = HEALTH_START;
-    mana                = MANA_START;
-    stamina             = STAMINA_START;
+    health              = res.healthStart;
+    mana                = res.manaStart;
+    stamina             = res.staminaStart;
     runToggled          = false;
     gameOver            = false;
     shooting            = false;
@@ -404,8 +246,6 @@ function create() {
     hasteEndTime        = -Infinity;
     lastAuraTime        = -Infinity;
     lastIceTime         = -Infinity;
-    topDummyLastShotTime   = -Infinity;
-    rightDummyLastShotTime = -Infinity;
     projectiles         = [];
     enemyProjectiles    = [];
     hasteSprites        = [];
@@ -417,17 +257,17 @@ function create() {
 
     const anims = this.anims;
 
-    // Idle animations (single frame, no loop)
+    // Idle animations
     const idleDirs = [
-        ['idle_up',    ROW_UP],
-        ['idle_left',  ROW_LEFT],
-        ['idle_down',  ROW_DOWN],
-        ['idle_right', ROW_RIGHT],
+        ['idle_up',    ROWS.up],
+        ['idle_left',  ROWS.left],
+        ['idle_down',  ROWS.down],
+        ['idle_right', ROWS.right],
     ];
     for (const [key, row] of idleDirs) {
         anims.create({
             key,
-            frames: [{ key: SPRITE_KEY, frame: getFrame(row, IDLE_FRAME) }],
+            frames: [{ key: PLAYER.assetKey, frame: getFrame(row, anim.idleFrame) }],
             frameRate: 1,
             repeat: 0
         });
@@ -435,34 +275,34 @@ function create() {
 
     // Walk animations
     const walkDirs = [
-        ['walk_up',    ROW_UP],
-        ['walk_left',  ROW_LEFT],
-        ['walk_down',  ROW_DOWN],
-        ['walk_right', ROW_RIGHT],
+        ['walk_up',    ROWS.up],
+        ['walk_left',  ROWS.left],
+        ['walk_down',  ROWS.down],
+        ['walk_right', ROWS.right],
     ];
     for (const [key, row] of walkDirs) {
         anims.create({
             key,
-            frames: anims.generateFrameNumbers(SPRITE_KEY, {
-                start: getFrame(row, WALK_START),
-                end:   getFrame(row, WALK_END)
+            frames: anims.generateFrameNumbers(PLAYER.assetKey, {
+                start: getFrame(row, anim.walkStart),
+                end:   getFrame(row, anim.walkEnd)
             }),
             frameRate: 8,
             repeat: -1
         });
     }
 
-    // Run animations — custom frame sequence via RUN_SEQUENCE
+    // Run animations — custom frame sequence
     const runDirs = [
-        ['run_up',    ROW_UP],
-        ['run_left',  ROW_LEFT],
-        ['run_down',  ROW_DOWN],
-        ['run_right', ROW_RIGHT],
+        ['run_up',    ROWS.up],
+        ['run_left',  ROWS.left],
+        ['run_down',  ROWS.down],
+        ['run_right', ROWS.right],
     ];
     for (const [key, row] of runDirs) {
         anims.create({
             key,
-            frames: RUN_SEQUENCE.map(col => ({ key: SPRITE_KEY, frame: getFrame(row, col) })),
+            frames: anim.runSequence.map(col => ({ key: PLAYER.assetKey, frame: getFrame(row, col) })),
             frameRate: 12,
             repeat: -1
         });
@@ -470,68 +310,68 @@ function create() {
 
     // Shoot animations (ready → fire, play once)
     const shootDirs = [
-        ['shoot_up',    ROW_UP],
-        ['shoot_left',  ROW_LEFT],
-        ['shoot_down',  ROW_DOWN],
-        ['shoot_right', ROW_RIGHT],
+        ['shoot_up',    ROWS.up],
+        ['shoot_left',  ROWS.left],
+        ['shoot_down',  ROWS.down],
+        ['shoot_right', ROWS.right],
     ];
     for (const [key, row] of shootDirs) {
         anims.create({
             key,
             frames: [
-                { key: SPRITE_KEY, frame: getFrame(row, SHOOT_READY_FRAME) },
-                { key: SPRITE_KEY, frame: getFrame(row, SHOOT_FIRE_FRAME)  },
+                { key: PLAYER.assetKey, frame: getFrame(row, anim.shootReadyFrame) },
+                { key: PLAYER.assetKey, frame: getFrame(row, anim.shootFireFrame)  },
             ],
-            frameRate: SHOOT_FRAME_RATE,
+            frameRate: anim.shootFrameRate,
             repeat: 0
         });
     }
 
-    // Force nearest-neighbor filtering; pixelArt:true sets this globally but explicit call
-    // ensures it if the texture was cached before config was applied.
-    this.textures.get(SPRITE_KEY).setFilter(Phaser.Textures.FilterMode.NEAREST);
+    this.textures.get(PLAYER.assetKey).setFilter(Phaser.Textures.FilterMode.NEAREST);
     this.textures.get(PLAYER_HEART_KEY).setFilter(Phaser.Textures.FilterMode.NEAREST);
-    this.textures.get(TILESET_KEY).setFilter(Phaser.Textures.FilterMode.NEAREST);
-    this.textures.get(SLIME_ASSET_KEY).setFilter(Phaser.Textures.FilterMode.NEAREST);
+    this.textures.get(WORLD.tilemap.tilesetKey).setFilter(Phaser.Textures.FilterMode.NEAREST);
+    for (const cfg of Object.values(ENEMY_TYPES)) {
+        this.textures.get(cfg.assetKey).setFilter(Phaser.Textures.FilterMode.NEAREST);
+    }
 
-    const map     = this.make.tilemap({ key: MAP_KEY });
-    const tileset = map.addTilesetImage(TILESET_NAME, TILESET_KEY);
+    const map     = this.make.tilemap({ key: WORLD.tilemap.mapKey });
+    const tileset = map.addTilesetImage(WORLD.tilemap.tilesetName, WORLD.tilemap.tilesetKey);
     if (!tileset) {
-        console.error('Missing tileset:', TILESET_NAME);
+        console.error('Missing tileset:', WORLD.tilemap.tilesetName);
         console.error('Available tilesets:', map.tilesets.map(t => t.name));
         return;
     }
-    const groundLayer = map.createLayer(WORLD_LAYER_NAME, tileset, 0, 0);
+    const groundLayer = map.createLayer(WORLD.tilemap.worldLayerName, tileset, 0, 0);
     if (!groundLayer) {
-        console.error('Missing layer:', WORLD_LAYER_NAME);
+        console.error('Missing layer:', WORLD.tilemap.worldLayerName);
         console.error('Available layers:', map.layers.map(l => l.name));
         return;
     }
     groundLayer.setScale(SCALE);
     groundLayer.setDepth(0);
 
-    player = this.add.sprite(START_X, START_Y, SPRITE_KEY);
+    player = this.add.sprite(PLAYER.startX, PLAYER.startY, PLAYER.assetKey);
     player.setScale(SCALE);
     player.setDepth(1);
     player.play('idle_down');
 
+    const phb = PLAYER.hitbox;
     hitboxDebugRect = this.add.rectangle(
-        START_X + PLAYER_HITBOX_OFFSET_X * SCALE,
-        START_Y + PLAYER_HITBOX_OFFSET_Y * SCALE,
-        PLAYER_HITBOX_WIDTH  * SCALE,
-        PLAYER_HITBOX_HEIGHT * SCALE
-    ).setFillStyle(0x000000, 0).setStrokeStyle(1, HITBOX_DEBUG_COLOR)
-     .setDepth(5).setVisible(HITBOX_DEBUG);
+        PLAYER.startX + phb.offsetX * SCALE,
+        PLAYER.startY + phb.offsetY * SCALE,
+        phb.width  * SCALE,
+        phb.height * SCALE
+    ).setFillStyle(0x000000, 0).setStrokeStyle(1, cssInt(phb.debugColorCss))
+     .setDepth(5).setVisible(phb.debug);
 
     if (player.postFX && player.postFX.addGlow) {
-        const glowColor = Phaser.Display.Color.HexStringToColor(HASTE_OUTLINE_COLOR_CSS).color;
-        hasteGlowFx = player.postFX.addGlow(glowColor, HASTE_OUTLINE_SIZE, 0, false);
+        const glowColor = Phaser.Display.Color.HexStringToColor(haste.outlineColorCss).color;
+        hasteGlowFx = player.postFX.addGlow(glowColor, haste.outlineSize, 0, false);
     } else {
-        // Canvas fallback: 4-direction tinted copies, no diagonals
-        const hasteOutlineColor = Phaser.Display.Color.HexStringToColor(HASTE_OUTLINE_COLOR_CSS).color;
-        const o = HASTE_OUTLINE_SIZE;
+        const hasteOutlineColor = Phaser.Display.Color.HexStringToColor(haste.outlineColorCss).color;
+        const o = haste.outlineSize;
         for (const [ox, oy] of [[-o, 0], [o, 0], [0, -o], [0, o]]) {
-            const s = this.add.sprite(START_X + ox, START_Y + oy, SPRITE_KEY)
+            const s = this.add.sprite(PLAYER.startX + ox, PLAYER.startY + oy, PLAYER.assetKey)
                 .setScale(SCALE)
                 .setTint(hasteOutlineColor)
                 .setDepth(0);
@@ -542,52 +382,130 @@ function create() {
     }
     setHasteVisualVisible(false);
 
-    // Slime idle animation
-    anims.create({
-        key: SLIME_ANIM_KEY,
-        frames: anims.generateFrameNumbers(SLIME_ASSET_KEY, { start: SLIME_FRAME_START, end: SLIME_FRAME_END }),
-        frameRate: SLIME_FRAME_RATE,
-        repeat: -1
-    });
-
-    // Dummies — four slime enemies
-    const dummyPositions = [
-        { x: DUMMY_X,       y: DUMMY_Y - DUMMY_SPACING_Y },
-        { x: DUMMY_X,       y: DUMMY_Y                   },
-        { x: DUMMY_X,       y: DUMMY_Y + DUMMY_SPACING_Y },
-        { x: RIGHT_DUMMY_X, y: RIGHT_DUMMY_Y             },
-    ];
-    for (const { x, y } of dummyPositions) {
-        const parts = [];
-        const sprite = this.add.sprite(x, y, SLIME_ASSET_KEY).setScale(SLIME_SCALE).setDepth(1);
-        sprite.play(SLIME_ANIM_KEY);
-        parts.push(sprite);
-        const hbBg   = this.add.rectangle(x, y - DUMMY_HEALTH_BAR_Y_OFFSET, DUMMY_HEALTH_BAR_WIDTH, DUMMY_HEALTH_BAR_HEIGHT, DUMMY_HEALTH_BAR_BG_COLOR).setDepth(2);
-        const hbFill = this.add.rectangle(x - DUMMY_HEALTH_BAR_WIDTH / 2, y - DUMMY_HEALTH_BAR_Y_OFFSET, DUMMY_HEALTH_BAR_WIDTH, DUMMY_HEALTH_BAR_HEIGHT, DUMMY_HEALTH_BAR_FILL_COLOR).setOrigin(0, 0.5).setDepth(3);
-        parts.push(hbBg, hbFill);
-        dummies.push({ x, y, health: DUMMY_MAX_HEALTH, alive: true, respawnAt: 0, parts, hbFill });
-    }
-
-    // Cast animations (cols 11–16, play once)
-    const castDirs = [
-        ['cast_up',    ROW_UP],
-        ['cast_left',  ROW_LEFT],
-        ['cast_down',  ROW_DOWN],
-        ['cast_right', ROW_RIGHT],
-    ];
-    for (const [key, row] of castDirs) {
+    // Enemy animations — one set per type
+    const seenAnimTypes = new Set();
+    for (const spawn of ENEMY_SPAWNS) {
+        if (seenAnimTypes.has(spawn.type)) continue;
+        seenAnimTypes.add(spawn.type);
+        const cfg = ENEMY_TYPES[spawn.type];
+        const ea  = cfg.animations;
         anims.create({
-            key,
-            frames: anims.generateFrameNumbers(SPRITE_KEY, {
-                start: getFrame(row, CAST_START),
-                end:   getFrame(row, CAST_END)
-            }),
-            frameRate: CAST_FRAME_RATE,
+            key: ea.idleKey,
+            frames: ea.idleFrames.map(f => ({ key: cfg.assetKey, frame: f })),
+            frameRate: ea.idleFrameRate,
+            repeat: -1
+        });
+        anims.create({
+            key: ea.attackKey,
+            frames: ea.attackFrames.map(f => ({ key: cfg.assetKey, frame: f })),
+            frameRate: ea.attackFrameRate,
             repeat: 0
         });
     }
 
-    // Return to normal logic when shoot or cast animation finishes
+    // Enemies
+    for (const spawn of ENEMY_SPAWNS) {
+        const cfg         = ENEMY_TYPES[spawn.type];
+        const { x, y }   = spawn;
+        const hbBgColor   = cssInt(cfg.healthBar.bgColorCss);
+        const hbFillColor = cssInt(cfg.healthBar.fillColorCss);
+        const ptCfg       = PROJECTILE_TYPES[cfg.attack.projectileType];
+        const projColor   = cssInt(ptCfg.colorCss);
+
+        const parts  = [];
+        const sprite = this.add.sprite(x, y, cfg.assetKey).setScale(SCALE).setDepth(1);
+        sprite.play(cfg.animations.idleKey);
+        parts.push(sprite);
+        const hbBg   = this.add.rectangle(x, y - cfg.healthBar.yOffset, cfg.healthBar.width, cfg.healthBar.height, hbBgColor).setDepth(2).setVisible(false);
+        const hbFill = this.add.rectangle(x - cfg.healthBar.width / 2, y - cfg.healthBar.yOffset, cfg.healthBar.width, cfg.healthBar.height, hbFillColor).setOrigin(0, 0.5).setDepth(3).setVisible(false);
+        parts.push(hbBg, hbFill);
+        const dbgColor = cssInt(cfg.hitbox.debugColorCss);
+        const hitboxDebugRect = this.add.rectangle(
+            x + cfg.hitbox.offsetX * SCALE,
+            y + cfg.hitbox.offsetY * SCALE,
+            cfg.hitbox.width  * SCALE,
+            cfg.hitbox.height * SCALE,
+            dbgColor, cfg.hitbox.debugAlpha
+        ).setStrokeStyle(cfg.hitbox.debugLineWidth, dbgColor).setDepth(6).setVisible(cfg.hitbox.debug);
+
+        const aiCfg = { ...cfg.ai, ...(spawn.ai || {}) };
+        const enemy = {
+            type:            spawn.type,
+            config:          cfg,
+            x, y,
+            health:          cfg.stats.maxHealth,
+            alive:           true,
+            respawnAt:       0,
+            parts,
+            hbBg,
+            hbFill,
+            sprite,
+            hitboxDebugRect,
+            aiCfg,
+            shootDirection:  spawn.shootDirection,
+            lastShotTime:    -Infinity,
+            isAttacking:     false,
+            firedThisAttack: false,
+        };
+
+        sprite.on('animationupdate', (anim, frame) => {
+            if (!enemy.alive) return;
+            if (anim.key !== cfg.animations.attackKey) return;
+            if (frame.textureFrame === cfg.animations.shootFrame && !enemy.firedThisAttack) {
+                enemy.firedThisAttack = true;
+                enemy.lastShotTime    = scene.time.now;
+                const projSpeed = cfg.attack.projectileSpeed ?? ptCfg.speed;
+                let vx = 0, vy = 0;
+                let pw = ptCfg.width, ph = ptCfg.height;
+                if (enemy.aiCfg.aimMode === 'towardPlayer') {
+                    const ddx  = player.x - enemy.x;
+                    const ddy  = player.y - enemy.y;
+                    const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+                    if (dist > 0) { vx = (ddx / dist) * projSpeed; vy = (ddy / dist) * projSpeed; }
+                } else {
+                    const dir = enemy.shootDirection;
+                    pw = (dir === 'left' || dir === 'right') ? ptCfg.width  : ptCfg.height;
+                    ph = (dir === 'left' || dir === 'right') ? ptCfg.height : ptCfg.width;
+                    vx = dir === 'left' ? -projSpeed : dir === 'right' ? projSpeed : 0;
+                    vy = dir === 'up'   ? -projSpeed : dir === 'down'  ? projSpeed : 0;
+                }
+                const ep = scene.add.rectangle(
+                    enemy.x + cfg.attack.projectileSpawnOffsetX * SCALE,
+                    enemy.y + cfg.attack.projectileSpawnOffsetY * SCALE,
+                    pw, ph, projColor
+                ).setDepth(1);
+                enemyProjectiles.push({ obj: ep, vx, vy, damage: ptCfg.damage });
+            }
+        });
+
+        sprite.on('animationcomplete', (anim) => {
+            if (anim.key !== cfg.animations.attackKey) return;
+            enemy.isAttacking = false;
+            enemy.sprite.play(cfg.animations.idleKey, true);
+        });
+
+        dummies.push(enemy);
+    }
+
+    // Cast animations (cols 11–16, play once)
+    const castDirs = [
+        ['cast_up',    ROWS.up],
+        ['cast_left',  ROWS.left],
+        ['cast_down',  ROWS.down],
+        ['cast_right', ROWS.right],
+    ];
+    for (const [key, row] of castDirs) {
+        anims.create({
+            key,
+            frames: anims.generateFrameNumbers(PLAYER.assetKey, {
+                start: getFrame(row, anim.castStart),
+                end:   getFrame(row, anim.castEnd)
+            }),
+            frameRate: anim.castFrameRate,
+            repeat: 0
+        });
+    }
+
     player.on('animationcomplete', (anim) => {
         if (anim.key.startsWith('shoot_')) shooting = false;
         if (anim.key.startsWith('cast_'))  casting  = false;
@@ -599,27 +517,35 @@ function create() {
         pendingSpell          = null;
         pendingSpellDirection = null;
         if (spell === 'aura') {
-            health = Math.min(HEALTH_MAX, health + AURA_HEAL_AMOUNT);
+            health = Math.min(res.healthMax, health + PLAYER.spells.aura.healAmount);
             showFloatingHealth(scene, FLOAT_HEALTH_SHOW_CHANGE_MS);
         } else if (spell === 'ice') {
-            const vec = DIR_VECS[dir];
-            const proj = scene.add.image(player.x + PLAYER_PROJECTILE_SPAWN_OFFSET_X * SCALE, 
-                                         player.y + PLAYER_PROJECTILE_SPAWN_OFFSET_Y * SCALE,
-                                         ICE_PROJECTILE_KEY).setScale(ICE_PROJECTILE_SCALE).setAngle(ICE_PROJECTILE_ANGLES[dir]);
-            projectiles.push({ obj: proj, vx: vec.x * ICE_PROJECTILE_SPEED, vy: vec.y * ICE_PROJECTILE_SPEED, born: scene.time.now, lifetime: ICE_PROJECTILE_LIFETIME, damage: ICE_DAMAGE });
+            const vec    = DIR_VECS[dir];
+            const iceCfg = PROJECTILE_TYPES[PLAYER.spells.ice.projectileType];
+            const proj   = scene.add.image(
+                player.x + PLAYER.combat.projectileSpawnOffsetX * SCALE,
+                player.y + PLAYER.combat.projectileSpawnOffsetY * SCALE,
+                iceCfg.assetKey
+            ).setScale(iceCfg.scale).setAngle(iceCfg.angles[dir]);
+            projectiles.push({
+                obj:      proj,
+                vx:       vec.x * iceCfg.speed,
+                vy:       vec.y * iceCfg.speed,
+                born:     scene.time.now,
+                lifetime: iceCfg.lifetimeMs,
+                damage:   PLAYER.spells.ice.damage
+            });
         } else if (spell === 'haste') {
-            hasteEndTime = scene.time.now + HASTE_DURATION_MS;
+            hasteEndTime = scene.time.now + haste.durationMs;
         }
     };
 
-    // Fire spell effect when animation reaches the release frame
     player.on('animationupdate', (anim, frame) => {
         if (!pendingSpell) return;
         if (!anim.key.startsWith('cast_')) return;
         if (CAST_RELEASE_FRAMES.has(frame.textureFrame)) resolveSpell();
     });
 
-    // Input
     wasd = {
         up:    this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
         left:  this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
@@ -632,9 +558,9 @@ function create() {
     key3     = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.THREE);
 
     this.input.keyboard.on('keydown-ONE', () => {
-        if (mana < MANA_AURA_COST) return;
-        if (scene.time.now - lastAuraTime < AURA_COOLDOWN_MS) return;
-        mana -= MANA_AURA_COST;
+        if (mana < PLAYER.spells.aura.manaCost) return;
+        if (scene.time.now - lastAuraTime < PLAYER.spells.aura.cooldownMs) return;
+        mana -= PLAYER.spells.aura.manaCost;
         lastAuraTime = scene.time.now;
         casting = true;
         pendingSpell          = 'aura';
@@ -643,9 +569,9 @@ function create() {
     });
 
     this.input.keyboard.on('keydown-TWO', () => {
-        if (mana < MANA_ICE_COST) return;
-        if (scene.time.now - lastIceTime < ICE_COOLDOWN_MS) return;
-        mana -= MANA_ICE_COST;
+        if (mana < PLAYER.spells.ice.manaCost) return;
+        if (scene.time.now - lastIceTime < PLAYER.spells.ice.cooldownMs) return;
+        mana -= PLAYER.spells.ice.manaCost;
         lastIceTime = scene.time.now;
         casting = true;
         pendingSpell          = 'ice';
@@ -654,8 +580,8 @@ function create() {
     });
 
     this.input.keyboard.on('keydown-THREE', () => {
-        if (mana < MANA_HASTE_COST) return;
-        mana -= MANA_HASTE_COST;
+        if (mana < PLAYER.spells.haste.manaCost) return;
+        mana -= PLAYER.spells.haste.manaCost;
         casting = true;
         pendingSpell          = 'haste';
         pendingSpellDirection = lastDirection;
@@ -663,10 +589,9 @@ function create() {
     });
 
     // Footer HUD — background
-    footerBg = this.add.rectangle(0, GAME_HEIGHT, GAME_WIDTH, FOOTER_HEIGHT, Phaser.Display.Color.HexStringToColor(FOOTER_BG_COLOR).color)
-        .setOrigin(0, 0)
-        .setScrollFactor(0)
-        .setDepth(10);
+    footerBg = this.add.rectangle(0, GAME_HEIGHT, GAME_WIDTH, FOOTER_HEIGHT,
+        Phaser.Display.Color.HexStringToColor(FOOTER_BG_COLOR).color)
+        .setOrigin(0, 0).setScrollFactor(0).setDepth(10);
 
     // --- Health bar ---
     const hbx = HEALTH_BAR_X;
@@ -678,8 +603,7 @@ function create() {
     footerBarObjects.push(healthBarFill);
     footerBarObjects.push(this.add.rectangle(hbx + HEALTH_BAR_WIDTH / 2, hby + HEALTH_BAR_HEIGHT / 2, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT)
         .setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(13)
-        .setFillStyle(0x000000, 0)
-        .setStrokeStyle(1, HEALTH_BAR_BORDER_COLOR));
+        .setFillStyle(0x000000, 0).setStrokeStyle(1, HEALTH_BAR_BORDER_COLOR));
 
     // --- Stamina bar ---
     const sbx = HEALTH_BAR_X;
@@ -691,8 +615,7 @@ function create() {
     footerBarObjects.push(staminaBarFill);
     footerBarObjects.push(this.add.rectangle(sbx + HEALTH_BAR_WIDTH / 2, sby + HEALTH_BAR_HEIGHT / 2, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT)
         .setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(13)
-        .setFillStyle(0x000000, 0)
-        .setStrokeStyle(1, STAMINA_BAR_BORDER_COLOR));
+        .setFillStyle(0x000000, 0).setStrokeStyle(1, STAMINA_BAR_BORDER_COLOR));
 
     // --- Mana bar ---
     const mbx = MANA_BAR_X;
@@ -704,12 +627,11 @@ function create() {
     footerBarObjects.push(manaBarFill);
     footerBarObjects.push(this.add.rectangle(mbx + MANA_BAR_WIDTH / 2, mby + MANA_BAR_HEIGHT / 2, MANA_BAR_WIDTH, MANA_BAR_HEIGHT)
         .setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(13)
-        .setFillStyle(0x000000, 0)
-        .setStrokeStyle(1, MANA_BAR_BORDER_COLOR));
+        .setFillStyle(0x000000, 0).setStrokeStyle(1, MANA_BAR_BORDER_COLOR));
 
     // --- Mana bar center divider (3 segmented dots at 50%) ---
-    const divX  = mbx + MANA_BAR_WIDTH / 2 - 1;
-    const segH  = 4;
+    const divX   = mbx + MANA_BAR_WIDTH / 2 - 1;
+    const segH   = 4;
     const segGap = 3;
     for (let si = 0; si < 3; si++) {
         footerBarObjects.push(this.add.rectangle(divX, mby + si * (segH + segGap), 2, segH, MANA_BAR_DIVIDER_COLOR)
@@ -804,42 +726,54 @@ function create() {
     this.input.on('pointerdown', (pointer) => {
         if (!pointer.leftButtonDown()) return;
         if (casting) {
-            if (!CAST_CANCELS_ON_SHOOT) return;
+            if (!anim.castCancelsOnShoot) return;
             casting = false;
             pendingSpell          = null;
             pendingSpellDirection = null;
             player.stop();
         }
-        const activeCooldown = scene.time.now < hasteEndTime ? SHOOT_COOLDOWN_MS / HASTE_SHOOT_DIVISOR : SHOOT_COOLDOWN_MS;
+        const activeCooldown = scene.time.now < hasteEndTime
+            ? PLAYER.combat.shootCooldownMs / haste.shootDivisor
+            : PLAYER.combat.shootCooldownMs;
         if (scene.time.now - lastShotTime < activeCooldown) return;
         lastShotTime = scene.time.now;
         shooting = true;
         player.play(`shoot_${lastDirection}`);
-        const vec  = DIR_VECS[lastDirection];
-        const proj = scene.add.rectangle(player.x + PLAYER_PROJECTILE_SPAWN_OFFSET_X * SCALE, player.y + PLAYER_PROJECTILE_SPAWN_OFFSET_Y * SCALE, PROJECTILE_SIZE, PROJECTILE_SIZE, 0xffffff);
+        const vec   = DIR_VECS[lastDirection];
+        const ptCfg = PROJECTILE_TYPES[PLAYER.combat.projectileType];
+        const proj  = scene.add.rectangle(
+            player.x + PLAYER.combat.projectileSpawnOffsetX * SCALE,
+            player.y + PLAYER.combat.projectileSpawnOffsetY * SCALE,
+            ptCfg.width, ptCfg.height,
+            cssInt(ptCfg.colorCss)
+        );
         projectiles.push({
-            obj:    proj,
-            vx:     vec.x * PROJECTILE_SPEED,
-            vy:     vec.y * PROJECTILE_SPEED,
-            born:   scene.time.now,
-            damage: BASIC_SHOT_DAMAGE
+            obj:      proj,
+            vx:       vec.x * ptCfg.speed,
+            vy:       vec.y * ptCfg.speed,
+            born:     scene.time.now,
+            lifetime: ptCfg.lifetimeMs,
+            damage:   ptCfg.damage
         });
     });
 }
 
 function update(time, delta) {
     if (gameOver) return;
-    const dt = delta / 1000;
+    const dt    = delta / 1000;
     const frame = player.frame.name;
+    const res   = PLAYER.resources;
+    const mov   = PLAYER.movement;
+    const haste = PLAYER.spells.haste;
 
     const hasteRemaining = hasteEndTime - time;
     let hasteShow;
     if (hasteRemaining <= 0) {
         hasteShow = false;
-    } else if (hasteRemaining <= BUFF_FAST_FLASH_START_MS) {
-        hasteShow = Math.floor(time / BUFF_FLASH_FAST_MS) % 2 === 0;
-    } else if (hasteRemaining <= BUFF_FLASH_START_MS) {
-        hasteShow = Math.floor(time / BUFF_FLASH_SLOW_MS) % 2 === 0;
+    } else if (hasteRemaining <= haste.fastFlashStartMs) {
+        hasteShow = Math.floor(time / haste.flashFastMs) % 2 === 0;
+    } else if (hasteRemaining <= haste.flashStartMs) {
+        hasteShow = Math.floor(time / haste.flashSlowMs) % 2 === 0;
     } else {
         hasteShow = true;
     }
@@ -852,59 +786,75 @@ function update(time, delta) {
     }
 
     // Mana regen
-    mana = Math.min(MANA_MAX, mana + MANA_REGEN_PER_SECOND * dt);
+    mana = Math.min(res.manaMax, mana + res.manaRegenPerSecond * dt);
 
-    // Update health bar fill width
-    healthBarFill.width = HEALTH_BAR_WIDTH * (health / HEALTH_MAX);
-
-    // Update mana bar fill width
-    manaBarFill.width = MANA_BAR_WIDTH * (mana / MANA_MAX);
+    // Update health/mana bar widths
+    healthBarFill.width = HEALTH_BAR_WIDTH * (health / res.healthMax);
+    manaBarFill.width   = MANA_BAR_WIDTH   * (mana   / res.manaMax);
 
     // Update spell pips
-    pipAura.setFillStyle(  mana >= MANA_AURA_COST  ? MANA_PIP_COLOR_READY : MANA_PIP_COLOR_EMPTY);
-    pipIce.setFillStyle(   mana >= MANA_ICE_COST   ? MANA_PIP_COLOR_READY : MANA_PIP_COLOR_EMPTY);
-    pipHaste1.setFillStyle(mana >= 50              ? MANA_PIP_COLOR_READY : MANA_PIP_COLOR_EMPTY);
-    pipHaste2.setFillStyle(mana >= MANA_HASTE_COST ? MANA_PIP_COLOR_READY : MANA_PIP_COLOR_EMPTY);
+    pipAura.setFillStyle(  mana >= PLAYER.spells.aura.manaCost ? MANA_PIP_COLOR_READY : MANA_PIP_COLOR_EMPTY);
+    pipIce.setFillStyle(   mana >= PLAYER.spells.ice.manaCost  ? MANA_PIP_COLOR_READY : MANA_PIP_COLOR_EMPTY);
+    pipHaste1.setFillStyle(mana >= haste.manaCost / 2          ? MANA_PIP_COLOR_READY : MANA_PIP_COLOR_EMPTY);
+    pipHaste2.setFillStyle(mana >= haste.manaCost              ? MANA_PIP_COLOR_READY : MANA_PIP_COLOR_EMPTY);
 
-    // Dummy respawn and health bar update
+    // Enemy respawn, health bar update, and attack trigger
     for (const d of dummies) {
+        const cfg = d.config;
         if (!d.alive && time >= d.respawnAt) {
-            d.health = DUMMY_MAX_HEALTH;
-            d.alive  = true;
+            d.health          = cfg.stats.maxHealth;
+            d.alive           = true;
+            d.isAttacking     = false;
+            d.firedThisAttack = false;
             for (const p of d.parts) p.setVisible(true);
+            d.hbBg.setVisible(false);
+            d.hbFill.setVisible(false);
+            if (d.hitboxDebugRect) d.hitboxDebugRect.setVisible(cfg.hitbox.debug);
+            d.sprite.play(cfg.animations.idleKey, true);
         }
-        d.hbFill.width = DUMMY_HEALTH_BAR_WIDTH * (d.health / DUMMY_MAX_HEALTH);
+        d.hbFill.width = cfg.healthBar.width * (d.health / cfg.stats.maxHealth);
+
+        if (d.alive && d.aiCfg.moveMode === 'slowChase') {
+            const mdx   = player.x - d.x;
+            const mdy   = player.y - d.y;
+            const mdist = Math.sqrt(mdx * mdx + mdy * mdy);
+            if (mdist > d.aiCfg.stopDistance && mdist < d.aiCfg.aggroRange) {
+                const spd = cfg.stats.moveSpeed;
+                d.x += (mdx / mdist) * spd * dt;
+                d.y += (mdy / mdist) * spd * dt;
+                d.sprite.setPosition(d.x, d.y);
+                d.hbBg.setPosition(d.x, d.y - cfg.healthBar.yOffset);
+                d.hbFill.setPosition(d.x - cfg.healthBar.width / 2, d.y - cfg.healthBar.yOffset);
+                if (d.hitboxDebugRect) d.hitboxDebugRect.setPosition(
+                    d.x + cfg.hitbox.offsetX * SCALE,
+                    d.y + cfg.hitbox.offsetY * SCALE
+                );
+            }
+        }
+
+        if (d.alive && d.aiCfg.aimMode !== 'none' && d.aiCfg.aimMode != null && !d.isAttacking) {
+            if (time - d.lastShotTime >= cfg.attack.cooldownMs) {
+                d.isAttacking     = true;
+                d.firedThisAttack = false;
+                d.sprite.play(cfg.animations.attackKey, true);
+            }
+        }
     }
 
-    // Top dummy shoots left
-    const topDummy = dummies[0];
-    if (topDummy.alive && time - topDummyLastShotTime >= TOP_DUMMY_SHOOT_COOLDOWN_MS) {
-        topDummyLastShotTime = time;
-        const ep = scene.add.rectangle(topDummy.x, topDummy.y, ENEMY_PROJECTILE_WIDTH, ENEMY_PROJECTILE_HEIGHT, ENEMY_PROJECTILE_COLOR).setDepth(1);
-        enemyProjectiles.push({ obj: ep, vx: -ENEMY_PROJECTILE_SPEED, vy: 0 });
-    }
-
-    // Right dummy shoots down
-    const rightDummy = dummies[3];
-    if (rightDummy.alive && time - rightDummyLastShotTime >= RIGHT_DUMMY_SHOOT_COOLDOWN_MS) {
-        rightDummyLastShotTime = time;
-        const ep = scene.add.rectangle(rightDummy.x, rightDummy.y, ENEMY_PROJECTILE_HEIGHT, ENEMY_PROJECTILE_WIDTH, ENEMY_PROJECTILE_COLOR).setDepth(1);
-        enemyProjectiles.push({ obj: ep, vx: 0, vy: ENEMY_PROJECTILE_SPEED });
-    }
-
-    // Update hitbox debug rect position
-    if (HITBOX_DEBUG && hitboxDebugRect) {
+    // Update player hitbox debug rect position
+    const phb = PLAYER.hitbox;
+    if (phb.debug && hitboxDebugRect) {
         hitboxDebugRect.setPosition(
-            player.x + PLAYER_HITBOX_OFFSET_X * SCALE,
-            player.y + PLAYER_HITBOX_OFFSET_Y * SCALE
+            player.x + phb.offsetX * SCALE,
+            player.y + phb.offsetY * SCALE
         );
     }
 
     // Move enemy projectiles, check player hit, destroy offscreen
-    const hbcx = player.x + PLAYER_HITBOX_OFFSET_X * SCALE;
-    const hbcy = player.y + PLAYER_HITBOX_OFFSET_Y * SCALE;
-    const phw  = PLAYER_HITBOX_WIDTH  * SCALE / 2;
-    const phh  = PLAYER_HITBOX_HEIGHT * SCALE / 2;
+    const hbcx = player.x + phb.offsetX * SCALE;
+    const hbcy = player.y + phb.offsetY * SCALE;
+    const phw  = phb.width  * SCALE / 2;
+    const phh  = phb.height * SCALE / 2;
     for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
         const ep = enemyProjectiles[i];
         ep.obj.x += ep.vx * dt;
@@ -914,12 +864,12 @@ function update(time, delta) {
             enemyProjectiles.splice(i, 1);
             continue;
         }
-        const ew = ENEMY_PROJECTILE_WIDTH  / 2;
-        const eh = ENEMY_PROJECTILE_HEIGHT / 2;
+        const ew = ep.obj.width  / 2;
+        const eh = ep.obj.height / 2;
         if (Math.abs(ep.obj.x - hbcx) < phw + ew && Math.abs(ep.obj.y - hbcy) < phh + eh) {
             ep.obj.destroy();
             enemyProjectiles.splice(i, 1);
-            health = Math.max(0, health - ENEMY_PROJECTILE_DAMAGE);
+            health = Math.max(0, health - (ep.damage ?? 1));
             showFloatingHealth(this, FLOAT_HEALTH_SHOW_CHANGE_MS);
         }
     }
@@ -943,10 +893,10 @@ function update(time, delta) {
         return;
     }
 
-    // Move projectiles, destroy expired or offscreen, check dummy hit
+    // Move projectiles, destroy expired or offscreen, check enemy hit
     for (let i = projectiles.length - 1; i >= 0; i--) {
         const p = projectiles[i];
-        if (time - p.born >= (p.lifetime ?? PROJECTILE_LIFETIME)) {
+        if (time - p.born >= p.lifetime) {
             p.obj.destroy();
             projectiles.splice(i, 1);
             continue;
@@ -962,18 +912,24 @@ function update(time, delta) {
         let hit = false;
         for (const d of dummies) {
             if (!d.alive) continue;
-            const hw = p.obj.width  / 2 + SLIME_BODY_WIDTH  / 2;
-            const hh = p.obj.height / 2 + SLIME_BODY_HEIGHT / 2;
-            if (Math.abs(p.obj.x - (d.x + SLIME_BODY_OFFSET_X)) < hw && Math.abs(p.obj.y - (d.y + SLIME_BODY_OFFSET_Y)) < hh) {
+            const cfg = d.config;
+            const hw = p.obj.width  / 2 + cfg.hitbox.width  * SCALE / 2;
+            const hh = p.obj.height / 2 + cfg.hitbox.height * SCALE / 2;
+            if (Math.abs(p.obj.x - (d.x + cfg.hitbox.offsetX * SCALE)) < hw &&
+                Math.abs(p.obj.y - (d.y + cfg.hitbox.offsetY * SCALE)) < hh) {
                 p.obj.destroy();
                 projectiles.splice(i, 1);
-                mana = Math.min(MANA_MAX, mana + DUMMY_HIT_MANA_GAIN);
+                mana = Math.min(res.manaMax, mana + cfg.stats.hitManaGain);
                 d.health -= p.damage ?? 0;
                 if (d.health <= 0) {
                     d.health    = 0;
                     d.alive     = false;
-                    d.respawnAt = time + DUMMY_RESPAWN_MS;
+                    d.respawnAt = time + cfg.stats.respawnMs;
                     for (const dp of d.parts) dp.setVisible(false);
+                    if (d.hitboxDebugRect) d.hitboxDebugRect.setVisible(false);
+                } else {
+                    d.hbBg.setVisible(true);
+                    d.hbFill.setVisible(true);
                 }
                 hit = true;
                 break;
@@ -988,24 +944,21 @@ function update(time, delta) {
     const down  = wasd.down.isDown;
 
     // Shift: toggle mode or hold mode
-    if (RUN_TOGGLE_MODE) {
+    if (mov.runToggleMode) {
         if (Phaser.Input.Keyboard.JustDown(shiftKey)) {
-            if (!runToggled && stamina >= STAMINA_RUN_MIN) {
+            if (!runToggled && stamina >= res.staminaRunMin) {
                 runToggled = true;
             } else {
                 runToggled = false;
             }
         }
     } else {
-        // Hysteresis: stay running until stamina=0, only restart at STAMINA_RUN_MIN.
-        // Without this, stamina oscillates around the threshold and the animation
-        // alternates between run/walk every frame, freezing on frame 0.
-        runToggled = shiftKey.isDown && (runToggled ? stamina > 0 : stamina >= STAMINA_RUN_MIN);
+        // Hysteresis: stay running until stamina=0, only restart at staminaRunMin
+        runToggled = shiftKey.isDown && (runToggled ? stamina > 0 : stamina >= res.staminaRunMin);
     }
 
     let dx = 0;
     let dy = 0;
-
     if (left)  dx -= 1;
     if (right) dx += 1;
     if (up)    dy -= 1;
@@ -1016,12 +969,12 @@ function update(time, delta) {
     // Stamina drain/regen
     const isRunning = runToggled && moving && stamina > 0;
     if (isRunning) {
-        stamina = Math.max(0, stamina - STAMINA_DRAIN_PER_SECOND * dt);
-        if (RUN_TOGGLE_MODE && stamina === 0) runToggled = false;
+        stamina = Math.max(0, stamina - res.staminaDrainPerSecond * dt);
+        if (mov.runToggleMode && stamina === 0) runToggled = false;
     } else {
-        stamina = Math.min(STAMINA_MAX, stamina + STAMINA_REGEN_PER_SECOND * dt);
+        stamina = Math.min(res.staminaMax, stamina + res.staminaRegenPerSecond * dt);
     }
-    staminaBarFill.width = HEALTH_BAR_WIDTH * (stamina / STAMINA_MAX);
+    staminaBarFill.width = HEALTH_BAR_WIDTH * (stamina / res.staminaMax);
 
     const col = (active) => active ? FOOTER_ACTIVE_COLOR : FOOTER_INACTIVE_COLOR;
     footerW.setColor(col(up));
@@ -1041,7 +994,7 @@ function update(time, delta) {
         dy /= len;
     }
 
-    const speed = MOVE_SPEED * (!shooting && isRunning ? RUN_MULTIPLIER : 1);
+    const speed = mov.moveSpeed * (!shooting && isRunning ? mov.runMultiplier : 1);
     player.x += dx * speed * dt;
     player.y += dy * speed * dt;
 
@@ -1080,13 +1033,13 @@ function update(time, delta) {
         const bob         = Math.sin(time * FLOAT_MANA_BOB_SPEED) * FLOAT_MANA_BOB_AMPLITUDE * SCALE;
         floatManaPip1.setPosition(player.x + FLOAT_MANA_OFFSET_X * SCALE - pipHalfSpan, player.y + FLOAT_MANA_OFFSET_Y * SCALE + bob);
         floatManaPip2.setPosition(player.x + FLOAT_MANA_OFFSET_X * SCALE + pipHalfSpan, player.y + FLOAT_MANA_OFFSET_Y * SCALE - bob);
-        floatManaPip1.setAlpha(mana >= 50       ? FLOAT_MANA_PIP_ACTIVE_ALPHA : FLOAT_MANA_PIP_EMPTY_ALPHA);
-        floatManaPip2.setAlpha(mana >= MANA_MAX ? FLOAT_MANA_PIP_ACTIVE_ALPHA : FLOAT_MANA_PIP_EMPTY_ALPHA);
-        floatManaPip1.setFillStyle(mana >= 50       ? FLOAT_MANA_PIP_ACTIVE_COLOR : FLOAT_MANA_PIP_EMPTY_COLOR);
-        floatManaPip2.setFillStyle(mana >= MANA_MAX ? FLOAT_MANA_PIP_ACTIVE_COLOR : FLOAT_MANA_PIP_EMPTY_COLOR);
+        floatManaPip1.setAlpha(mana >= res.manaMax / 2 ? FLOAT_MANA_PIP_ACTIVE_ALPHA : FLOAT_MANA_PIP_EMPTY_ALPHA);
+        floatManaPip2.setAlpha(mana >= res.manaMax     ? FLOAT_MANA_PIP_ACTIVE_ALPHA : FLOAT_MANA_PIP_EMPTY_ALPHA);
+        floatManaPip1.setFillStyle(mana >= res.manaMax / 2 ? FLOAT_MANA_PIP_ACTIVE_COLOR : FLOAT_MANA_PIP_EMPTY_COLOR);
+        floatManaPip2.setFillStyle(mana >= res.manaMax     ? FLOAT_MANA_PIP_ACTIVE_COLOR : FLOAT_MANA_PIP_EMPTY_COLOR);
 
         floatStaminaGfx.clear();
-        const showStamina = isRunning || stamina < STAMINA_MAX;
+        const showStamina = isRunning || stamina < res.staminaMax;
         floatStaminaGfx.setVisible(showStamina);
         if (showStamina) {
             const sx = player.x + FLOAT_STAMINA_OFFSET_X * SCALE;
@@ -1095,7 +1048,7 @@ function update(time, delta) {
             floatStaminaGfx.beginPath();
             floatStaminaGfx.arc(sx, sy, FLOAT_STAMINA_RADIUS * SCALE, 0, Math.PI * 2, false);
             floatStaminaGfx.strokePath();
-            const fillAngle = Math.PI * 2 * (stamina / STAMINA_MAX);
+            const fillAngle = Math.PI * 2 * (stamina / res.staminaMax);
             floatStaminaGfx.lineStyle(FLOAT_STAMINA_LINE_W * SCALE, FLOAT_STAMINA_FILL_COLOR, 1);
             floatStaminaGfx.beginPath();
             floatStaminaGfx.arc(sx, sy, FLOAT_STAMINA_RADIUS * SCALE, -Math.PI / 2, -Math.PI / 2 + fillAngle, false);
@@ -1114,9 +1067,8 @@ function update(time, delta) {
     // Shoot or cast animation overrides movement animation until complete
     if (shooting || casting) return;
 
-    const prefix = moving ? (isRunning ? 'run' : 'walk') : 'idle';
+    const prefix  = moving ? (isRunning ? 'run' : 'walk') : 'idle';
     const animKey = `${prefix}_${lastDirection}`;
-
     if (player.anims.currentAnim?.key !== animKey) {
         player.play(animKey);
     }
