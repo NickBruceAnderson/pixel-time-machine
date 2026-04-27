@@ -10,13 +10,23 @@ export const PROJECTILE_TYPES = {
     },
 
     enemyBullet: {
-        kind:       'rectangle',
-        colorCss:   '#ff3333',
-        width:      10,
-        height:     6,
-        speed:      220,
+        width: 10,
+        height: 5,
+        speed: 250,
+        damage: 1,
         lifetimeMs: 3000,
-        damage:     1,
+        colorCss: '#66ff66', // red-green? tune this if too neon
+        parryable: true,
+    },
+
+    enemyUnparryableBullet: {
+        width: 10,
+        height: 5,
+        speed: 250,
+        damage: 1,
+        lifetimeMs: 3000,
+        colorCss: '#660000',
+        parryable: false,
     },
 
     ice: {

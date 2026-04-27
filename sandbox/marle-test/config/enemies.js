@@ -17,18 +17,19 @@ export const ENEMY_TYPES = {
         },
 
         stats: {
-            maxHealth:   3,
+            maxHealth:   5,
             damage:      1,
             armor:       0,
-            moveSpeed:   25,
-            respawnMs:   0,
+            moveSpeed:   50,
+            respawn:     false,
+            respawnMs:   3000,
             hitManaGain: 5,
         },
 
         ai: {
             moveMode:     'slowChase',
             aimMode:      'towardPlayer',
-            aggroRange:   300,
+            aggroRange:   1000,
             stopDistance: 140,
         },
 
@@ -52,21 +53,18 @@ export const ENEMY_TYPES = {
         },
 
         attack: {
-            cooldownMs:            1000,
-            projectileSpeed:       250,
-            projectileType:        'enemyBullet',
+            cooldownMinMs:     500,
+            cooldownMs:        1000,
+            initialDelayMinMs:  500,
+            initialDelayMaxMs: 1000,
+            projectileType: 'enemyBullet',
             projectileSpawnOffsetX: 0,
             projectileSpawnOffsetY: 16,
         },
     }
 };
 
-export const ENEMY_SPAWNS = [
-    //{ type: 'slime', x: 1000, y: 150, shootDirection: 'left', ai: { aimMode: 'fixed' } },
-    //{ type: 'slime', x: 950, y: 450, ai: { aimMode: 'none' } },
-    { type: 'slime', x: 790, y: 430 },
-    { type: 'slime', x: 865, y: 555 },
-    { type: 'slime', x: 1140, y: 610 },
-    { type: 'slime', x: 980, y: 120 },
-    { type: 'slime', x: 1130, y: 185 },
-];
+export const ENEMY_SPAWNS = [];
+
+//{ type: 'slime', x: 1000, y: 150, shootDirection: 'left', ai: { aimMode: 'fixed' } },
+//{ type: 'slime', x: 950, y: 450, ai: { aimMode: 'none' } },

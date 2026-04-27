@@ -10,8 +10,8 @@ export const CHARACTERS = {
         framesPerRow: 22,
 
         // --- Spawn ---
-        startX: 400,
-        startY: 300,
+        startX: 100,
+        startY: 340,
 
         // --- Bounds / collision ---
         bounds: {
@@ -61,7 +61,7 @@ export const CHARACTERS = {
         combat: {
             basicShotDamage: 1,
             projectileType: 'basic',
-            shootCooldownMs: 200,
+            shootCooldownMs: 400,
             projectileSpawnOffsetX: 0,
             projectileSpawnOffsetY: 8,
         },
@@ -69,11 +69,11 @@ export const CHARACTERS = {
         // --- Dodge ---
         dodge: {
             key: 'SPACE',
-            distance: 250,
-            durationMs: 250,
+            distance: 200,
+            durationMs: 200,
             cooldownMs: 500,
-            staminaCost: 20,
-            invulnMs: 250,
+            staminaCost: 50,
+            invulnMs: 200,
         },
 
         // --- Hurt / invulnerability ---
@@ -92,7 +92,7 @@ export const CHARACTERS = {
             parryFrame: 21,
             parryWindowMs: 170,
             parryFlashMs: 340,
-            staminaDrainPerSecond: 1,
+            staminaDrainPerSecond: 10,
             hitStaminaCost: 20,
             minStaminaToBlock: 20,
             moveSpeedMultiplier: 0.25,
@@ -123,7 +123,7 @@ export const CHARACTERS = {
             haste: {
                 manaCost: 100,
                 durationMs: 10000,
-                shootDivisor: 3,
+                shootDivisor: 2,
                 outlineColorCss: '#ff9900',
                 outlineAlpha: 0.8,
                 outlineSize: 4,
