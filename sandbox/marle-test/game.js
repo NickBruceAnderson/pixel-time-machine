@@ -163,6 +163,11 @@ function getFrame(row, col) {
     return row * PLAYER.framesPerRow + col;
 }
 
+function createAnimOnce(anims, config) {
+    if (anims.exists(config.key)) return;
+    anims.create(config);
+}
+
 const CAST_RELEASE_FRAMES = new Set(
     Object.values(ROWS).map(row => row * PLAYER.framesPerRow + PLAYER.animations.castReleaseFrame)
 );
@@ -395,7 +400,7 @@ function create() {
     ];
 
     for (const [key, row] of idleDirs) {
-        anims.create({
+        createAnimOnce(anims, {
             key,
             frames: [{ key: PLAYER.assetKey, frame: getFrame(row, anim.idleFrame) }],
             frameRate: anim.idleFrameRate,
@@ -412,7 +417,7 @@ function create() {
     ];
 
     for (const [key, row] of walkDirs) {
-        anims.create({
+        createAnimOnce(anims, {
             key,
             frames: anims.generateFrameNumbers(PLAYER.assetKey, {
                 start: getFrame(row, anim.walkStart),
@@ -432,7 +437,7 @@ function create() {
     ];
 
     for (const [key, row] of runDirs) {
-        anims.create({
+        createAnimOnce(anims, {
             key,
             frames: anim.runSequence.map(col => ({
                 key: PLAYER.assetKey,
@@ -452,7 +457,7 @@ function create() {
     ];
 
     for (const [key, row] of shootDirs) {
-        anims.create({
+        createAnimOnce(anims, {
             key,
             frames: [
                 { key: PLAYER.assetKey, frame: getFrame(row, anim.shootReadyFrame) },
@@ -540,14 +545,14 @@ function create() {
     for (const cfg of Object.values(ENEMY_TYPES)) {
         const ea = cfg.animations;
 
-        anims.create({
+        createAnimOnce(anims, {
             key: ea.idleKey,
             frames: ea.idleFrames.map(f => ({ key: cfg.assetKey, frame: f })),
             frameRate: ea.idleFrameRate,
             repeat: -1
         });
 
-        anims.create({
+        createAnimOnce(anims, {
             key: ea.attackKey,
             frames: ea.attackFrames.map(f => ({ key: cfg.assetKey, frame: f })),
             frameRate: ea.attackFrameRate,
@@ -688,7 +693,7 @@ function create() {
     ];
 
     for (const [key, row] of castDirs) {
-        anims.create({
+        createAnimOnce(anims, {
             key,
             frames: anims.generateFrameNumbers(PLAYER.assetKey, {
                 start: getFrame(row, anim.castStart),
@@ -708,7 +713,7 @@ function create() {
     ];
 
     for (const [key, row] of dodgeDirs) {
-        anims.create({
+        createAnimOnce(anims, {
             key,
             frames: anim.dodgeSequence.map(col => ({
                 key: PLAYER.assetKey,
