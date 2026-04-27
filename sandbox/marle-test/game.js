@@ -102,6 +102,17 @@ const GAME_OVER_FONT_SIZE = '48px';
 const RESTART_FONT_SIZE   = '20px';
 const GAME_OVER_COLOR     = '#ffffff';
 
+// --- ENEMY HIT FEEDBACK ---
+const ENEMY_HIT_FLASH_MS           = 80;
+const ENEMY_HIT_KNOCKBACK_DISTANCE = 20;
+const ENEMY_HIT_KNOCKBACK_MS       = 120;
+const FLOATING_DAMAGE_Y_OFFSET     = -70;
+const FLOATING_DAMAGE_MS           = 600;
+const FLOATING_DAMAGE_TEXT         = '-';
+const HIT_PAUSE_MS                 = 40;
+const DEATH_POP_SCALE              = 2.5;
+const DEATH_POP_MS                 = 200;
+
 // --- DERIVED NUMERIC COLORS ---
 function cssInt(s) { return parseInt(s.slice(1), 16); }
 const HEALTH_BAR_BG_COLOR         = cssInt(HEALTH_BAR_BG_COLOR_CSS);
@@ -189,6 +200,7 @@ let floatHealthVisibleUntil = 0;
 let floatHealthFadeTween    = null;
 let floatManaPip1, floatManaPip2;
 let floatStaminaGfx;
+let hitPauseEndTime = -Infinity;
 
 function setHasteVisualVisible(show) {
     const haste = PLAYER.spells.haste;
@@ -246,6 +258,7 @@ function create() {
     hasteEndTime        = -Infinity;
     lastAuraTime        = -Infinity;
     lastIceTime         = -Infinity;
+    hitPauseEndTime     = -Infinity;
     projectiles         = [];
     enemyProjectiles    = [];
     hasteSprites        = [];
@@ -443,9 +456,14 @@ function create() {
             hitboxDebugRect,
             aiCfg,
             shootDirection:  spawn.shootDirection,
-            lastShotTime:    -Infinity,
-            isAttacking:     false,
-            firedThisAttack: false,
+            lastShotTime:     -Infinity,
+            isAttacking:      false,
+            firedThisAttack:  false,
+            knockbackVx:      0,
+            knockbackVy:      0,
+            knockbackEndTime: -Infinity,
+            floatDmgText:     null,
+            flashTimer:       null,
         };
 
         sprite.on('animationupdate', (anim, frame) => {
@@ -798,7 +816,8 @@ function update(time, delta) {
     pipHaste1.setFillStyle(mana >= haste.manaCost / 2          ? MANA_PIP_COLOR_READY : MANA_PIP_COLOR_EMPTY);
     pipHaste2.setFillStyle(mana >= haste.manaCost              ? MANA_PIP_COLOR_READY : MANA_PIP_COLOR_EMPTY);
 
-    // Enemy respawn, health bar update, and attack trigger
+    // Enemy respawn, health bar update, movement, and attack trigger
+    const hitPaused = time < hitPauseEndTime;
     for (const d of dummies) {
         const cfg = d.config;
         if (!d.alive && time >= d.respawnAt) {
@@ -806,6 +825,10 @@ function update(time, delta) {
             d.alive           = true;
             d.isAttacking     = false;
             d.firedThisAttack = false;
+            d.knockbackEndTime = -Infinity;
+            if (d.flashTimer) { d.flashTimer.remove(); d.flashTimer = null; }
+            d.sprite.clearTint();
+            if (d.floatDmgText) { d.floatDmgText.destroy(); d.floatDmgText = null; }
             for (const p of d.parts) p.setVisible(true);
             d.hbBg.setVisible(false);
             d.hbFill.setVisible(false);
@@ -814,29 +837,43 @@ function update(time, delta) {
         }
         d.hbFill.width = cfg.healthBar.width * (d.health / cfg.stats.maxHealth);
 
-        if (d.alive && d.aiCfg.moveMode === 'slowChase') {
-            const mdx   = player.x - d.x;
-            const mdy   = player.y - d.y;
-            const mdist = Math.sqrt(mdx * mdx + mdy * mdy);
-            if (mdist > d.aiCfg.stopDistance && mdist < d.aiCfg.aggroRange) {
-                const spd = cfg.stats.moveSpeed;
-                d.x += (mdx / mdist) * spd * dt;
-                d.y += (mdy / mdist) * spd * dt;
-                d.sprite.setPosition(d.x, d.y);
-                d.hbBg.setPosition(d.x, d.y - cfg.healthBar.yOffset);
-                d.hbFill.setPosition(d.x - cfg.healthBar.width / 2, d.y - cfg.healthBar.yOffset);
-                if (d.hitboxDebugRect) d.hitboxDebugRect.setPosition(
-                    d.x + cfg.hitbox.offsetX * SCALE,
-                    d.y + cfg.hitbox.offsetY * SCALE
-                );
-            }
+        if (d.alive && d.knockbackEndTime > time) {
+            d.x += d.knockbackVx * dt;
+            d.y += d.knockbackVy * dt;
+            d.sprite.setPosition(d.x, d.y);
+            d.hbBg.setPosition(d.x, d.y - cfg.healthBar.yOffset);
+            d.hbFill.setPosition(d.x - cfg.healthBar.width / 2, d.y - cfg.healthBar.yOffset);
+            if (d.hitboxDebugRect) d.hitboxDebugRect.setPosition(
+                d.x + cfg.hitbox.offsetX * SCALE,
+                d.y + cfg.hitbox.offsetY * SCALE
+            );
         }
 
-        if (d.alive && d.aiCfg.aimMode !== 'none' && d.aiCfg.aimMode != null && !d.isAttacking) {
-            if (time - d.lastShotTime >= cfg.attack.cooldownMs) {
-                d.isAttacking     = true;
-                d.firedThisAttack = false;
-                d.sprite.play(cfg.animations.attackKey, true);
+        if (!hitPaused) {
+            if (d.alive && d.aiCfg.moveMode === 'slowChase' && d.knockbackEndTime <= time) {
+                const mdx   = player.x - d.x;
+                const mdy   = player.y - d.y;
+                const mdist = Math.sqrt(mdx * mdx + mdy * mdy);
+                if (mdist > d.aiCfg.stopDistance && mdist < d.aiCfg.aggroRange) {
+                    const spd = cfg.stats.moveSpeed;
+                    d.x += (mdx / mdist) * spd * dt;
+                    d.y += (mdy / mdist) * spd * dt;
+                    d.sprite.setPosition(d.x, d.y);
+                    d.hbBg.setPosition(d.x, d.y - cfg.healthBar.yOffset);
+                    d.hbFill.setPosition(d.x - cfg.healthBar.width / 2, d.y - cfg.healthBar.yOffset);
+                    if (d.hitboxDebugRect) d.hitboxDebugRect.setPosition(
+                        d.x + cfg.hitbox.offsetX * SCALE,
+                        d.y + cfg.hitbox.offsetY * SCALE
+                    );
+                }
+            }
+
+            if (d.alive && d.aiCfg.aimMode !== 'none' && d.aiCfg.aimMode != null && !d.isAttacking) {
+                if (time - d.lastShotTime >= cfg.attack.cooldownMs) {
+                    d.isAttacking     = true;
+                    d.firedThisAttack = false;
+                    d.sprite.play(cfg.animations.attackKey, true);
+                }
             }
         }
     }
@@ -921,12 +958,62 @@ function update(time, delta) {
                 projectiles.splice(i, 1);
                 mana = Math.min(res.manaMax, mana + cfg.stats.hitManaGain);
                 d.health -= p.damage ?? 0;
+
+                // Flash white
+                if (d.flashTimer) d.flashTimer.remove();
+                d.sprite.setTint(0xffffff);
+                d.flashTimer = scene.time.delayedCall(ENEMY_HIT_FLASH_MS, () => {
+                    d.sprite.clearTint();
+                    d.flashTimer = null;
+                });
+
+                // Knockback in projectile direction
+                const kbLen = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+                if (kbLen > 0) {
+                    const kbSpd = ENEMY_HIT_KNOCKBACK_DISTANCE / (ENEMY_HIT_KNOCKBACK_MS / 1000);
+                    d.knockbackVx      = (p.vx / kbLen) * kbSpd;
+                    d.knockbackVy      = (p.vy / kbLen) * kbSpd;
+                    d.knockbackEndTime = time + ENEMY_HIT_KNOCKBACK_MS;
+                }
+
+                // Floating damage text
+                if (d.floatDmgText) { d.floatDmgText.destroy(); }
+                const dmgText = scene.add.text(
+                    d.x, d.y + FLOATING_DAMAGE_Y_OFFSET,
+                    FLOATING_DAMAGE_TEXT + String(p.damage ?? 0),
+                    { fontSize: '16px', fontFamily: 'monospace', color: '#ffffff' }
+                ).setOrigin(0.5, 1).setDepth(10);
+                d.floatDmgText = dmgText;
+                scene.tweens.add({
+                    targets:  dmgText,
+                    y:        dmgText.y - 30,
+                    alpha:    0,
+                    duration: FLOATING_DAMAGE_MS,
+                    onComplete: () => { dmgText.destroy(); if (d.floatDmgText === dmgText) d.floatDmgText = null; }
+                });
+
+                // Brief hit pause
+                hitPauseEndTime = time + HIT_PAUSE_MS;
+
                 if (d.health <= 0) {
                     d.health    = 0;
                     d.alive     = false;
                     d.respawnAt = time + cfg.stats.respawnMs;
                     for (const dp of d.parts) dp.setVisible(false);
                     if (d.hitboxDebugRect) d.hitboxDebugRect.setVisible(false);
+                    if (d.flashTimer) { d.flashTimer.remove(); d.flashTimer = null; }
+                    d.sprite.clearTint();
+                    if (d.floatDmgText) { d.floatDmgText.destroy(); d.floatDmgText = null; }
+                    // Death pop
+                    const pop = scene.add.rectangle(d.x, d.y, 24, 24, 0xffffff).setAlpha(0.8).setDepth(5);
+                    scene.tweens.add({
+                        targets:  pop,
+                        scaleX:   DEATH_POP_SCALE,
+                        scaleY:   DEATH_POP_SCALE,
+                        alpha:    0,
+                        duration: DEATH_POP_MS,
+                        onComplete: () => pop.destroy()
+                    });
                 } else {
                     d.hbBg.setVisible(true);
                     d.hbFill.setVisible(true);
