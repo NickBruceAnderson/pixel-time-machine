@@ -284,6 +284,9 @@ let startText, startSub;
 let objText;
 let winText, winSub;
 
+let sfxMarleDamage;
+let sfxParryMeh;
+
 function setHasteVisualVisible(show) {
     const haste = PLAYER.spells.haste;
 
@@ -330,6 +333,8 @@ function preload() {
     this.load.image(iceCfg.assetKey, iceCfg.assetPath);
     this.load.image(PLAYER.hud.heartKey, PLAYER.hud.heartPath);
     this.load.tilemapTiledJSON(WORLD.tilemap.mapKey, WORLD.tilemap.mapPath);
+    this.load.audio('marleDamage', 'assets/audio/marle-damage.mp3');
+    this.load.audio('parryMeh', 'assets/audio/parry-meh.mp3');
 
     for (const tileset of WORLD.tilemap.tilesets) {
         this.load.image(tileset.key, tileset.path);
@@ -340,6 +345,12 @@ function create() {
     scene = this;
     this.game.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
+    sfxMarleDamage = this.sound.add('marleDamage', {
+        volume: 0.25
+    });
+    sfxParryMeh = this.sound.add('parryMeh', {
+        volume: 0.25
+    });
     const res = PLAYER.resources;
     const mov = PLAYER.movement;
     const anim = PLAYER.animations;
@@ -1642,6 +1653,7 @@ function update(time, delta) {
             const isParry = ep.parryable && (time - blockStartedAtMs) <= BLOCK.parryWindowMs;
 
             if (isParry) {
+                sfxParryMeh.play();
                 parryFlashUntilMs = time + BLOCK.parryFlashMs;
                 player.stop();
                 player.setFrame(getFrame(ROWS[lastDirection], BLOCK.parryFrame));
@@ -1674,6 +1686,7 @@ function update(time, delta) {
 
         health = Math.max(0, health - epDmg);
         showFloatingHealth(this, FLOAT_HEALTH_SHOW_CHANGE_MS);
+        sfxMarleDamage.play();
 
         shooting = false;
         casting = false;
