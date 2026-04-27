@@ -12,7 +12,7 @@ export const PROJECTILE_TYPES = {
     enemyBullet: {
         width: 10,
         height: 5,
-        speed: 250,
+        speed: 300,
         damage: 1,
         lifetimeMs: 3000,
         colorCss: '#66ff66', // red-green? tune this if too neon
