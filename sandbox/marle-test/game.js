@@ -286,6 +286,15 @@ let winText, winSub;
 
 let sfxMarleDamage;
 let sfxParryMeh;
+let sfxAura;
+let sfxXbow;
+let sfxEnemyDie;
+let sfxDodge;
+let sfxHaste;
+let sfxBattleStart;
+let sfxIce;
+let sfxBlockHit;
+let musicBattle;
 
 function setHasteVisualVisible(show) {
     const haste = PLAYER.spells.haste;
@@ -335,6 +344,15 @@ function preload() {
     this.load.tilemapTiledJSON(WORLD.tilemap.mapKey, WORLD.tilemap.mapPath);
     this.load.audio('marleDamage', 'assets/audio/marle-damage.mp3');
     this.load.audio('parryMeh', 'assets/audio/parry-meh.mp3');
+    this.load.audio('aura', 'assets/audio/aura.mp3');
+    this.load.audio('xbow', 'assets/audio/xbow.mp3');
+    this.load.audio('enemyDie', 'assets/audio/enemyDie.mp3');
+    this.load.audio('dodge', 'assets/audio/dodge.mp3');
+    this.load.audio('haste', 'assets/audio/haste.mp3');
+    this.load.audio('battleStart', 'assets/audio/battleStart.mp3');
+    this.load.audio('ice', 'assets/audio/ice.mp3');
+    this.load.audio('blockHit', 'assets/audio/blockHit.mp3');
+    this.load.audio('battleSong', 'assets/audio/battle-song.mp3');
 
     for (const tileset of WORLD.tilemap.tilesets) {
         this.load.image(tileset.key, tileset.path);
@@ -350,6 +368,34 @@ function create() {
     });
     sfxParryMeh = this.sound.add('parryMeh', {
         volume: 0.25
+    });
+    sfxAura = this.sound.add('aura', {
+        volume: 0.25
+    });
+    sfxXbow = this.sound.add('xbow', {
+        volume: 0.18
+    });
+    sfxEnemyDie = this.sound.add('enemyDie', {
+        volume: 0.35
+    });
+    sfxDodge = this.sound.add('dodge', {
+        volume: 0.25
+    });
+    sfxHaste = this.sound.add('haste', {
+        volume: 0.25
+    });
+    sfxBattleStart = this.sound.add('battleStart', {
+        volume: 0.35
+    });
+    sfxIce = this.sound.add('ice', {
+        volume: 0.25
+    });
+    sfxBlockHit = this.sound.add('blockHit', {
+        volume: 0.3
+    });
+    musicBattle = this.sound.add('battleSong', {
+        volume: 0.18,
+        loop: true
     });
     const res = PLAYER.resources;
     const mov = PLAYER.movement;
@@ -751,6 +797,7 @@ function create() {
         if (spell === 'aura') {
             health = Math.min(res.healthMax, health + PLAYER.spells.aura.healAmount);
             showFloatingHealth(scene, FLOAT_HEALTH_SHOW_CHANGE_MS);
+            sfxAura.play();
         } else if (spell === 'ice') {
             const vec = DIR_VECS[dir];
             const iceCfg = PROJECTILE_TYPES[PLAYER.spells.ice.projectileType];
@@ -769,8 +816,10 @@ function create() {
                 lifetime: iceCfg.lifetimeMs,
                 damage: PLAYER.spells.ice.damage
             });
+            sfxIce.play();
         } else if (spell === 'haste') {
             hasteEndTime = scene.time.now + haste.durationMs;
+            sfxHaste.play();
         }
     };
 
@@ -878,6 +927,7 @@ function create() {
         casting = false;
         pendingSpell = null;
         pendingSpellDirection = null;
+        sfxDodge.play();
         player.play(`dodge_${dodgeDir}`);
         playerInvulnEndTime = Math.max(playerInvulnEndTime, scene.time.now + dodge.invulnMs);
     });
@@ -1035,7 +1085,7 @@ function create() {
     ft('  |  ');
     footerLmbShoot = ft('LMB Shoot');
     ft('  |  ');
-    footerRmbParry = ft('RMB Parry');
+    footerRmbParry = ft('RMB Block/Parry');
     ft('  |  ');
     footerSpaceDodge = ft('Space Dodge');
     ft('  |  ');
@@ -1126,7 +1176,13 @@ function create() {
 
     restartKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
     restartKey.on('down', () => {
-        if (gameOver || gameWon) scene.scene.restart();
+        if (gameOver || gameWon) {
+            if (musicBattle && musicBattle.isPlaying) {
+                musicBattle.stop();
+            }
+
+            scene.scene.restart();
+        }
     });
 
     // Objective HUD
@@ -1214,6 +1270,10 @@ function create() {
 function startGame() {
     if (gameStarted) return;
 
+    sfxBattleStart.play();
+    if (!musicBattle.isPlaying) {
+        musicBattle.play();
+    }
     gameStarted = true;
     startText.setVisible(false);
     startSub.setVisible(false);
@@ -1427,6 +1487,8 @@ function tryShootAtPointer(scene, pointer, now) {
         ptCfg.height,
         cssInt(ptCfg.colorCss)
     );
+
+    sfxXbow.play();
 
     projectiles.push({
         obj: proj,
@@ -1648,6 +1710,7 @@ function update(time, delta) {
 
         if (isBlocking) {
             stamina = Math.max(0, stamina - BLOCK.hitStaminaCost);
+            sfxBlockHit.play();
             if (stamina <= 0) isBlocking = false;
 
             const isParry = ep.parryable && (time - blockStartedAtMs) <= BLOCK.parryWindowMs;
@@ -1820,6 +1883,7 @@ function update(time, delta) {
                 d.health = 0;
                 d.alive = false;
                 slimesKilled++;
+                sfxEnemyDie.play();
 
                 if (cfg.stats.respawn) {
                     d.respawnAt = time + cfg.stats.respawnMs;
