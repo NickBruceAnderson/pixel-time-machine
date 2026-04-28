@@ -102,9 +102,10 @@ const GAME_START_TEXT = 'Go!';
 const START_SCREEN_AUTO_MS = 1000;
 const SLIME_TARGET_KILLS = 64;
 const REGULAR_SLIME_TARGET_KILLS = 63;
-const SLIME_WAVES = [1, 2, 4, 8, 16, 32];
+const SLIME_WAVES = [1, 2, 4, 8, 16, 32];  //[];
 const BOSS_ENABLED = true;
-const BOSS_HEALTH_MULTIPLIER = 12.8;
+const BOSS_HEALTH_MULTIPLIER = 4;
+const BOSS_ARMOR = 1;
 const WAVE_SPAWN_MARGIN = 64;
 const SPAWN_ENTRY_SPEED_MULTIPLIER = 10;
 const SLIME_TRIPLE_SHOT_CHANCE = 0.25;
@@ -285,7 +286,7 @@ let objText;
 let winText, winSub;
 
 let sfxMarleDamage;
-let sfxParryMeh;
+let sfxParry;
 let sfxAura;
 let sfxXbow;
 let sfxEnemyDie;
@@ -342,17 +343,18 @@ function preload() {
     this.load.image(iceCfg.assetKey, iceCfg.assetPath);
     this.load.image(PLAYER.hud.heartKey, PLAYER.hud.heartPath);
     this.load.tilemapTiledJSON(WORLD.tilemap.mapKey, WORLD.tilemap.mapPath);
-    this.load.audio('marleDamage', 'assets/audio/marle-damage.mp3');
-    this.load.audio('parryMeh', 'assets/audio/parry-meh.mp3');
+
     this.load.audio('aura', 'assets/audio/aura.mp3');
-    this.load.audio('xbow', 'assets/audio/xbow.mp3');
-    this.load.audio('enemyDie', 'assets/audio/enemyDie.mp3');
+    this.load.audio('battle-song', 'assets/audio/battle-song.mp3');
+    this.load.audio('battle-start', 'assets/audio/battle-start.mp3');
+    this.load.audio('block-hit', 'assets/audio/block-hit.mp3');
     this.load.audio('dodge', 'assets/audio/dodge.mp3');
+    this.load.audio('enemy-die', 'assets/audio/enemy-die.mp3');
     this.load.audio('haste', 'assets/audio/haste.mp3');
-    this.load.audio('battleStart', 'assets/audio/battleStart.mp3');
     this.load.audio('ice', 'assets/audio/ice.mp3');
-    this.load.audio('blockHit', 'assets/audio/blockHit.mp3');
-    this.load.audio('battleSong', 'assets/audio/battle-song.mp3');
+    this.load.audio('marle-damage', 'assets/audio/marle-damage.mp3');
+    this.load.audio('parry', 'assets/audio/parry.mp3');
+    this.load.audio('xbow', 'assets/audio/xbow.mp3');
 
     for (const tileset of WORLD.tilemap.tilesets) {
         this.load.image(tileset.key, tileset.path);
@@ -363,10 +365,10 @@ function create() {
     scene = this;
     this.game.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
-    sfxMarleDamage = this.sound.add('marleDamage', {
+    sfxMarleDamage = this.sound.add('marle-damage', {
         volume: 0.25
     });
-    sfxParryMeh = this.sound.add('parryMeh', {
+    sfxParry = this.sound.add('parry', {
         volume: 0.25
     });
     sfxAura = this.sound.add('aura', {
@@ -375,7 +377,7 @@ function create() {
     sfxXbow = this.sound.add('xbow', {
         volume: 0.18
     });
-    sfxEnemyDie = this.sound.add('enemyDie', {
+    sfxEnemyDie = this.sound.add('enemy-die', {
         volume: 0.35
     });
     sfxDodge = this.sound.add('dodge', {
@@ -384,19 +386,20 @@ function create() {
     sfxHaste = this.sound.add('haste', {
         volume: 0.25
     });
-    sfxBattleStart = this.sound.add('battleStart', {
+    sfxBattleStart = this.sound.add('battle-start', {
         volume: 0.35
     });
     sfxIce = this.sound.add('ice', {
         volume: 0.25
     });
-    sfxBlockHit = this.sound.add('blockHit', {
+    sfxBlockHit = this.sound.add('block-hit', {
         volume: 0.3
     });
-    musicBattle = this.sound.add('battleSong', {
+    musicBattle = this.sound.add('battle-song', {
         volume: 0.18,
         loop: true
     });
+
     const res = PLAYER.resources;
     const mov = PLAYER.movement;
     const anim = PLAYER.animations;
@@ -1280,6 +1283,8 @@ function startGame() {
     objText.setVisible(true);
     waveIndex = 0;
     spawnWave(0);
+    //bossSpawned = true;
+    //spawnBoss();
 }
 
 function spawnWave(idx) {
@@ -1716,7 +1721,7 @@ function update(time, delta) {
             const isParry = ep.parryable && (time - blockStartedAtMs) <= BLOCK.parryWindowMs;
 
             if (isParry) {
-                sfxParryMeh.play();
+                sfxParry.play();
                 parryFlashUntilMs = time + BLOCK.parryFlashMs;
                 player.stop();
                 player.setFrame(getFrame(ROWS[lastDirection], BLOCK.parryFrame));
@@ -1828,8 +1833,13 @@ function update(time, delta) {
             projectiles.splice(i, 1);
 
             mana = Math.min(res.manaMax, mana + cfg.stats.hitManaGain);
-            d.health -= p.damage ?? 0;
+            let damage = p.damage ?? 0;
 
+            if (d.isBoss) {
+                damage = Math.max(0, damage - BOSS_ARMOR);
+            }
+
+            d.health -= damage;
             if (d.flashTimer) d.flashTimer.remove();
 
             d.sprite.setTint(0xffffff);
@@ -1854,7 +1864,7 @@ function update(time, delta) {
             const dmgText = scene.add.text(
                 d.x,
                 d.y + FLOATING_DAMAGE_Y_OFFSET,
-                FLOATING_DAMAGE_TEXT + String(p.damage ?? 0),
+                FLOATING_DAMAGE_TEXT + String(damage),
                 {
                     fontSize: '16px',
                     fontFamily: 'monospace',

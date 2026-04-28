@@ -100,7 +100,7 @@ export const CHARACTERS = {
             reflectedProjectile: {
                 colorCss: '#ffee00',
                 speedMultiplier: 8,
-                damageMultiplier: 1,
+                damageMultiplier: 4,
                 lifetimeMs: 1400,
             },
         },
