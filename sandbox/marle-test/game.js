@@ -103,14 +103,19 @@ const START_SCREEN_AUTO_MS = 1000;
 const SLIME_TARGET_KILLS = 64;
 const REGULAR_SLIME_TARGET_KILLS = 63;
 const SLIME_WAVES = [1, 2, 4, 8, 16, 32];  //[];
-const BOSS_ENABLED = true;
-const BOSS_HEALTH_MULTIPLIER = 4;
-const BOSS_ARMOR = 1;
 const WAVE_SPAWN_MARGIN = 64;
 const SPAWN_ENTRY_SPEED_MULTIPLIER = 10;
 const SLIME_TRIPLE_SHOT_CHANCE = 0.25;
 const SLIME_TRIPLE_SHOT_ANGLE_DEGREES = 45;
 const SLIME_TRIPLE_SHOT_SPACING_MS = 120;
+
+// --- BOSS COMBAT ---
+const BOSS_ENABLED = true;
+const BOSS_HEALTH_MULTIPLIER = 4;    // boss HP = slime maxHealth (5) * this = 20
+const BOSS_ARMOR = 1;                // flat reduction per hit; basic shot (1 dmg) deals 0
+const BOSS_DAMAGE_FROM_PARRY = 3;    // reference: reflected bullet raw (4) minus armor = 3 net
+const BOSS_DAMAGE_FROM_ICE = 5;      // reference: ice raw damage before armor (net 4)
+
 const START_TEXT_FONT_SIZE = '48px';
 const OBJECTIVE_TEXT_FONT_SIZE = '14px';
 const WIN_TEXT_FONT_SIZE = '48px';
@@ -1744,7 +1749,7 @@ function update(time, delta) {
                     vx: rvx,
                     vy: rvy,
                     born: time,
-                    lifetime: 1400,
+                    lifetime: BLOCK.reflectedProjectile.lifetimeMs,
                     damage: Math.ceil(epDmg * BLOCK.reflectedProjectile.damageMultiplier),
                 });
             }
