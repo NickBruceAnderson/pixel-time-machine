@@ -559,16 +559,34 @@ function create() {
         return;
     }
 
-    const groundLayer = map.createLayer(WORLD.tilemap.worldLayerName, tilesets, 0, 0);
+    const groundLayer = map.createLayer(WORLD.tilemap.groundLayerName, tilesets, 0, 0);
 
     if (!groundLayer) {
-        console.error('Missing layer:', WORLD.tilemap.worldLayerName);
+        console.error('Missing layer:', WORLD.tilemap.groundLayerName);
         console.error('Available layers:', map.layers.map(l => l.name));
         return;
     }
 
     groundLayer.setScale(SCALE);
     groundLayer.setDepth(0);
+
+    const doodadsLayer = map.createLayer(WORLD.tilemap.doodadsLayerName, tilesets, 0, 0);
+
+    if (doodadsLayer) {
+        doodadsLayer.setScale(SCALE);
+        doodadsLayer.setDepth(0.5);
+    } else {
+        console.warn('Missing optional layer:', WORLD.tilemap.doodadsLayerName);
+    }
+
+    const canopyLayer = map.createLayer(WORLD.tilemap.canopyLayerName, tilesets, 0, 0);
+
+    if (canopyLayer) {
+        canopyLayer.setScale(SCALE);
+        canopyLayer.setDepth(2);
+    } else {
+        console.warn('Missing optional layer:', WORLD.tilemap.canopyLayerName);
+    }
 
     const colLayer = map.getObjectLayer(WORLD.tilemap.colliderLayerName);
     if (colLayer) {
@@ -1281,7 +1299,7 @@ function create() {
             return;
         }
 
-        if (pointer.rightButtonDown()) {
+        if (pointer.button === 2) {
             if (!gameOver && stamina >= BLOCK.minStaminaToBlock) {
                 isBlocking = true;
                 blockStartedAtMs = scene.time.now;
@@ -1542,6 +1560,24 @@ function projectileHitsMapCollider(obj) {
 
     return false;
 }
+
+function playerHitsMapCollider(testX, testY) {
+    const phb = PLAYER.hitbox;
+    const pcx = testX + phb.offsetX * SCALE;
+    const pcy = testY + phb.offsetY * SCALE;
+    const phw = phb.width * SCALE / 2;
+    const phh = phb.height * SCALE / 2;
+
+    for (const col of mapColliders) {
+        if (Math.abs(pcx - col.cx) < phw + col.hw &&
+            Math.abs(pcy - col.cy) < phh + col.hh) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 
 function update(time, delta) {
     if (objText && gameStarted) {
@@ -2084,13 +2120,16 @@ function update(time, delta) {
         dy /= len;
     }
 
+    let moveX = 0;
+    let moveY = 0;
+
     if (dodging) {
         if (time >= dodgeEndTime) {
             dodging = false;
         } else {
             const dodgeSpd = dodge.distance / (dodge.durationMs / 1000);
-            player.x += dodgeDirX * dodgeSpd * dt;
-            player.y += dodgeDirY * dodgeSpd * dt;
+            moveX = dodgeDirX * dodgeSpd * dt;
+            moveY = dodgeDirY * dodgeSpd * dt;
         }
     } else {
         let speed = mov.moveSpeed * (!shooting && isRunning ? mov.runMultiplier : 1);
@@ -2099,13 +2138,29 @@ function update(time, delta) {
             speed *= BLOCK.moveSpeedMultiplier;
         }
 
-        player.x += dx * speed * dt;
-        player.y += dy * speed * dt;
+        moveX = dx * speed * dt;
+        moveY = dy * speed * dt;
+    }
+
+    if (!playerHitsMapCollider(player.x + moveX, player.y)) {
+        player.x += moveX;
+    }
+
+    if (!playerHitsMapCollider(player.x, player.y + moveY)) {
+        player.y += moveY;
     }
 
     if (playerKnockbackEndTime > time) {
-        player.x += playerKnockbackVx * dt;
-        player.y += playerKnockbackVy * dt;
+        const knockX = playerKnockbackVx * dt;
+        const knockY = playerKnockbackVy * dt;
+
+        if (!playerHitsMapCollider(player.x + knockX, player.y)) {
+            player.x += knockX;
+        }
+
+        if (!playerHitsMapCollider(player.x, player.y + knockY)) {
+            player.y += knockY;
+        }
     }
 
     player.x = Phaser.Math.Clamp(player.x, PLAYER.bounds.paddingX, GAME_WIDTH - PLAYER.bounds.paddingX);
