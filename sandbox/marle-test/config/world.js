@@ -7,33 +7,47 @@ export const WORLD = {
     tilemap: {
         mapKey:         'forestMap',
         mapPath:        'assets/forest-map.tmj',
-        worldLayerName: 'ground',
+        worldLayerName:    'ground',
+        colliderLayerName: 'colliders',
+        colliderDebug:     false,
+        colliderDebugColorCss: '#ff00ff',
+        colliderDebugAlpha:    0.3,
 
         tilesets: [
             {
                 name: 'grass',
-                key:  'grass',
+                key: 'grass',
                 path: 'assets/grass.png',
             },
             {
                 name: 'grass-rock',
-                key:  'grass-rock',
+                key: 'grass-rock',
                 path: 'assets/grass-rock.png',
             },
             {
                 name: 'grass-road-bent',
-                key:  'grass-road-bent',
+                key: 'grass-road-bent',
                 path: 'assets/grass-road-bent.png',
             },
             {
                 name: 'grass-road-horizontal',
-                key:  'grass-road-horizontal',
+                key: 'grass-road-horizontal',
                 path: 'assets/grass-road-horizontal.png',
             },
             {
                 name: 'grass-road-vertical',
-                key:  'grass-road-vertical',
+                key: 'grass-road-vertical',
                 path: 'assets/grass-road-vertical.png',
+            },
+            {
+                name: 'rocks',
+                key: 'rocks',
+                path: 'assets/rocks.png',
+            },
+            {
+                name: 'tree',
+                key: 'tree',
+                path: 'assets/tree.png',
             },
         ],
     }

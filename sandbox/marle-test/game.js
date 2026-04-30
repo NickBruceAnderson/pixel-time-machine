@@ -252,6 +252,7 @@ let stamina = PLAYER.resources.staminaStart;
 let runToggled = false;
 let pipAura, pipIce, pipHaste1, pipHaste2;
 let dummies = [];
+let mapColliders = [];
 let enemyProjectiles = [];
 let gameOver = false;
 let restartKey;
@@ -450,6 +451,7 @@ function create() {
     hasteSprites = [];
     hasteGlowFx = null;
     dummies = [];
+    mapColliders = [];
     hitboxDebugRect = null;
     footerBarObjects = [];
     footerControlsObjects = [];
@@ -567,6 +569,23 @@ function create() {
 
     groundLayer.setScale(SCALE);
     groundLayer.setDepth(0);
+
+    const colLayer = map.getObjectLayer(WORLD.tilemap.colliderLayerName);
+    if (colLayer) {
+        for (const obj of colLayer.objects) {
+            const cx = (obj.x + obj.width / 2) * SCALE;
+            const cy = (obj.y + obj.height / 2) * SCALE;
+            const hw = obj.width  * SCALE / 2;
+            const hh = obj.height * SCALE / 2;
+            mapColliders.push({ cx, cy, hw, hh });
+
+            if (WORLD.tilemap.colliderDebug) {
+                this.add.rectangle(cx, cy, hw * 2, hh * 2)
+                    .setFillStyle(cssInt(WORLD.tilemap.colliderDebugColorCss), WORLD.tilemap.colliderDebugAlpha)
+                    .setDepth(8);
+            }
+        }
+    }
 
     player = this.add.sprite(PLAYER.startX, PLAYER.startY, PLAYER.assetKey);
     player.setScale(SCALE);
@@ -1510,6 +1529,20 @@ function tryShootAtPointer(scene, pointer, now) {
     });
 }
 
+function projectileHitsMapCollider(obj) {
+    const pw = obj.width  / 2;
+    const ph = obj.height / 2;
+
+    for (const col of mapColliders) {
+        if (Math.abs(obj.x - col.cx) < pw + col.hw &&
+            Math.abs(obj.y - col.cy) < ph + col.hh) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 function update(time, delta) {
     if (objText && gameStarted) {
         const line2 = bossSpawned
@@ -1698,6 +1731,12 @@ function update(time, delta) {
             continue;
         }
 
+        if (projectileHitsMapCollider(ep.obj)) {
+            ep.obj.destroy();
+            enemyProjectiles.splice(i, 1);
+            continue;
+        }
+
         const ew = ep.obj.width / 2;
         const eh = ep.obj.height / 2;
         const hitPlayer = Math.abs(ep.obj.x - hbcx) < phw + ew &&
@@ -1719,11 +1758,13 @@ function update(time, delta) {
         if (time < playerInvulnEndTime) continue;
 
         if (isBlocking) {
-            stamina = Math.max(0, stamina - BLOCK.hitStaminaCost);
-            sfxBlockHit.play();
-            if (stamina <= 0) isBlocking = false;
-
             const isParry = ep.parryable && (time - blockStartedAtMs) <= BLOCK.parryWindowMs;
+
+            if (!isParry) {
+                stamina = Math.max(0, stamina - BLOCK.hitStaminaCost);
+                sfxBlockHit.play();
+                if (stamina <= 0) isBlocking = false;
+            }
 
             if (isParry) {
                 sfxParry.play();
@@ -1815,6 +1856,12 @@ function update(time, delta) {
         p.obj.y += p.vy * dt;
 
         if (p.obj.x < 0 || p.obj.x > GAME_WIDTH || p.obj.y < 0 || p.obj.y > GAME_HEIGHT) {
+            p.obj.destroy();
+            projectiles.splice(i, 1);
+            continue;
+        }
+
+        if (projectileHitsMapCollider(p.obj)) {
             p.obj.destroy();
             projectiles.splice(i, 1);
             continue;
