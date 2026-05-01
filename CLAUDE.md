@@ -15,6 +15,8 @@ Summarize terminal output. Show only: failing lines, counts, actionable takeaway
 ## Scope
 Current working folder only. No sibling year or sandbox folders unless asked.
 Targeted reads only: file, function, or section. No broad scans.
+Use `.claudeignore` when focusing one game or sandbox.
+Avoid loading unrelated folders into context.
 
 ## Bug Workflow
 Issue / Fix / Verify format.
