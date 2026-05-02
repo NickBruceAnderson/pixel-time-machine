@@ -37,8 +37,10 @@ If edit output exceeds 200 lines, stop and ask.
 If more than 3 edit calls are needed, stop and report.
 
 ## Repo
-Stack: Phaser 3 CDN, vanilla JS, GitHub Pages. No bundler.
+Stack: Phaser 4 CDN, vanilla JS, GitHub Pages. No bundler.
 Static year games use no bundler and no npm by default.
+Use Phaser 4 CDN directly in each game's `index.html`.
+Keep `index.html` minimal: Phaser 4 CDN tag plus game script.
 npm is allowed for scoped server or tooling folders.
 Examples: Colyseus servers, deployment packages, asset tools.
 Keep npm dependencies out of the repo root unless approved.
