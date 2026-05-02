@@ -3,8 +3,10 @@
 const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 900;
 const BACKGROUND_COLOR = '#000000';
+const PLAY_TOP = 20;
 const PLAY_HEIGHT = 600;
-const UI_ZONE_TOP = 600;
+const PLAY_BOTTOM = PLAY_TOP + PLAY_HEIGHT-30;
+const UI_ZONE_TOP = PLAY_BOTTOM;
 
 const PADDLE_WIDTH = 6;
 const PADDLE_HEIGHT = 60;
@@ -95,7 +97,9 @@ class PongScene extends Phaser.Scene {
         this.gameOver   = false;
 
         // ── Center divider (play zone only) ───────────────────────────────────
-        for (let y = 0; y < PLAY_HEIGHT; y += DIVIDER_DASH_GAP) {
+        this.add.rectangle(CANVAS_WIDTH / 2, PLAY_TOP, CANVAS_WIDTH, 1, phaserColor(ZONE_SEPARATOR_COLOR)).setAlpha(0.6).setDepth(10);
+
+        for (let y = PLAY_TOP; y < PLAY_BOTTOM; y += DIVIDER_DASH_GAP) {
             this.add.rectangle(
                 CANVAS_WIDTH / 2,
                 y + DIVIDER_DASH_HEIGHT / 2,
@@ -106,16 +110,16 @@ class PongScene extends Phaser.Scene {
         }
 
         // Play zone / UI zone separator
-        this.add.rectangle(CANVAS_WIDTH / 2, PLAY_HEIGHT, CANVAS_WIDTH, 1, phaserColor(ZONE_SEPARATOR_COLOR)).setAlpha(0.6);
+        this.add.rectangle(CANVAS_WIDTH / 2, PLAY_BOTTOM, CANVAS_WIDTH, 1, phaserColor(ZONE_SEPARATOR_COLOR)).setAlpha(0.6);
 
         // UI zone / footer separator
-        const footerTop = CANVAS_HEIGHT - 100;
+        const footerTop = CANVAS_HEIGHT - 150;
         this.add.rectangle(CANVAS_WIDTH / 2, footerTop, CANVAS_WIDTH, 1, phaserColor(ZONE_SEPARATOR_COLOR)).setAlpha(0.6).setDepth(10);
 
         // Centered instruction text
         this.add.text(
             CANVAS_WIDTH / 2,
-            CANVAS_HEIGHT - FOOTER_Y_OFFSET,
+            footerTop + 25,
             'Pong — but your mana bar unlocks combos. GROW your paddle, SHRINK theirs, or BURST the ball to double speed.\nPress into the ball to SMASH it for bonus power and a mana boost!',
             { fontSize: FOOTER_FONT_SIZE + 'px', fill: FOOTER_COLOR, fontFamily: 'monospace' }
         ).setDepth(10).setOrigin(0.5, 0);
@@ -123,14 +127,14 @@ class PongScene extends Phaser.Scene {
         // ── Paddles ───────────────────────────────────────────────────────────
         this.paddleLeft = this.add.rectangle(
             PADDLE_OFFSET,
-            PLAY_HEIGHT / 2,
+            PLAY_TOP + PLAY_HEIGHT / 2,
             PADDLE_WIDTH,
             PADDLE_HEIGHT,
             phaserColor(PADDLE_DEFAULT_COLOR)
         );
         this.paddleRight = this.add.rectangle(
             CANVAS_WIDTH - PADDLE_OFFSET,
-            PLAY_HEIGHT / 2,
+            PLAY_TOP + PLAY_HEIGHT / 2,
             PADDLE_WIDTH,
             PADDLE_HEIGHT,
             phaserColor(PADDLE_DEFAULT_COLOR)
@@ -143,7 +147,7 @@ class PongScene extends Phaser.Scene {
         // ── Ball ──────────────────────────────────────────────────────────────
         this.ball = this.add.rectangle(
             CANVAS_WIDTH / 2,
-            PLAY_HEIGHT  / 2,
+            PLAY_TOP + PLAY_HEIGHT / 2,
             BALL_SIZE,
             BALL_SIZE,
             phaserColor(BALL_NORMAL_TINT)
@@ -172,7 +176,7 @@ class PongScene extends Phaser.Scene {
 
         this.messageText = this.add.text(
             CANVAS_WIDTH / 2,
-            PLAY_HEIGHT  / 2 + 60,
+            PLAY_TOP + PLAY_HEIGHT / 2,
             '',
             { fontSize: MESSAGE_FONT_SIZE, fill: MESSAGE_COLOR, fontFamily: 'monospace', align: 'center' }
         ).setOrigin(0.5, 0.5);
@@ -380,8 +384,8 @@ class PongScene extends Phaser.Scene {
 
         paddle.y = Phaser.Math.Clamp(
             paddle.y,
-            height / 2,
-            PLAY_HEIGHT - height / 2
+            PLAY_TOP + height / 2,
+            PLAY_BOTTOM - height / 2
         );
     }
 
@@ -456,7 +460,7 @@ class PongScene extends Phaser.Scene {
         this.applyPaddleHeight(this.paddleRight, this.paddleRightHeight);
 
         this.ball.x    = CANVAS_WIDTH / 2;
-        this.ball.y    = PLAY_HEIGHT  / 2;
+        this.ball.y    = PLAY_TOP + PLAY_HEIGHT / 2;
         this.ballSpeed = BALL_BASE_SPEED;
 
         this.BURSTActive     = false;
@@ -505,13 +509,13 @@ class PongScene extends Phaser.Scene {
 
         this.paddleLeft.y = Phaser.Math.Clamp(
             this.paddleLeft.y,
-            halfLeftPaddleHeight,
-            PLAY_HEIGHT - halfLeftPaddleHeight
+            PLAY_TOP + halfLeftPaddleHeight,
+            PLAY_BOTTOM - halfLeftPaddleHeight
         );
         this.paddleRight.y = Phaser.Math.Clamp(
             this.paddleRight.y,
-            halfRightPaddleHeight,
-            PLAY_HEIGHT - halfRightPaddleHeight
+            PLAY_TOP + halfRightPaddleHeight,
+            PLAY_BOTTOM - halfRightPaddleHeight
         );
 
         // Mana accrual
@@ -527,11 +531,11 @@ class PongScene extends Phaser.Scene {
 
         // Wall bounce — contained in play zone
         const half = BALL_SIZE / 2;
-        if (this.ball.y - half <= 0) {
-            this.ball.y = half;
+        if (this.ball.y - half <= PLAY_TOP) {
+            this.ball.y = PLAY_TOP + half;
             this.ballVY = Math.abs(this.ballVY);
-        } else if (this.ball.y + half >= PLAY_HEIGHT) {
-            this.ball.y = PLAY_HEIGHT - half;
+        } else if (this.ball.y + half >= PLAY_BOTTOM) {
+            this.ball.y = PLAY_BOTTOM - half;
             this.ballVY = -Math.abs(this.ballVY);
         }
 
