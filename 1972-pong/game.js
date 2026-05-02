@@ -14,7 +14,7 @@ const PADDLE_SPEED = 500;   // paddle movement speed in pixels per second
 const PADDLE_OFFSET = 40;    // distance from screen edge to paddle center
 const PADDLE_GROW_PX = 20;    // pixels added to paddle on GROW
 const PADDLE_SHRINK_PX = 20;    // pixels removed from opponent paddle on SHRINK
-const PADDLE_MIN_HEIGHT = 20;    // paddle can never shrink below this (pixels)
+const PADDLE_MIN_HEIGHT = 10;    // paddle can never shrink below this (pixels)
 const PADDLE_MAX_HEIGHT = 180;   // paddle can never grow above this (pixels)
 const PADDLE_DEFAULT_COLOR  = '#ffffff'; // starting and post-flash paddle color
 const PADDLE_GROW_FLASH_COLOR = '#0088ff'; // tint on growing player's paddle
@@ -48,7 +48,7 @@ const MESSAGE_COLOR = '#ffffff';
 const SMASH_WINDOW_MS = 300;   // ms after smash key press that a smash can land
 const SMASH_SPEED_MULT = 1.5;   // speed multiplier on a successful smash
 
-const MANA_FILL_TIME_MS = 10000; // ms to fill mana bar from 0 to MANA_MAX
+const MANA_FILL_TIME_MS = 100; // ms to fill mana bar from 0 to MANA_MAX
 const MANA_MAX = 100;   // maximum mana value
 const MANA_HALF = 50;    // bar color threshold; equals MANA_COST by design
 const MANA_COST = 50;    // mana spent on GROW or SHRINK
@@ -492,15 +492,24 @@ class PongScene extends Phaser.Scene {
         if (Phaser.Input.Keyboard.JustDown(this.keys.left)) this.smashRightAt = time;
 
         // Paddle movement — clamped to play zone, using live heights
-        const topL = this.paddleLeftHeight  / 2;
-        const botL = PLAY_HEIGHT - this.paddleLeftHeight  / 2;
-        const topR = this.paddleRightHeight / 2;
-        const botR = PLAY_HEIGHT - this.paddleRightHeight / 2;
+        const halfLeftPaddleHeight  = this.paddleLeft.displayHeight / 2;
+        const halfRightPaddleHeight = this.paddleRight.displayHeight / 2;
 
-        if (this.keys.w.isDown)    this.paddleLeft.y  = Math.max(topL, this.paddleLeft.y  - PADDLE_SPEED * dt);
-        if (this.keys.s.isDown)    this.paddleLeft.y  = Math.min(botL, this.paddleLeft.y  + PADDLE_SPEED * dt);
-        if (this.keys.up.isDown)   this.paddleRight.y = Math.max(topR, this.paddleRight.y - PADDLE_SPEED * dt);
-        if (this.keys.down.isDown) this.paddleRight.y = Math.min(botR, this.paddleRight.y + PADDLE_SPEED * dt);
+        if (this.keys.w.isDown)    this.paddleLeft.y  -= PADDLE_SPEED * dt;
+        if (this.keys.s.isDown)    this.paddleLeft.y  += PADDLE_SPEED * dt;
+        if (this.keys.up.isDown)   this.paddleRight.y -= PADDLE_SPEED * dt;
+        if (this.keys.down.isDown) this.paddleRight.y += PADDLE_SPEED * dt;
+
+        this.paddleLeft.y = Phaser.Math.Clamp(
+            this.paddleLeft.y,
+            halfLeftPaddleHeight,
+            PLAY_HEIGHT - halfLeftPaddleHeight
+        );
+        this.paddleRight.y = Phaser.Math.Clamp(
+            this.paddleRight.y,
+            halfRightPaddleHeight,
+            PLAY_HEIGHT - halfRightPaddleHeight
+        );
 
         // Mana accrual
         const manaPerMs = MANA_MAX / MANA_FILL_TIME_MS;
@@ -508,6 +517,8 @@ class PongScene extends Phaser.Scene {
         this.manaRight  = Math.min(MANA_MAX, this.manaRight + manaPerMs * delta);
 
         // Ball movement
+        const prevBallX = this.ball.x;
+        const prevBallY = this.ball.y;
         this.ball.x += this.ballVX * dt;
         this.ball.y += this.ballVY * dt;
 
@@ -522,8 +533,8 @@ class PongScene extends Phaser.Scene {
         }
 
         // Paddle collisions
-        this.checkPaddleCollision(this.paddleLeft,   1, this.smashLeftAt,  time);
-        this.checkPaddleCollision(this.paddleRight, -1, this.smashRightAt, time);
+        this.checkPaddleCollision(this.paddleLeft,   1, this.smashLeftAt,  time, prevBallX, prevBallY);
+        this.checkPaddleCollision(this.paddleRight, -1, this.smashRightAt, time, prevBallX, prevBallY);
 
         // Scoring
         if (this.ball.x < 0) {
@@ -539,7 +550,7 @@ class PongScene extends Phaser.Scene {
         this.drawManaBars();
     }
 
-    checkPaddleCollision(paddle, deflectDir, smashAt, currentTime) {
+    checkPaddleCollision(paddle, deflectDir, smashAt, currentTime, prevBallX, prevBallY) {
         const half   = BALL_SIZE / 2;
         const halfPW = PADDLE_WIDTH / 2;
         const halfPH = paddle.height / 2;
@@ -550,9 +561,28 @@ class PongScene extends Phaser.Scene {
             this.ball.y - half < paddle.y + halfPH &&
             this.ball.y + half > paddle.y - halfPH;
 
-        if (!overlapping) return;
         if (deflectDir ===  1 && this.ballVX > 0) return;
         if (deflectDir === -1 && this.ballVX < 0) return;
+
+        const faceX = paddle.x + deflectDir * halfPW;
+        const prevEdgeX = prevBallX - deflectDir * half;
+        const currEdgeX = this.ball.x - deflectDir * half;
+        const crossedFace = deflectDir === 1
+            ? prevEdgeX >= faceX && currEdgeX <= faceX
+            : prevEdgeX <= faceX && currEdgeX >= faceX;
+
+        let sweptY = this.ball.y;
+        if (crossedFace && currEdgeX !== prevEdgeX) {
+            const t = (faceX - prevEdgeX) / (currEdgeX - prevEdgeX);
+            sweptY = Phaser.Math.Linear(prevBallY, this.ball.y, t);
+        }
+
+        const sweptOverlapsY =
+            sweptY + half >= paddle.y - halfPH &&
+            sweptY - half <= paddle.y + halfPH;
+
+        if (!overlapping && !(crossedFace && sweptOverlapsY)) return;
+        if (!overlapping) this.ball.y = sweptY;
 
         this.ballSpeed = Math.min(this.ballSpeed + BALL_SPEED_INCREASE, BALL_SPEED_CAP);
 
