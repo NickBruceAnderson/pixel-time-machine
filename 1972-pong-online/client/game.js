@@ -30,6 +30,13 @@ const STATUS_COLOR = '#aaaaaa';
 const ROOM_STATUS_X = CANVAS_WIDTH / 2;
 const ROOM_STATUS_Y = PLAY_BOTTOM + 110;
 
+const DEBUG_NET_STATS = true;
+const PING_SEND_MS = 1000;
+const FPS_TEXT_X = CANVAS_WIDTH / 2 - 80;
+const FPS_TEXT_Y = ROOM_STATUS_Y + 24;
+const PING_TEXT_X = CANVAS_WIDTH / 2 + 80;
+const PING_TEXT_Y = ROOM_STATUS_Y + 24;
+
 const SERVER_URL = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`;
 const ROOM_NAME = 'pong';
 
@@ -45,6 +52,7 @@ class OnlinePongScene extends Phaser.Scene {
         this.playerNumber = 0;
         this.inputDir = 0;
         this.lastSentInput = null;
+        this.nextPingAt = 0;
 
         for (let y = PLAY_TOP; y < PLAY_BOTTOM; y += DIVIDER_DASH_GAP) {
             this.add.rectangle(
@@ -99,6 +107,18 @@ class OnlinePongScene extends Phaser.Scene {
             'Connecting...',
             { fontSize: STATUS_FONT_SIZE + 'px', fill: STATUS_COLOR, fontFamily: 'monospace', align: 'center' }
         ).setOrigin(0.5, 0);
+        this.fpsText = this.add.text(
+            FPS_TEXT_X,
+            FPS_TEXT_Y,
+            'FPS: --',
+            { fontSize: STATUS_FONT_SIZE + 'px', fill: STATUS_COLOR, fontFamily: 'monospace', align: 'center' }
+        ).setOrigin(0.5, 0).setVisible(DEBUG_NET_STATS);
+        this.pingText = this.add.text(
+            PING_TEXT_X,
+            PING_TEXT_Y,
+            'PING: --',
+            { fontSize: STATUS_FONT_SIZE + 'px', fill: STATUS_COLOR, fontFamily: 'monospace', align: 'center' }
+        ).setOrigin(0.5, 0).setVisible(DEBUG_NET_STATS);
 
         this.keys = this.input.keyboard.addKeys({
             w: Phaser.Input.Keyboard.KeyCodes.W,
@@ -123,6 +143,9 @@ class OnlinePongScene extends Phaser.Scene {
 
             this.room.onMessage('state', (state) => {
                 this.applyServerState(state);
+            });
+            this.room.onMessage('pong', (message) => {
+                this.updatePing(message);
             });
 
             this.room.onLeave(() => {
@@ -153,7 +176,28 @@ class OnlinePongScene extends Phaser.Scene {
         this.statusText.setText(`Room ${state.roomId} | ${role} | ${status}`);
     }
 
-    update() {
+    updatePing(message) {
+        if (!DEBUG_NET_STATS || typeof message.sentAt !== 'number') return;
+
+        const pingMs = Math.max(0, Math.round(performance.now() - message.sentAt));
+        this.pingText.setText(`PING: ${pingMs}ms`);
+    }
+
+    updateDiagnostics(time) {
+        if (!DEBUG_NET_STATS) return;
+
+        const fps = this.game.loop.actualFps || this.game.loop.targetFps || 0;
+        this.fpsText.setText(`FPS: ${Math.round(fps)}`);
+
+        if (this.room && time >= this.nextPingAt) {
+            this.room.send('ping', { sentAt: performance.now() });
+            this.nextPingAt = time + PING_SEND_MS;
+        }
+    }
+
+    update(time) {
+        this.updateDiagnostics(time);
+
         if (!this.room || this.playerNumber === 0) return;
 
         const upPressed = this.playerNumber === 1 ? this.keys.w.isDown : this.keys.up.isDown;

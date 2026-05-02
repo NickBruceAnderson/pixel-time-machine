@@ -49,6 +49,9 @@ class PongRoom extends Room {
             if (playerNumber === 1) this.inputs.left = this.normalizeInput(message.dir);
             if (playerNumber === 2) this.inputs.right = this.normalizeInput(message.dir);
         });
+        this.onMessage('ping', (client, message) => {
+            client.send('pong', { sentAt: message.sentAt });
+        });
 
         this.setSimulationInterval((deltaTime) => this.update(deltaTime), 1000 / TICK_RATE);
         this.clock.setInterval(() => this.broadcastState(), 1000 / STATE_SEND_RATE);
