@@ -1,0 +1,65 @@
+prefix_rule(
+    pattern = ["git", "status"],
+    decision = "allow",
+    justification = "Safe repo status check"
+)
+
+prefix_rule(
+    pattern = ["git", "diff"],
+    decision = "allow",
+    justification = "Safe repo diff check"
+)
+
+prefix_rule(
+    pattern = ["git", "add"],
+    decision = "allow",
+    justification = "Allow staging requested files"
+)
+
+prefix_rule(
+    pattern = ["git", "commit"],
+    decision = "allow",
+    justification = "Allow commits requested by prompts"
+)
+
+prefix_rule(
+    pattern = ["python", "-m", "http.server"],
+    decision = "allow",
+    justification = "Allow local static server"
+)
+
+prefix_rule(
+    pattern = ["py", "-m", "http.server"],
+    decision = "allow",
+    justification = "Allow Windows local static server"
+)
+
+prefix_rule(
+    pattern = ["git", "push"],
+    decision = "forbidden",
+    justification = "User pushes manually"
+)
+
+prefix_rule(
+    pattern = ["git", "reset"],
+    decision = "forbidden",
+    justification = "Destructive git command"
+)
+
+prefix_rule(
+    pattern = ["git", "clean"],
+    decision = "forbidden",
+    justification = "Destructive cleanup command"
+)
+
+prefix_rule(
+    pattern = ["npm"],
+    decision = "prompt",
+    justification = "npm only for scoped server/tooling folders"
+)
+
+prefix_rule(
+    pattern = ["npx"],
+    decision = "prompt",
+    justification = "npx can execute remote packages"
+)
