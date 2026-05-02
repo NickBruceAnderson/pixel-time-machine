@@ -1,42 +1,40 @@
 /// <reference types="phaser" />
 
-// ─── TUNABLES ────────────────────────────────────────────────────────────────
+const CANVAS_WIDTH = 800;
+const CANVAS_HEIGHT = 900;
+const BACKGROUND_COLOR = '#000000';
+const PLAY_HEIGHT = 600;
+const UI_ZONE_TOP = 600;
 
-const CANVAS_WIDTH = 800;   // game canvas width in pixels
-const CANVAS_HEIGHT = 900;   // total canvas height (play zone + UI zone + footer)
-const BACKGROUND_COLOR = '#000000'; // game background color
-const PLAY_HEIGHT = 600;   // playable area height; UI zone occupies the rest
-const UI_ZONE_TOP = 600;   // Y where the UI zone begins (equals PLAY_HEIGHT)
+const PADDLE_WIDTH = 6;
+const PADDLE_HEIGHT = 60;
+const PADDLE_SPEED = 500;
+const PADDLE_OFFSET = 40;
+const PADDLE_GROW_PX = 20;
+const PADDLE_SHRINK_PX = 20;
+const PADDLE_MIN_HEIGHT = 10;
+const PADDLE_MAX_HEIGHT = 200;
+const PADDLE_DEFAULT_COLOR = '#ffffff';
+const PADDLE_GROW_FLASH_COLOR = '#0088ff';
+const PADDLE_SHRINK_FLASH_COLOR = '#ff2200';
+const PADDLE_FLASH_DURATION_MS = 200;
 
-const PADDLE_WIDTH = 6;     // paddle thickness in pixels
-const PADDLE_HEIGHT = 60;    // starting paddle height in pixels
-const PADDLE_SPEED = 500;   // paddle movement speed in pixels per second
-const PADDLE_OFFSET = 40;    // distance from screen edge to paddle center
-const PADDLE_GROW_PX = 20;    // pixels added to paddle on GROW
-const PADDLE_SHRINK_PX = 20;    // pixels removed from opponent paddle on SHRINK
-const PADDLE_MIN_HEIGHT = 10;    // paddle can never shrink below this (pixels)
-const PADDLE_MAX_HEIGHT = 180;   // paddle can never grow above this (pixels)
-const PADDLE_DEFAULT_COLOR  = '#ffffff'; // starting and post-flash paddle color
-const PADDLE_GROW_FLASH_COLOR = '#0088ff'; // tint on growing player's paddle
-const PADDLE_SHRINK_FLASH_COLOR = '#ff2200'; // tint on shrinking opponent's paddle
-const PADDLE_FLASH_DURATION_MS = 200;       // how long the flash tint lasts
+const BALL_SIZE = 6;
+const BALL_BASE_SPEED = 200;
+const BALL_SPEED_INCREASE = 20;
+const BALL_SPEED_CAP = 400;
+const MAX_DELTA_SECONDS = 1 / 60;
+const BALL_SMASH_TINT = '#ff2200';
+const BALL_NORMAL_TINT = '#ffffff';
 
-const BALL_SIZE = 6;     // ball width and height in pixels
-const BALL_BASE_SPEED = 200;   // ball speed after every reset (also the launch speed)
-const BALL_SPEED_INCREASE = 20;    // speed added on each paddle hit
-const BALL_SPEED_CAP = 400;   // ball will never exceed this on normal hits
-const MAX_DELTA_SECONDS = 1 / 60; // max movement step to prevent resize tunneling
-const BALL_SMASH_TINT = '#ff2200'; // ball color after a smash hit
-const BALL_NORMAL_TINT = '#ffffff'; // default ball color
+const SERVE_ANGLE_MAX = 30;
+const DEFLECT_ANGLE_MAX = 60;
 
-const SERVE_ANGLE_MAX = 30;    // max degrees from horizontal on serve
-const DEFLECT_ANGLE_MAX = 60;    // max degrees from horizontal on paddle deflect
+const SCORE_TO_WIN = 7;
 
-const SCORE_TO_WIN = 7;     // first to this score wins
-
-const DIVIDER_DASH_HEIGHT = 18;    // height of each center-line dash in pixels
-const DIVIDER_DASH_GAP = 30;    // center-to-center spacing between dashes
-const DIVIDER_WIDTH = 4;     // width of center line in pixels
+const DIVIDER_DASH_HEIGHT = 18;
+const DIVIDER_DASH_GAP = 30;
+const DIVIDER_WIDTH = 4;
 const DIVIDER_DASH_COLOR = '#444444';
 const ZONE_SEPARATOR_COLOR = '#333333';
 
@@ -45,48 +43,46 @@ const SCORE_COLOR = '#ffffff';
 const MESSAGE_FONT_SIZE = '28px';
 const MESSAGE_COLOR = '#ffffff';
 
-const SMASH_WINDOW_MS = 300;   // ms after smash key press that a smash can land
-const SMASH_SPEED_MULT = 1.5;   // speed multiplier on a successful smash
+const SMASH_WINDOW_MS = 300;
+const SMASH_SPEED_MULT = 1.5;
 
-const MANA_FILL_TIME_MS = 100; // ms to fill mana bar from 0 to MANA_MAX
-const MANA_MAX = 100;   // maximum mana value
-const MANA_HALF = 50;    // bar color threshold; equals MANA_COST by design
-const MANA_COST = 50;    // mana spent on GROW or SHRINK
-const MANA_SMASH_BONUS = 0.1;  // fraction of MANA_MAX granted on a successful smash
-const MANA_BAR_WIDTH = 180;   // fallback bar width; overridden at runtime by legend measurement
-const MANA_BAR_HEIGHT = 24;    // mana bar height in pixels
-const MANA_BAR_MARGIN = 20;    // distance from screen edges to HUD group
+const MANA_FILL_TIME_MS = 10000;
+const MANA_MAX = 100;
+const MANA_HALF = 50;
+const MANA_COST = 50;
+const MANA_SMASH_BONUS = 0.1;
+const MANA_BAR_WIDTH = 180;
+const MANA_BAR_HEIGHT = 24;
+const MANA_BAR_MARGIN = 20;
 const MANA_BAR_BACK_COLOR = '#111111';
 const MANA_BAR_MID_COLOR = '#ffffff';
-const MANA_COLOR_LOW = '#3355ff'; // bar color below MANA_HALF
-const MANA_COLOR_HIGH = '#00ccff'; // bar color at or above MANA_HALF
+const MANA_COLOR_LOW = '#3355ff';
+const MANA_COLOR_HIGH = '#00ccff';
 
-const COMBO_TIMEOUT_MS = 600;   // combo buffer clears if idle longer than this
+const COMBO_TIMEOUT_MS = 600;
 
-const BURST_COST = 100;   // mana cost for BURST stratagem
-const BURST_SPEED_MULT = 2.0;   // ball speed multiplier when BURST fires; persists until reset
-const BURST_TINT = '#ffff00'; // ball color while BURST is active
+const BURST_COST = 100;
+const BURST_SPEED_MULT = 2.0;
+const BURST_TINT = '#ffff00';
 
-const HUD_LEGEND_FONT_SIZE = 24;        // legend text size in pixels
-const HUD_LEGEND_COLOR = '#aaaaaa'; // legend text color
-const HUD_LEGEND_LINE_GAP = 6;         // pixels between legend lines
-const HUD_LEGEND_BAR_GAP = 12;        // pixels between mana bar bottom and legend top
+const HUD_LEGEND_FONT_SIZE = 24;
+const HUD_LEGEND_COLOR = '#aaaaaa';
+const HUD_LEGEND_LINE_GAP = 6;
+const HUD_LEGEND_BAR_GAP = 12;
 
-const MANA_PIP_WIDTH = 8;         // width of each mana cost pip rectangle
-const MANA_PIP_HEIGHT = 6;         // height of each mana cost pip rectangle
-const MANA_PIP_GAP = 2;         // horizontal gap between pips
-const MANA_PIP_COLOR = '#00ccff'; // pip fill color
-const MANA_PIP_MARGIN = 4;         // gap between legend text edge and first pip
+const MANA_PIP_WIDTH = 8;
+const MANA_PIP_HEIGHT = 6;
+const MANA_PIP_GAP = 2;
+const MANA_PIP_COLOR = '#00ccff';
+const MANA_PIP_MARGIN = 4;
 
-const COMBO_ARROW_HIT_COLOR = '#3355ff'; // highlighted arrow color when combo prefix matches
+const COMBO_ARROW_HIT_COLOR = '#3355ff';
 
-const FOOTER_FONT_SIZE = 11;        // instruction text size in pixels
-const FOOTER_COLOR = '#888888'; // instruction text color
-const FOOTER_Y_OFFSET = 90;        // px from canvas bottom to footer text top
+const FOOTER_FONT_SIZE = 11;
+const FOOTER_COLOR = '#888888';
+const FOOTER_Y_OFFSET = 90;
 
 const phaserColor = (cssHex) => Phaser.Display.Color.HexStringToColor(cssHex).color;
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 class PongScene extends Phaser.Scene {
     constructor() {
