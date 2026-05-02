@@ -701,6 +701,16 @@ class PongScene extends Phaser.Scene {
     // ── Main loop ─────────────────────────────────────────────────────────────
 
     update(time, delta) {
+        // Expire stale combo buffers — runs in all modes
+        if (this.comboBufferLeft.length  > 0 && time - this.comboTimerLeft  > COMBO_TIMEOUT_MS) {
+            this.comboBufferLeft.length  = 0;
+            this.refreshComboHud('left');
+        }
+        if (this.comboBufferRight.length > 0 && time - this.comboTimerRight > COMBO_TIMEOUT_MS) {
+            this.comboBufferRight.length = 0;
+            this.refreshComboHud('right');
+        }
+
         if (this.onlineMode) {
             this.updateOnline(time);
             return;
@@ -718,16 +728,6 @@ class PongScene extends Phaser.Scene {
         }
 
         const dt = Math.min(delta / 1000, MAX_DELTA_SECONDS);
-
-        // Expire stale combo buffers
-        if (this.comboBufferLeft.length  > 0 && time - this.comboTimerLeft  > COMBO_TIMEOUT_MS) {
-            this.comboBufferLeft.length  = 0;
-            this.refreshComboHud('left');
-        }
-        if (this.comboBufferRight.length > 0 && time - this.comboTimerRight > COMBO_TIMEOUT_MS) {
-            this.comboBufferRight.length = 0;
-            this.refreshComboHud('right');
-        }
 
         // Smash timestamps — D=left smash, LEFT arrow=right smash
         if (Phaser.Input.Keyboard.JustDown(this.keys.d))    this.smashLeftAt  = time;
