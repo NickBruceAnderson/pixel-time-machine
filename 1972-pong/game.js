@@ -24,6 +24,7 @@ const BALL_SIZE = 6;     // ball width and height in pixels
 const BALL_BASE_SPEED = 200;   // ball speed after every reset (also the launch speed)
 const BALL_SPEED_INCREASE = 20;    // speed added on each paddle hit
 const BALL_SPEED_CAP = 400;   // ball will never exceed this on normal hits
+const MAX_DELTA_SECONDS = 1 / 60; // max movement step to prevent resize tunneling
 const BALL_SMASH_TINT = '#ff2200'; // ball color after a smash hit
 const BALL_NORMAL_TINT = '#ffffff'; // default ball color
 
@@ -473,7 +474,7 @@ class PongScene extends Phaser.Scene {
             return;
         }
 
-        const dt = delta / 1000;
+        const dt = Math.min(delta / 1000, MAX_DELTA_SECONDS);
 
         // Expire stale combo buffers
         if (this.comboBufferLeft.length  > 0 && time - this.comboTimerLeft  > COMBO_TIMEOUT_MS) {
