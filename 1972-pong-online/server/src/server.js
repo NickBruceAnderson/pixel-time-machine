@@ -5,7 +5,7 @@ import { createServer } from 'http';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
-const PORT = 2567;
+const PORT = Number(process.env.PORT) || 2567;
 const ROOM_NAME = 'pong';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CLIENT_DIR = join(__dirname, '../../client');
@@ -273,4 +273,4 @@ gameServer.router = createRouter({
 });
 gameServer.listen(PORT);
 
-console.log(`Colyseus Pong server listening on http://localhost:${PORT}`);
+console.log(`Colyseus Pong server listening on port ${PORT}`);
