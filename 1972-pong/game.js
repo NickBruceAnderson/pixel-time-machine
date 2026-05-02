@@ -45,6 +45,14 @@ const SCORE_COLOR = '#ffffff';
 const MESSAGE_FONT_SIZE = '28px';
 const MESSAGE_COLOR = '#ffffff';
 
+const READY_ENABLED = true;
+const READY_START_DELAY_MS = 300;
+const READY_TEXT_X = CANVAS_WIDTH / 2;
+const READY_TEXT_Y = PLAY_TOP + PLAY_HEIGHT / 2 - 70;
+const READY_PLAYER_GAP = 36;
+const READY_COLOR = '#ffffff';
+const NOT_READY_COLOR = '#888888';
+
 const SMASH_WINDOW_MS = 300;
 const SMASH_SPEED_MULT = 1.5;
 
@@ -95,6 +103,10 @@ class PongScene extends Phaser.Scene {
         this.scoreLeft  = 0;
         this.scoreRight = 0;
         this.gameOver   = false;
+        this.matchStarted = !READY_ENABLED;
+        this.readyLeft = false;
+        this.readyRight = false;
+        this.readyStartQueued = false;
 
         // ── Center divider (play zone only) ───────────────────────────────────
         this.add.rectangle(CANVAS_WIDTH / 2, PLAY_TOP, CANVAS_WIDTH, 1, phaserColor(ZONE_SEPARATOR_COLOR)).setAlpha(0.6).setDepth(10);
@@ -180,6 +192,19 @@ class PongScene extends Phaser.Scene {
             '',
             { fontSize: MESSAGE_FONT_SIZE, fill: MESSAGE_COLOR, fontFamily: 'monospace', align: 'center' }
         ).setOrigin(0.5, 0.5);
+
+        this.readyLeftText = this.add.text(
+            READY_TEXT_X,
+            READY_TEXT_Y,
+            'P1: PRESS W',
+            { fontSize: MESSAGE_FONT_SIZE, fill: NOT_READY_COLOR, fontFamily: 'monospace', align: 'center' }
+        ).setOrigin(0.5, 0.5).setVisible(READY_ENABLED);
+        this.readyRightText = this.add.text(
+            READY_TEXT_X,
+            READY_TEXT_Y + READY_PLAYER_GAP,
+            'P2: PRESS UP',
+            { fontSize: MESSAGE_FONT_SIZE, fill: NOT_READY_COLOR, fontFamily: 'monospace', align: 'center' }
+        ).setOrigin(0.5, 0.5).setVisible(READY_ENABLED);
 
         // ── Keyboard bindings ─────────────────────────────────────────────────
         this.keys = this.input.keyboard.addKeys({
@@ -295,12 +320,14 @@ class PongScene extends Phaser.Scene {
         this.refreshComboHud('left');
         this.refreshComboHud('right');
 
-        this.launchBall();
+        if (!READY_ENABLED) this.launchBall();
     }
 
     // ── Combo system ──────────────────────────────────────────────────────────
 
     pushCombo(player, dir) {
+        if (!this.matchStarted) return;
+
         const buf = player === 'left' ? this.comboBufferLeft : this.comboBufferRight;
         buf.push(dir);
         if (buf.length > 4) buf.shift();
@@ -474,11 +501,40 @@ class PongScene extends Phaser.Scene {
         this.ballVY = Math.sin(angleRad) * this.ballSpeed;
     }
 
+    updateReadyGate() {
+        if (Phaser.Input.Keyboard.JustDown(this.keys.w)) {
+            this.readyLeft = true;
+            this.readyLeftText.setText('P1 READY').setFill(READY_COLOR);
+        }
+        if (Phaser.Input.Keyboard.JustDown(this.keys.up)) {
+            this.readyRight = true;
+            this.readyRightText.setText('P2 READY').setFill(READY_COLOR);
+        }
+
+        if (this.readyLeft && this.readyRight && !this.readyStartQueued) {
+            this.readyStartQueued = true;
+            this.time.delayedCall(READY_START_DELAY_MS, () => this.startReadyMatch());
+        }
+    }
+
+    startReadyMatch() {
+        this.matchStarted = true;
+        this.readyLeftText.setVisible(false);
+        this.readyRightText.setVisible(false);
+        this.launchBall();
+    }
+
     // ── Main loop ─────────────────────────────────────────────────────────────
 
     update(time, delta) {
         if (this.gameOver) {
             if (Phaser.Input.Keyboard.JustDown(this.keys.space)) this.scene.restart();
+            return;
+        }
+
+        if (!this.matchStarted) {
+            this.updateReadyGate();
+            this.drawManaBars();
             return;
         }
 
