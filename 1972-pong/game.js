@@ -15,6 +15,7 @@ const PADDLE_OFFSET = 40;    // distance from screen edge to paddle center
 const PADDLE_GROW_PX = 20;    // pixels added to paddle on GROW
 const PADDLE_SHRINK_PX = 20;    // pixels removed from opponent paddle on SHRINK
 const PADDLE_MIN_HEIGHT = 20;    // paddle can never shrink below this (pixels)
+const PADDLE_MAX_HEIGHT = 180;   // paddle can never grow above this (pixels)
 const PADDLE_DEFAULT_COLOR  = '#ffffff'; // starting and post-flash paddle color
 const PADDLE_GROW_FLASH_COLOR = '#0088ff'; // tint on growing player's paddle
 const PADDLE_SHRINK_FLASH_COLOR = '#ff2200'; // tint on shrinking opponent's paddle
@@ -383,12 +384,12 @@ class PongScene extends Phaser.Scene {
 
         if (name === 'GROW ') {
             if (player === 'left') {
-                this.paddleLeftHeight = Math.max(PADDLE_MIN_HEIGHT, this.paddleLeftHeight + PADDLE_GROW_PX);
+                this.paddleLeftHeight = Math.min(PADDLE_MAX_HEIGHT, this.paddleLeftHeight + PADDLE_GROW_PX);
                 this.paddleLeft.height = this.paddleLeftHeight;
                 this.paddleLeft.fillColor = phaserColor(PADDLE_GROW_FLASH_COLOR);
                 this.time.delayedCall(PADDLE_FLASH_DURATION_MS, () => { this.paddleLeft.fillColor  = phaserColor(PADDLE_DEFAULT_COLOR); });
             } else {
-                this.paddleRightHeight = Math.max(PADDLE_MIN_HEIGHT, this.paddleRightHeight + PADDLE_GROW_PX);
+                this.paddleRightHeight = Math.min(PADDLE_MAX_HEIGHT, this.paddleRightHeight + PADDLE_GROW_PX);
                 this.paddleRight.height = this.paddleRightHeight;
                 this.paddleRight.fillColor = phaserColor(PADDLE_GROW_FLASH_COLOR);
                 this.time.delayedCall(PADDLE_FLASH_DURATION_MS, () => { this.paddleRight.fillColor = phaserColor(PADDLE_DEFAULT_COLOR); });
