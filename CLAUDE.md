@@ -38,8 +38,17 @@ If more than 3 edit calls are needed, stop and report.
 
 ## Repo
 Stack: Phaser 3 CDN, vanilla JS, GitHub Pages. No bundler.
-Local dev: `serve.bat` → `python -m http.server 8000`. Never `file://`.
-Tunables block at top of every `game.js`. No magic numbers inline.
+Static year games use no bundler and no npm by default.
+npm is allowed for scoped server or tooling folders.
+Examples: Colyseus servers, deployment packages, asset tools.
+Keep npm dependencies out of the repo root unless approved.
+Keep server dependencies inside that game's `server/` folder.
+Explain why npm is needed before adding it.
+Local static dev: `serve.bat` → `python -m http.server 8000`.
+Server dev: use that game's documented npm command.
+Never use `file://`.
+Tunables block at top of every `game.js`.
+No magic numbers inline.
 Readable over clever.
 
 ## Context Discipline
