@@ -8,6 +8,7 @@
     "start": "node src/server.js"
   },
   "dependencies": {
-    "colyseus": "^0.17.0"
+    "colyseus": "^0.17.0",
+    "express": "^5.2.1"
   }
 }

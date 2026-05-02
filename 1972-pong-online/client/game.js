@@ -30,7 +30,7 @@ const STATUS_COLOR = '#aaaaaa';
 const ROOM_STATUS_X = CANVAS_WIDTH / 2;
 const ROOM_STATUS_Y = PLAY_BOTTOM + 110;
 
-const SERVER_URL = 'ws://localhost:2567';
+const SERVER_URL = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`;
 const ROOM_NAME = 'pong';
 
 const phaserColor = (cssHex) => Phaser.Display.Color.HexStringToColor(cssHex).color;

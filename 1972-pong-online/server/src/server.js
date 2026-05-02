@@ -1,7 +1,14 @@
-import { Server, Room } from 'colyseus';
+import { Server, Room, WebSocketTransport, createEndpoint, createRouter } from 'colyseus';
+import express from 'express';
+import { readFile } from 'fs/promises';
+import { createServer } from 'http';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 
 const PORT = 2567;
 const ROOM_NAME = 'pong';
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const CLIENT_DIR = join(__dirname, '../../client');
 
 const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 900;
@@ -244,8 +251,26 @@ class PongRoom extends Room {
     }
 }
 
-const gameServer = new Server();
+const httpServer = createServer();
+
+const gameServer = new Server({
+    transport: new WebSocketTransport({ server: httpServer }),
+    express: (app) => {
+        app.get('/', (req, res) => {
+            res.sendFile(join(CLIENT_DIR, 'index.html'));
+        });
+        app.use(express.static(CLIENT_DIR));
+    },
+});
 gameServer.define(ROOM_NAME, PongRoom);
+gameServer.router = createRouter({
+    root: createEndpoint('/', { method: 'GET' }, async () => {
+        const html = await readFile(join(CLIENT_DIR, 'index.html'), 'utf8');
+        return new Response(html, {
+            headers: { 'content-type': 'text/html; charset=utf-8' },
+        });
+    }),
+});
 gameServer.listen(PORT);
 
-console.log(`Colyseus Pong server listening on ws://localhost:${PORT}`);
+console.log(`Colyseus Pong server listening on http://localhost:${PORT}`);
