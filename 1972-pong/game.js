@@ -92,6 +92,22 @@ const FOOTER_FONT_SIZE = 11;
 const FOOTER_COLOR = '#888888';
 const FOOTER_Y_OFFSET = 90;
 
+const ONLINE_AUTO_CONNECT = window.location.pathname === '/' && typeof Colyseus !== 'undefined';
+const ONLINE_ROOM_NAME = 'pong';
+const ONLINE_SERVER_URL = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`;
+const NET_TICK_RATE = 120;
+const NET_STATE_SEND_RATE = 120;
+const DEBUG_NET_STATS = true;
+const PING_SEND_MS = 1000;
+const STATUS_FONT_SIZE = '16px';
+const STATUS_COLOR = '#aaaaaa';
+const STATUS_TEXT_X = CANVAS_WIDTH / 2;
+const STATUS_TEXT_Y = UI_ZONE_TOP + 115;
+const FPS_TEXT_X = CANVAS_WIDTH / 2 - 80;
+const FPS_TEXT_Y = STATUS_TEXT_Y + 24;
+const PING_TEXT_X = CANVAS_WIDTH / 2 + 80;
+const PING_TEXT_Y = STATUS_TEXT_Y + 24;
+
 const phaserColor = (cssHex) => Phaser.Display.Color.HexStringToColor(cssHex).color;
 
 class PongScene extends Phaser.Scene {
@@ -107,6 +123,11 @@ class PongScene extends Phaser.Scene {
         this.readyLeft = false;
         this.readyRight = false;
         this.readyStartQueued = false;
+        this.onlineMode = ONLINE_AUTO_CONNECT;
+        this.room = null;
+        this.playerNumber = 0;
+        this.lastSentInput = null;
+        this.nextPingAt = 0;
 
         // ── Center divider (play zone only) ───────────────────────────────────
         this.add.rectangle(CANVAS_WIDTH / 2, PLAY_TOP, CANVAS_WIDTH, 1, phaserColor(ZONE_SEPARATOR_COLOR)).setAlpha(0.6).setDepth(10);
@@ -205,6 +226,24 @@ class PongScene extends Phaser.Scene {
             'P2: PRESS UP',
             { fontSize: MESSAGE_FONT_SIZE, fill: NOT_READY_COLOR, fontFamily: 'monospace', align: 'center' }
         ).setOrigin(0.5, 0.5).setVisible(READY_ENABLED);
+        this.statusText = this.add.text(
+            STATUS_TEXT_X,
+            STATUS_TEXT_Y,
+            'Connecting...',
+            { fontSize: STATUS_FONT_SIZE + 'px', fill: STATUS_COLOR, fontFamily: 'monospace', align: 'center' }
+        ).setOrigin(0.5, 0).setVisible(this.onlineMode);
+        this.fpsText = this.add.text(
+            FPS_TEXT_X,
+            FPS_TEXT_Y,
+            'FPS: --',
+            { fontSize: STATUS_FONT_SIZE + 'px', fill: STATUS_COLOR, fontFamily: 'monospace', align: 'center' }
+        ).setOrigin(0.5, 0).setVisible(this.onlineMode && DEBUG_NET_STATS);
+        this.pingText = this.add.text(
+            PING_TEXT_X,
+            PING_TEXT_Y,
+            'PING: --',
+            { fontSize: STATUS_FONT_SIZE + 'px', fill: STATUS_COLOR, fontFamily: 'monospace', align: 'center' }
+        ).setOrigin(0.5, 0).setVisible(this.onlineMode && DEBUG_NET_STATS);
 
         // ── Keyboard bindings ─────────────────────────────────────────────────
         this.keys = this.input.keyboard.addKeys({
@@ -320,13 +359,42 @@ class PongScene extends Phaser.Scene {
         this.refreshComboHud('left');
         this.refreshComboHud('right');
 
-        if (!READY_ENABLED) this.launchBall();
+        if (this.onlineMode) this.connectOnline();
+        else if (!READY_ENABLED) this.launchBall();
     }
 
     // ── Combo system ──────────────────────────────────────────────────────────
 
+    async connectOnline() {
+        try {
+            const client = new Colyseus.Client(ONLINE_SERVER_URL);
+            this.room = await client.joinOrCreate(ONLINE_ROOM_NAME);
+            this.statusText.setText('Joined room. Waiting for assignment...');
+
+            this.room.onMessage('assignment', (message) => {
+                this.playerNumber = message.playerNumber;
+            });
+            this.room.onMessage('state', (state) => this.applyOnlineState(state));
+            this.room.onMessage('pong', (message) => this.updatePing(message));
+            this.room.onLeave(() => {
+                this.statusText.setText('Disconnected from room.');
+                this.room = null;
+            });
+            this.room.onError((code, message) => {
+                this.statusText.setText(`Room error ${code}: ${message}`);
+            });
+        } catch (error) {
+            this.statusText.setText('Connection failed. Start the Pong server.');
+            console.error(error);
+        }
+    }
+
     pushCombo(player, dir) {
         if (!this.matchStarted) return;
+        if (this.onlineMode) {
+            if (!this.room || !this.ownsOnlinePlayer(player)) return;
+            this.room.send('combo', { dir });
+        }
 
         const buf = player === 'left' ? this.comboBufferLeft : this.comboBufferRight;
         buf.push(dir);
@@ -357,6 +425,12 @@ class PongScene extends Phaser.Scene {
         const exactCombo = matchingCombos.find(combo => buf.length === combo.seq.length);
         if (!exactCombo) {
             this.setComboFeedback(player, 'input');
+            return;
+        }
+
+        if (this.onlineMode) {
+            buf.length = 0;
+            this.setComboFeedback(player, mana >= exactCombo.cost ? 'success' : 'cooldown', exactCombo.name.trim());
             return;
         }
 
@@ -502,6 +576,13 @@ class PongScene extends Phaser.Scene {
     }
 
     updateReadyGate() {
+        if (this.onlineMode) {
+            if (!this.room) return;
+            if (this.playerNumber === 1 && Phaser.Input.Keyboard.JustDown(this.keys.w)) this.room.send('ready');
+            if (this.playerNumber === 2 && Phaser.Input.Keyboard.JustDown(this.keys.up)) this.room.send('ready');
+            return;
+        }
+
         if (Phaser.Input.Keyboard.JustDown(this.keys.w)) {
             this.readyLeft = true;
             this.readyLeftText.setText('P1 READY').setFill(READY_COLOR);
@@ -524,9 +605,107 @@ class PongScene extends Phaser.Scene {
         this.launchBall();
     }
 
+    ownsOnlinePlayer(player) {
+        return (player === 'left' && this.playerNumber === 1) || (player === 'right' && this.playerNumber === 2);
+    }
+
+    applyOnlineState(state) {
+        this.matchStarted = state.matchStarted;
+        this.readyLeft = state.ready.left;
+        this.readyRight = state.ready.right;
+        this.scoreLeft = state.score.left;
+        this.scoreRight = state.score.right;
+        this.manaLeft = state.mana.left;
+        this.manaRight = state.mana.right;
+        const oldLeftHeight = this.paddleLeftHeight;
+        const oldRightHeight = this.paddleRightHeight;
+        this.paddleLeftHeight = state.paddles.left.height;
+        this.paddleRightHeight = state.paddles.right.height;
+
+        this.paddleLeft.setSize(PADDLE_WIDTH, this.paddleLeftHeight);
+        this.paddleRight.setSize(PADDLE_WIDTH, this.paddleRightHeight);
+        this.flashOnlinePaddle(this.paddleLeft, oldLeftHeight, this.paddleLeftHeight);
+        this.flashOnlinePaddle(this.paddleRight, oldRightHeight, this.paddleRightHeight);
+        this.paddleLeft.y = state.paddles.left.y;
+        this.paddleRight.y = state.paddles.right.y;
+        this.ball.x = state.ball.x;
+        this.ball.y = state.ball.y;
+        this.ball.fillColor = phaserColor(state.ball.tint);
+        this.scoreLeftText.setText(this.scoreLeft);
+        this.scoreRightText.setText(this.scoreRight);
+        this.gameOver = state.gameOver;
+        this.messageText.setText(state.message || '');
+
+        this.readyLeftText.setVisible(!state.matchStarted && !state.gameOver);
+        this.readyRightText.setVisible(!state.matchStarted && !state.gameOver);
+        this.readyLeftText.setText(state.ready.left ? 'P1 READY' : 'P1: PRESS W').setFill(state.ready.left ? READY_COLOR : NOT_READY_COLOR);
+        this.readyRightText.setText(state.ready.right ? 'P2 READY' : 'P2: PRESS UP').setFill(state.ready.right ? READY_COLOR : NOT_READY_COLOR);
+
+        const role = this.playerNumber > 0 ? `P${this.playerNumber}` : 'Spectator';
+        this.statusText.setText(`Room ${state.roomId} | ${role} | ${state.players.connected}/2 players`);
+        this.refreshComboHud('left');
+        this.refreshComboHud('right');
+        this.drawManaBars();
+    }
+
+    flashOnlinePaddle(paddle, oldHeight, newHeight) {
+        if (newHeight > oldHeight) {
+            paddle.fillColor = phaserColor(PADDLE_GROW_FLASH_COLOR);
+            this.time.delayedCall(PADDLE_FLASH_DURATION_MS, () => { paddle.fillColor = phaserColor(PADDLE_DEFAULT_COLOR); });
+        } else if (newHeight < oldHeight) {
+            paddle.fillColor = phaserColor(PADDLE_SHRINK_FLASH_COLOR);
+            this.time.delayedCall(PADDLE_FLASH_DURATION_MS, () => { paddle.fillColor = phaserColor(PADDLE_DEFAULT_COLOR); });
+        }
+    }
+
+    updatePing(message) {
+        if (!DEBUG_NET_STATS || typeof message.sentAt !== 'number') return;
+
+        const pingMs = Math.max(0, Math.round(performance.now() - message.sentAt));
+        this.pingText.setText(`PING: ${pingMs}ms`);
+    }
+
+    updateOnlineDiagnostics(time) {
+        if (!DEBUG_NET_STATS) return;
+
+        const fps = this.game.loop.actualFps || this.game.loop.targetFps || 0;
+        this.fpsText.setText(`FPS: ${Math.round(fps)}`);
+
+        if (this.room && time >= this.nextPingAt) {
+            this.room.send('ping', { sentAt: performance.now() });
+            this.nextPingAt = time + PING_SEND_MS;
+        }
+    }
+
+    updateOnline(time) {
+        this.updateOnlineDiagnostics(time);
+        if (!this.room || this.playerNumber === 0) return;
+
+        if (!this.matchStarted) {
+            this.updateReadyGate();
+            return;
+        }
+
+        if (this.playerNumber === 1 && Phaser.Input.Keyboard.JustDown(this.keys.d)) this.room.send('smash');
+        if (this.playerNumber === 2 && Phaser.Input.Keyboard.JustDown(this.keys.left)) this.room.send('smash');
+
+        const upPressed = this.playerNumber === 1 ? this.keys.w.isDown : this.keys.up.isDown;
+        const downPressed = this.playerNumber === 1 ? this.keys.s.isDown : this.keys.down.isDown;
+        const nextInput = upPressed === downPressed ? 0 : (upPressed ? -1 : 1);
+        if (nextInput !== this.lastSentInput) {
+            this.room.send('input', { dir: nextInput });
+            this.lastSentInput = nextInput;
+        }
+    }
+
     // ── Main loop ─────────────────────────────────────────────────────────────
 
     update(time, delta) {
+        if (this.onlineMode) {
+            this.updateOnline(time);
+            return;
+        }
+
         if (this.gameOver) {
             if (Phaser.Input.Keyboard.JustDown(this.keys.space)) this.scene.restart();
             return;
