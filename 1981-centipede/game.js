@@ -304,7 +304,7 @@ function damageMushroom(index) {
     const m = mushroomList[index];
     m.hp -= 1;
     score += SCORE_MUSHROOM;
-    scoreText.setText('SCORE ' + score);
+    updateScoreText();
     if (m.hp <= 0) {
         m.rect.destroy();
         mushroomList.splice(index, 1);
@@ -317,7 +317,7 @@ function killSegment(index) {
     centipedeList[index].rect.destroy();
     centipedeList.splice(index, 1);
     score += SCORE_SEGMENT;
-    scoreText.setText('SCORE ' + score);
+    updateScoreText();
     if (centipedeList.length === 0) {
         advanceWave();
     }
@@ -340,13 +340,17 @@ function computeSpeed() {
     return BASE_CENTIPEDE_SPEED * levelMult * waveMult;
 }
 
+function updateScoreText() {
+    scoreText.setText('SCORE ' + score);
+}
+
 function updateWaveText() {
     waveText.setText('LEVEL ' + currentLevel + '  WAVE ' + currentWave + ' / ' + MAX_WAVES);
 }
 
 function advanceWave() {
     score += SCORE_CLEAR_BONUS;
-    scoreText.setText('SCORE ' + score);
+    updateScoreText();
 
     currentWave++;
     if (currentWave > MAX_WAVES) {
