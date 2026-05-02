@@ -320,8 +320,8 @@ class PongScene extends Phaser.Scene {
         );
 
         if (matchingCombos.length === 0) {
-            this.setComboFeedback(player, 'fail');
             buf.length = 0;
+            this.setComboFeedback(player, 'fail');
             return;
         }
 
@@ -333,11 +333,11 @@ class PongScene extends Phaser.Scene {
 
         if (mana >= exactCombo.cost) {
             this.executeStratagem(player, exactCombo.name, exactCombo.cost);
+            buf.length = 0;
             this.setComboFeedback(player, 'success', exactCombo.name.trim());
-            buf.length = 0;
         } else {
-            this.setComboFeedback(player, 'cooldown', exactCombo.name.trim());
             buf.length = 0;
+            this.setComboFeedback(player, 'cooldown', exactCombo.name.trim());
         }
     }
 
