@@ -1,59 +1,71 @@
 /// <reference types="phaser" />
 
 // ─── Tunables ────────────────────────────────────────────────────────────────
-const CANVAS_WIDTH            = 800;
-const CANVAS_HEIGHT           = 900;
-const BACKGROUND_COLOR        = '#000000';
+const CANVAS_WIDTH                = 800;
+const CANVAS_HEIGHT               = 900;
 
-const PLAY_TOP                = 40;
-const PLAY_HEIGHT             = 760;
-const PLAY_BOTTOM             = PLAY_TOP + PLAY_HEIGHT;
+const PLAY_TOP                    = 40;
+const PLAY_HEIGHT                 = 760;
+const PLAY_BOTTOM                 = PLAY_TOP + PLAY_HEIGHT;
 
-const PLAYER_WIDTH            = 16;
-const PLAYER_HEIGHT           = 16;
-const PLAYER_SPEED            = 300;
-const PLAYER_Y                = PLAY_BOTTOM - PLAYER_HEIGHT - 10;
-const PLAYER_COLOR            = 0x00ff00;
+const PLAYER_WIDTH                = 16;
+const PLAYER_HEIGHT               = 16;
+const PLAYER_SPEED_X              = 300;
+const PLAYER_SPEED_Y              = 200;
+const PLAYER_VERTICAL_BAND_HEIGHT = 30;
+const PLAYER_MAX_Y                = PLAY_BOTTOM - PLAYER_HEIGHT - 10;
+const PLAYER_MIN_Y                = PLAYER_MAX_Y - PLAYER_VERTICAL_BAND_HEIGHT;
 
-const BULLET_WIDTH            = 4;
-const BULLET_HEIGHT           = 12;
-const BULLET_SPEED            = 500;
-const BULLET_COLOR            = 0xffff00;
+const BULLET_WIDTH                = 4;
+const BULLET_HEIGHT               = 12;
+const BULLET_SPEED                = 500;
 
-const MUSHROOM_ROWS           = 10;
-const MUSHROOM_COLS           = 20;
-const MUSHROOM_COUNT          = 30;
-const MUSHROOM_WIDTH          = 12;
-const MUSHROOM_HEIGHT         = 12;
-const MUSHROOM_HP             = 3;
-const MUSHROOM_COLOR_FULL     = 0x00aa00;
-const MUSHROOM_COLOR_HIT      = 0xffaa00;
-const MUSHROOM_COLOR_LOW      = 0xff4400;
+const MUSHROOM_ROWS               = 10;
+const MUSHROOM_COLS               = 20;
+const MUSHROOM_COUNT              = 30;
+const MUSHROOM_WIDTH              = 12;
+const MUSHROOM_HEIGHT             = 12;
+const MUSHROOM_HP                 = 3;
+const MUSHROOM_COLOR_HIT          = 0xffaa00;
+const MUSHROOM_COLOR_LOW          = 0xff4400;
 
-const CENTIPEDE_SEGMENTS      = 10;
-const CENTIPEDE_SEGMENT_SIZE  = 14;
-const CENTIPEDE_SPEED         = 80;
-const CENTIPEDE_DROP_DISTANCE = 20;
-const CENTIPEDE_ROW_HEIGHT    = 20;
-const CENTIPEDE_COLOR         = 0xff4444;
-const CENTIPEDE_HEAD_COLOR    = 0xff8800;
+const CENTIPEDE_SEGMENTS          = 10;
+const CENTIPEDE_SEGMENT_SIZE      = 14;
+const BASE_CENTIPEDE_SPEED        = 80;
+const CENTIPEDE_DROP_DISTANCE     = 20;
+const CENTIPEDE_ROW_HEIGHT        = 20;
+const CENTIPEDE_TOP_RESPAWN_Y     = PLAY_TOP + CENTIPEDE_SEGMENT_SIZE / 2 + 4;
+const CENTIPEDE_BOTTOM_LOOP_Y     = PLAY_BOTTOM - CENTIPEDE_SEGMENT_SIZE / 2 - 4;
 
-const SCORE_SEGMENT           = 10;
-const SCORE_MUSHROOM          = 1;
-const SCORE_CLEAR_BONUS       = 50;
-const SPEED_INCREASE          = 10;
-const SPEED_CAP               = 200;
+const MAX_WAVES                   = 10;
+const WAVES_PER_LEVEL             = 2;
+const WAVE_SPEED_INCREASE_PCT     = 8;
+const LEVEL_SPEED_MULTIPLIERS     = [1.0, 1.2, 1.45, 1.75, 2.1];
 
-const SCORE_TEXT_X            = 20;
-const SCORE_TEXT_Y            = PLAY_BOTTOM + 12;
-const SCORE_FONT_SIZE         = '20px';
-const SCORE_FONT_FAMILY       = 'monospace';
-const SCORE_COLOR             = '#ffffff';
-const MESSAGE_FONT_SIZE       = '26px';
-const MESSAGE_COLOR           = '#ffffff';
-const MESSAGE_X               = CANVAS_WIDTH / 2;
-const MESSAGE_Y               = CANVAS_HEIGHT / 2;
-const SEPARATOR_COLOR         = 0x333333;
+const LEVEL_PALETTES = [
+    { bg: '#000000', player: 0x00ff00, bullet: 0xffff00, headColor: 0xff8800, bodyColor: 0xff4444, mushFull: 0x00aa00, textColor: '#ffffff' },
+    { bg: '#000510', player: 0x00ffcc, bullet: 0x00ffff, headColor: 0x22ccff, bodyColor: 0x0077bb, mushFull: 0x006644, textColor: '#00ffcc' },
+    { bg: '#060400', player: 0xffee00, bullet: 0xffffff, headColor: 0xff9900, bodyColor: 0xddaa00, mushFull: 0x776600, textColor: '#ffee00' },
+    { bg: '#060008', player: 0xff55ff, bullet: 0xee00ff, headColor: 0xff00bb, bodyColor: 0xaa00aa, mushFull: 0x550033, textColor: '#ff55ff' },
+    { bg: '#0a0000', player: 0xff3333, bullet: 0xffaaaa, headColor: 0xffffff, bodyColor: 0xff0000, mushFull: 0x770000, textColor: '#ff3333' },
+];
+
+const BACKGROUND_COLOR            = LEVEL_PALETTES[0].bg;
+
+const SCORE_SEGMENT               = 10;
+const SCORE_MUSHROOM              = 1;
+const SCORE_CLEAR_BONUS           = 50;
+
+const SCORE_TEXT_X                = 20;
+const SCORE_TEXT_Y                = PLAY_BOTTOM + 12;
+const WAVE_TEXT_X                 = CANVAS_WIDTH - 20;
+const WAVE_TEXT_Y                 = PLAY_BOTTOM + 12;
+const SCORE_FONT_SIZE             = '20px';
+const SCORE_FONT_FAMILY           = 'monospace';
+const MESSAGE_FONT_SIZE           = '26px';
+const MESSAGE_X                   = CANVAS_WIDTH / 2;
+const MESSAGE_Y                   = CANVAS_HEIGHT / 2;
+const SEPARATOR_COLOR             = 0x333333;
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 const config = {
@@ -72,25 +84,31 @@ let playerRect;
 let bulletRect, bulletActive;
 let mushroomList;    // [{ rect, hp }]
 let centipedeList;   // [{ rect, dir }]
-let score, scoreText, messageText;
-let cursors, keyA, keyD, keySpace, keyEnter;
-let isGameOver;
+let score, scoreText, waveText, messageText;
+let cursors, keyA, keyD, keyW, keyS, keySpace, keyEnter, keyR;
+let isGameOver, isWin;
 let currentSpeed;
+let currentWave, currentLevel;
+let currentPalette;
 
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
 function preload() {}
 
 function create() {
-    scene        = this;
-    isGameOver   = false;
-    score        = 0;
-    bulletActive = false;
-    currentSpeed = CENTIPEDE_SPEED;
+    scene          = this;
+    isGameOver     = false;
+    isWin          = false;
+    score          = 0;
+    bulletActive   = false;
+    currentWave    = 1;
+    currentLevel   = 1;
+    currentPalette = LEVEL_PALETTES[0];
+    currentSpeed   = computeSpeed();
 
     scene.add.rectangle(CANVAS_WIDTH / 2, PLAY_BOTTOM + 1, CANVAS_WIDTH, 2, SEPARATOR_COLOR);
 
-    playerRect = scene.add.rectangle(CANVAS_WIDTH / 2, PLAYER_Y, PLAYER_WIDTH, PLAYER_HEIGHT, PLAYER_COLOR);
-    bulletRect = scene.add.rectangle(-100, -100, BULLET_WIDTH, BULLET_HEIGHT, BULLET_COLOR).setVisible(false);
+    playerRect = scene.add.rectangle(CANVAS_WIDTH / 2, PLAYER_MAX_Y, PLAYER_WIDTH, PLAYER_HEIGHT, currentPalette.player);
+    bulletRect = scene.add.rectangle(-100, -100, BULLET_WIDTH, BULLET_HEIGHT, currentPalette.bullet).setVisible(false);
 
     mushroomList  = [];
     centipedeList = [];
@@ -100,26 +118,38 @@ function create() {
     scoreText = scene.add.text(SCORE_TEXT_X, SCORE_TEXT_Y, 'SCORE 0', {
         fontSize: SCORE_FONT_SIZE,
         fontFamily: SCORE_FONT_FAMILY,
-        color: SCORE_COLOR
+        color: currentPalette.textColor
     });
+
+    waveText = scene.add.text(WAVE_TEXT_X, WAVE_TEXT_Y, '', {
+        fontSize: SCORE_FONT_SIZE,
+        fontFamily: SCORE_FONT_FAMILY,
+        color: currentPalette.textColor
+    }).setOrigin(1, 0);
+    updateWaveText();
 
     messageText = scene.add.text(MESSAGE_X, MESSAGE_Y, '', {
         fontSize: MESSAGE_FONT_SIZE,
         fontFamily: SCORE_FONT_FAMILY,
-        color: MESSAGE_COLOR,
+        color: currentPalette.textColor,
         align: 'center'
     }).setOrigin(0.5).setVisible(false);
 
     cursors  = scene.input.keyboard.createCursorKeys();
     keyA     = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
     keyD     = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
+    keyW     = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
+    keyS     = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
     keySpace = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     keyEnter = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
+    keyR     = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
 }
 
 function update(time, delta) {
-    if (isGameOver) {
-        if (Phaser.Input.Keyboard.JustDown(keySpace) || Phaser.Input.Keyboard.JustDown(keyEnter)) {
+    if (isGameOver || isWin) {
+        if (Phaser.Input.Keyboard.JustDown(keyR)     ||
+            Phaser.Input.Keyboard.JustDown(keySpace) ||
+            Phaser.Input.Keyboard.JustDown(keyEnter)) {
             scene.scene.restart();
         }
         return;
@@ -134,9 +164,14 @@ function update(time, delta) {
 // ─── Player ───────────────────────────────────────────────────────────────────
 function updatePlayer(dt) {
     if (cursors.left.isDown || keyA.isDown) {
-        playerRect.x = Math.max(PLAYER_WIDTH / 2, playerRect.x - PLAYER_SPEED * dt);
+        playerRect.x = Math.max(PLAYER_WIDTH / 2, playerRect.x - PLAYER_SPEED_X * dt);
     } else if (cursors.right.isDown || keyD.isDown) {
-        playerRect.x = Math.min(CANVAS_WIDTH - PLAYER_WIDTH / 2, playerRect.x + PLAYER_SPEED * dt);
+        playerRect.x = Math.min(CANVAS_WIDTH - PLAYER_WIDTH / 2, playerRect.x + PLAYER_SPEED_X * dt);
+    }
+    if (cursors.up.isDown || keyW.isDown) {
+        playerRect.y = Math.max(PLAYER_MIN_Y, playerRect.y - PLAYER_SPEED_Y * dt);
+    } else if (cursors.down.isDown || keyS.isDown) {
+        playerRect.y = Math.min(PLAYER_MAX_Y, playerRect.y + PLAYER_SPEED_Y * dt);
     }
 
     if (!bulletActive && Phaser.Input.Keyboard.JustDown(keySpace)) {
@@ -207,10 +242,10 @@ function updateCentipede(dt) {
             seg.rect.x = nextX;
         }
 
-        seg.rect.fillColor = i === 0 ? CENTIPEDE_HEAD_COLOR : CENTIPEDE_COLOR;
+        seg.rect.fillColor = i === 0 ? currentPalette.headColor : currentPalette.bodyColor;
 
-        if (seg.rect.y + half >= PLAYER_Y - PLAYER_HEIGHT / 2) {
-            triggerGameOver();
+        if (seg.rect.y >= CENTIPEDE_BOTTOM_LOOP_Y) {
+            loopCentipede();
             return;
         }
     }
@@ -227,7 +262,7 @@ function updateCentipede(dt) {
 // ─── Spawn ───────────────────────────────────────────────────────────────────
 function spawnMushrooms() {
     const zoneTop    = PLAY_TOP + CENTIPEDE_ROW_HEIGHT * 2;
-    const zoneBottom = PLAYER_Y - PLAYER_HEIGHT / 2 - 20;
+    const zoneBottom = PLAYER_MIN_Y - PLAYER_HEIGHT / 2 - 20;
     const cellW      = (CANVAS_WIDTH - 40) / MUSHROOM_COLS;
     const cellH      = (zoneBottom - zoneTop) / MUSHROOM_ROWS;
 
@@ -243,17 +278,16 @@ function spawnMushrooms() {
         const [r, c] = positions[i];
         const x    = 20 + c * cellW + cellW / 2;
         const y    = zoneTop + r * cellH + cellH / 2;
-        const rect = scene.add.rectangle(x, y, MUSHROOM_WIDTH, MUSHROOM_HEIGHT, MUSHROOM_COLOR_FULL);
+        const rect = scene.add.rectangle(x, y, MUSHROOM_WIDTH, MUSHROOM_HEIGHT, currentPalette.mushFull);
         mushroomList.push({ rect, hp: MUSHROOM_HP });
     }
 }
 
 function spawnCentipede() {
-    const y = PLAY_TOP + CENTIPEDE_SEGMENT_SIZE / 2 + 4;
     for (let i = 0; i < CENTIPEDE_SEGMENTS; i++) {
         const x    = CENTIPEDE_SEGMENT_SIZE / 2 + 4 + i * (CENTIPEDE_SEGMENT_SIZE + 2);
-        const rect = scene.add.rectangle(x, y, CENTIPEDE_SEGMENT_SIZE, CENTIPEDE_SEGMENT_SIZE,
-            i === 0 ? CENTIPEDE_HEAD_COLOR : CENTIPEDE_COLOR);
+        const rect = scene.add.rectangle(x, CENTIPEDE_TOP_RESPAWN_Y, CENTIPEDE_SEGMENT_SIZE, CENTIPEDE_SEGMENT_SIZE,
+            i === 0 ? currentPalette.headColor : currentPalette.bodyColor);
         centipedeList.push({ rect, dir: 1 });
     }
 }
@@ -284,20 +318,74 @@ function killSegment(index) {
     centipedeList.splice(index, 1);
     score += SCORE_SEGMENT;
     scoreText.setText('SCORE ' + score);
-
     if (centipedeList.length === 0) {
-        score += SCORE_CLEAR_BONUS;
-        currentSpeed = Math.min(currentSpeed + SPEED_INCREASE, SPEED_CAP);
-        scoreText.setText('SCORE ' + score);
-        spawnCentipede();
+        advanceWave();
     }
 }
 
 function triggerGameOver() {
     isGameOver = true;
-    messageText.setText('GAME OVER\nSCORE ' + score + '\n\nSPACE or ENTER to restart').setVisible(true);
+    messageText.setText('GAME OVER\nSCORE ' + score + '\n\nR to restart').setVisible(true);
 }
 
 function aabb(ax, ay, aw, ah, bx, by, bw, bh) {
     return Math.abs(ax - bx) * 2 < aw + bw && Math.abs(ay - by) * 2 < ah + bh;
+}
+
+// ─── Wave / Level ─────────────────────────────────────────────────────────────
+function computeSpeed() {
+    const levelMult   = LEVEL_SPEED_MULTIPLIERS[currentLevel - 1];
+    const waveInLevel = (currentWave - 1) % WAVES_PER_LEVEL;
+    const waveMult    = 1 + (WAVE_SPEED_INCREASE_PCT / 100) * waveInLevel;
+    return BASE_CENTIPEDE_SPEED * levelMult * waveMult;
+}
+
+function updateWaveText() {
+    waveText.setText('LEVEL ' + currentLevel + '  WAVE ' + currentWave + ' / ' + MAX_WAVES);
+}
+
+function advanceWave() {
+    score += SCORE_CLEAR_BONUS;
+    scoreText.setText('SCORE ' + score);
+
+    currentWave++;
+    if (currentWave > MAX_WAVES) {
+        triggerWin();
+        return;
+    }
+
+    const newLevel = Math.ceil(currentWave / WAVES_PER_LEVEL);
+    if (newLevel !== currentLevel) {
+        currentLevel = newLevel;
+        applyPalette(LEVEL_PALETTES[currentLevel - 1]);
+    }
+
+    currentSpeed = computeSpeed();
+    updateWaveText();
+
+    for (const m of mushroomList) m.rect.destroy();
+    mushroomList = [];
+    spawnMushrooms();
+    spawnCentipede();
+}
+
+function loopCentipede() {
+    for (const seg of centipedeList) seg.rect.destroy();
+    centipedeList = [];
+    spawnCentipede();
+}
+
+function applyPalette(palette) {
+    currentPalette = palette;
+    scene.cameras.main.setBackgroundColor(palette.bg);
+    playerRect.fillColor  = palette.player;
+    bulletRect.fillColor  = palette.bullet;
+    scoreText.setColor(palette.textColor);
+    waveText.setColor(palette.textColor);
+    messageText.setColor(palette.textColor);
+}
+
+function triggerWin() {
+    isWin = true;
+    messageText.setText('YOU SURVIVED\nSCORE ' + score + '\n\nR to restart').setVisible(true);
 }
