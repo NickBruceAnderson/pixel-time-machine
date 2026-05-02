@@ -362,11 +362,13 @@ class PongScene extends Phaser.Scene {
         if (!arrowTexts) return;
 
         const buf    = player === 'left' ? this.comboBufferLeft : this.comboBufferRight;
+        const mana   = player === 'left' ? this.manaLeft : this.manaRight;
         const combos = this.getCombos(player);
 
         for (let row = 0; row < 3; row++) {
             const combo   = combos[row];
-            const matches = buf.length > 0 && buf.every((v, i) => v === combo.seq[i]);
+            const hasMana = mana >= combo.cost;
+            const matches = hasMana && buf.length > 0 && buf.every((v, i) => v === combo.seq[i]);
             const count   = matches ? buf.length : 0;
             for (let col = 0; col < 4; col++) {
                 arrowTexts[row][col].setFill(col < count ? COMBO_ARROW_HIT_COLOR : HUD_LEGEND_COLOR);
