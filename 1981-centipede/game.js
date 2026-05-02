@@ -2,10 +2,10 @@
 
 // ─── Tunables ────────────────────────────────────────────────────────────────
 const CANVAS_WIDTH                = 800;
-const CANVAS_HEIGHT               = 900;
+const CANVAS_HEIGHT               = 500;
 
 const PLAY_TOP                    = 40;
-const PLAY_HEIGHT                 = 760;
+const PLAY_HEIGHT                 = 400;
 const PLAY_BOTTOM                 = PLAY_TOP + PLAY_HEIGHT;
 
 const PLAYER_WIDTH                = 16;
@@ -22,7 +22,7 @@ const BULLET_SPEED                = 500;
 
 const MUSHROOM_ROWS               = 10;
 const MUSHROOM_COLS               = 20;
-const MUSHROOM_COUNT              = 30;
+const MUSHROOM_COUNT              = 40;
 const MUSHROOM_WIDTH              = 12;
 const MUSHROOM_HEIGHT             = 12;
 const MUSHROOM_HP                 = 3;
@@ -31,7 +31,7 @@ const MUSHROOM_COLOR_LOW          = 0xff4400;
 
 const CENTIPEDE_SEGMENTS          = 10;
 const CENTIPEDE_SEGMENT_SIZE      = 14;
-const BASE_CENTIPEDE_SPEED        = 80;
+const BASE_CENTIPEDE_SPEED        = 200;
 const CENTIPEDE_DROP_DISTANCE     = 20;
 const CENTIPEDE_ROW_HEIGHT        = 20;
 const CENTIPEDE_TOP_RESPAWN_Y     = PLAY_TOP + CENTIPEDE_SEGMENT_SIZE / 2 + 4;
@@ -39,7 +39,7 @@ const CENTIPEDE_BOTTOM_LOOP_Y     = PLAY_BOTTOM - CENTIPEDE_SEGMENT_SIZE / 2 - 4
 
 const MAX_WAVES                   = 10;
 const WAVES_PER_LEVEL             = 2;
-const WAVE_SPEED_INCREASE_PCT     = 8;
+const WAVE_SPEED_INCREASE_PCT     = 10;
 const LEVEL_SPEED_MULTIPLIERS     = [1.0, 1.2, 1.45, 1.75, 2.1];
 
 const LEVEL_PALETTES = [
@@ -73,6 +73,10 @@ const config = {
     width: CANVAS_WIDTH,
     height: CANVAS_HEIGHT,
     backgroundColor: BACKGROUND_COLOR,
+    scale: {
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+    },
     scene: { preload, create, update }
 };
 
