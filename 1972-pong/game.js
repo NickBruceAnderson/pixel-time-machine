@@ -378,6 +378,17 @@ class PongScene extends Phaser.Scene {
         }
     }
 
+    applyPaddleHeight(paddle, height) {
+        paddle.setSize(PADDLE_WIDTH, height);
+        paddle.setOrigin(0.5, 0.5);
+
+        paddle.y = Phaser.Math.Clamp(
+            paddle.y,
+            height / 2,
+            PLAY_HEIGHT - height / 2
+        );
+    }
+
     executeStratagem(player, name, cost) {
         if (player === 'left') this.manaLeft  = Math.max(0, this.manaLeft  - cost);
         else                   this.manaRight = Math.max(0, this.manaRight - cost);
@@ -385,26 +396,22 @@ class PongScene extends Phaser.Scene {
         if (name === 'GROW ') {
             if (player === 'left') {
                 this.paddleLeftHeight = Math.min(PADDLE_MAX_HEIGHT, this.paddleLeftHeight + PADDLE_GROW_PX);
-                this.paddleLeft.height = this.paddleLeftHeight;
-                this.paddleLeft.fillColor = phaserColor(PADDLE_GROW_FLASH_COLOR);
-                this.time.delayedCall(PADDLE_FLASH_DURATION_MS, () => { this.paddleLeft.fillColor  = phaserColor(PADDLE_DEFAULT_COLOR); });
+                this.applyPaddleHeight(this.paddleLeft, this.paddleLeftHeight);
+                this.paddleLeft.fillColor = phaserColor(PADDLE_GROW_FLASH_COLOR);                this.time.delayedCall(PADDLE_FLASH_DURATION_MS, () => { this.paddleLeft.fillColor  = phaserColor(PADDLE_DEFAULT_COLOR); });
             } else {
                 this.paddleRightHeight = Math.min(PADDLE_MAX_HEIGHT, this.paddleRightHeight + PADDLE_GROW_PX);
-                this.paddleRight.height = this.paddleRightHeight;
-                this.paddleRight.fillColor = phaserColor(PADDLE_GROW_FLASH_COLOR);
-                this.time.delayedCall(PADDLE_FLASH_DURATION_MS, () => { this.paddleRight.fillColor = phaserColor(PADDLE_DEFAULT_COLOR); });
+                this.applyPaddleHeight(this.paddleRight, this.paddleRightHeight);
+                this.paddleRight.fillColor = phaserColor(PADDLE_GROW_FLASH_COLOR);                this.time.delayedCall(PADDLE_FLASH_DURATION_MS, () => { this.paddleRight.fillColor = phaserColor(PADDLE_DEFAULT_COLOR); });
             }
         } else if (name === 'SHRINK') {
             if (player === 'left') {
                 this.paddleRightHeight = Math.max(PADDLE_MIN_HEIGHT, this.paddleRightHeight - PADDLE_SHRINK_PX);
-                this.paddleRight.height = this.paddleRightHeight;
-                this.paddleRight.fillColor = phaserColor(PADDLE_SHRINK_FLASH_COLOR);
-                this.time.delayedCall(PADDLE_FLASH_DURATION_MS, () => { this.paddleRight.fillColor = phaserColor(PADDLE_DEFAULT_COLOR); });
+                this.applyPaddleHeight(this.paddleRight, this.paddleRightHeight);
+                this.paddleRight.fillColor = phaserColor(PADDLE_SHRINK_FLASH_COLOR);                this.time.delayedCall(PADDLE_FLASH_DURATION_MS, () => { this.paddleRight.fillColor = phaserColor(PADDLE_DEFAULT_COLOR); });
             } else {
                 this.paddleLeftHeight = Math.max(PADDLE_MIN_HEIGHT, this.paddleLeftHeight - PADDLE_SHRINK_PX);
-                this.paddleLeft.height = this.paddleLeftHeight;
-                this.paddleLeft.fillColor = phaserColor(PADDLE_SHRINK_FLASH_COLOR);
-                this.time.delayedCall(PADDLE_FLASH_DURATION_MS, () => { this.paddleLeft.fillColor  = phaserColor(PADDLE_DEFAULT_COLOR); });
+                this.applyPaddleHeight(this.paddleLeft, this.paddleLeftHeight);
+                this.paddleLeft.fillColor = phaserColor(PADDLE_SHRINK_FLASH_COLOR);                this.time.delayedCall(PADDLE_FLASH_DURATION_MS, () => { this.paddleLeft.fillColor  = phaserColor(PADDLE_DEFAULT_COLOR); });
             }
         } else if (name === 'BURST') {
             this.ballSpeed   *= BURST_SPEED_MULT;
@@ -449,8 +456,8 @@ class PongScene extends Phaser.Scene {
     launchBall() {
         this.paddleLeftHeight  = PADDLE_HEIGHT;
         this.paddleRightHeight = PADDLE_HEIGHT;
-        this.paddleLeft.height  = PADDLE_HEIGHT;
-        this.paddleRight.height = PADDLE_HEIGHT;
+        this.applyPaddleHeight(this.paddleLeft, this.paddleLeftHeight);
+        this.applyPaddleHeight(this.paddleRight, this.paddleRightHeight);
 
         this.ball.x    = CANVAS_WIDTH / 2;
         this.ball.y    = PLAY_HEIGHT  / 2;
@@ -492,8 +499,8 @@ class PongScene extends Phaser.Scene {
         if (Phaser.Input.Keyboard.JustDown(this.keys.left)) this.smashRightAt = time;
 
         // Paddle movement — clamped to play zone, using live heights
-        const halfLeftPaddleHeight  = this.paddleLeft.displayHeight / 2;
-        const halfRightPaddleHeight = this.paddleRight.displayHeight / 2;
+        const halfLeftPaddleHeight = this.paddleLeftHeight / 2;
+        const halfRightPaddleHeight = this.paddleRightHeight / 2;
 
         if (this.keys.w.isDown)    this.paddleLeft.y  -= PADDLE_SPEED * dt;
         if (this.keys.s.isDown)    this.paddleLeft.y  += PADDLE_SPEED * dt;
