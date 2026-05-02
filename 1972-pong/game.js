@@ -95,8 +95,6 @@ const FOOTER_Y_OFFSET = 90;
 const ONLINE_AUTO_CONNECT = window.location.pathname === '/' && typeof Colyseus !== 'undefined';
 const ONLINE_ROOM_NAME = 'pong';
 const ONLINE_SERVER_URL = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`;
-const NET_TICK_RATE = 120;
-const NET_STATE_SEND_RATE = 120;
 const DEBUG_NET_STATS = true;
 const PING_SEND_MS = 1000;
 const STATUS_FONT_SIZE = '16px';
@@ -490,6 +488,11 @@ class PongScene extends Phaser.Scene {
         );
     }
 
+    flashPaddle(paddle, color) {
+        paddle.fillColor = phaserColor(color);
+        this.time.delayedCall(PADDLE_FLASH_DURATION_MS, () => { paddle.fillColor = phaserColor(PADDLE_DEFAULT_COLOR); });
+    }
+
     executeStratagem(player, name, cost) {
         if (player === 'left') this.manaLeft  = Math.max(0, this.manaLeft  - cost);
         else                   this.manaRight = Math.max(0, this.manaRight - cost);
@@ -498,21 +501,21 @@ class PongScene extends Phaser.Scene {
             if (player === 'left') {
                 this.paddleLeftHeight = Math.min(PADDLE_MAX_HEIGHT, this.paddleLeftHeight + PADDLE_GROW_PX);
                 this.applyPaddleHeight(this.paddleLeft, this.paddleLeftHeight);
-                this.paddleLeft.fillColor = phaserColor(PADDLE_GROW_FLASH_COLOR);                this.time.delayedCall(PADDLE_FLASH_DURATION_MS, () => { this.paddleLeft.fillColor  = phaserColor(PADDLE_DEFAULT_COLOR); });
+                this.flashPaddle(this.paddleLeft, PADDLE_GROW_FLASH_COLOR);
             } else {
                 this.paddleRightHeight = Math.min(PADDLE_MAX_HEIGHT, this.paddleRightHeight + PADDLE_GROW_PX);
                 this.applyPaddleHeight(this.paddleRight, this.paddleRightHeight);
-                this.paddleRight.fillColor = phaserColor(PADDLE_GROW_FLASH_COLOR);                this.time.delayedCall(PADDLE_FLASH_DURATION_MS, () => { this.paddleRight.fillColor = phaserColor(PADDLE_DEFAULT_COLOR); });
+                this.flashPaddle(this.paddleRight, PADDLE_GROW_FLASH_COLOR);
             }
         } else if (name === 'SHRINK') {
             if (player === 'left') {
                 this.paddleRightHeight = Math.max(PADDLE_MIN_HEIGHT, this.paddleRightHeight - PADDLE_SHRINK_PX);
                 this.applyPaddleHeight(this.paddleRight, this.paddleRightHeight);
-                this.paddleRight.fillColor = phaserColor(PADDLE_SHRINK_FLASH_COLOR);                this.time.delayedCall(PADDLE_FLASH_DURATION_MS, () => { this.paddleRight.fillColor = phaserColor(PADDLE_DEFAULT_COLOR); });
+                this.flashPaddle(this.paddleRight, PADDLE_SHRINK_FLASH_COLOR);
             } else {
                 this.paddleLeftHeight = Math.max(PADDLE_MIN_HEIGHT, this.paddleLeftHeight - PADDLE_SHRINK_PX);
                 this.applyPaddleHeight(this.paddleLeft, this.paddleLeftHeight);
-                this.paddleLeft.fillColor = phaserColor(PADDLE_SHRINK_FLASH_COLOR);                this.time.delayedCall(PADDLE_FLASH_DURATION_MS, () => { this.paddleLeft.fillColor  = phaserColor(PADDLE_DEFAULT_COLOR); });
+                this.flashPaddle(this.paddleLeft, PADDLE_SHRINK_FLASH_COLOR);
             }
         } else if (name === 'BURST') {
             this.ballSpeed   *= BURST_SPEED_MULT;
