@@ -94,6 +94,7 @@ const LP_BLOCK_SIZE = 8;
 const RESOURCE_BLOCK_SPACING = 2;
 
 const ACTION_DELAY_MS = 3000;
+const FLOATING_EFFECT_MS = 1000;
 const FONT_SIZE_HEADER = 24;
 const FONT_SIZE_BODY = 18;
 const FONT_SIZE_SMALL = 14;
@@ -105,13 +106,6 @@ function buildInfoText(characterClass = 'knight') {
   const stats = CHARACTER_CLASSES[characterClass];
 
   return [
-    /*'Key Stats:',
-    `HP: ${RESOURCE_ICONS.hp.repeat(stats.maxHp)}`,
-    `SP: ${RESOURCE_ICONS.sp.repeat(stats.maxSp)}`,
-    `AP: ${RESOURCE_ICONS.ap.repeat(stats.maxAp)}`,
-    `PP: ${RESOURCE_ICONS.pp.repeat(stats.maxPp)}`,
-    `LP: ${RESOURCE_ICONS.lp.repeat(stats.maxLp)}`,
-    '',*/
     'Skills:',
     `A1: ${slash.name} | Cost: ${RESOURCE_ICONS.ap.repeat(slash.apCost)} | Damage: ${RESOURCE_ICONS.sp.repeat(slash.spDamage)} or ${RESOURCE_ICONS.hp.repeat(slash.hpDamage)}`,
     'A2:',
@@ -144,6 +138,7 @@ let action = 1;
 let nextActorIndex = 0;
 let battleEnded = false;
 let actionTimer;
+let infoText;
 
 const config = {
   type: Phaser.AUTO,
@@ -205,7 +200,7 @@ function createLayout() {
   sceneRef.add.rectangle(layout.info.x, layout.info.y, layout.info.w, layout.info.h, PHASER_COLORS.infoPanel)
     .setOrigin(0)
     .setStrokeStyle(2, PHASER_COLORS.panelBorder);
-  sceneRef.add.text(layout.info.x + 24, layout.info.y + 22, INFO_TEXT, smallTextStyle());
+  createInfoPanel();
 
   drawPanel(layout.right, 'Combat Log');
 }
@@ -225,7 +220,7 @@ function createUnits() {
 
   units[0].enemy = units[1];
   units[1].enemy = units[0];
-  units.forEach(drawUnitResources);
+  refreshInfoPanel();
 }
 
 function createCharacter(name, characterClass, color, x) {
@@ -255,98 +250,53 @@ function createCharacter(name, characterClass, color, x) {
     lp: classStats.lp,
     maxLp: classStats.maxLp,
     rect,
-    label,
-    resourceNodes: []
+    label
   };
 }
 
-function drawUnitResources(unit) {
-  const x = unit.rect.x;
-  const topY = unit.rect.y - UNIT_HEIGHT / 2 - 54;
-  const secondY = topY + 25;
-
-  const spIconSize = `${SP_BLOCK_SIZE}px`;
-  const hpIconSize = `${HP_BLOCK_SIZE}px`;
-  const iconSpacing = Math.max(SP_BLOCK_SIZE, HP_BLOCK_SIZE) + RESOURCE_BLOCK_SPACING;
-  const totalIcons = unit.maxSp + unit.maxHp;
-  const startX = x - ((totalIcons - 1) * iconSpacing) / 2;
-
-  unit.resourceNodes = [];
-  unit.spIcons = [];
-  unit.hpIcons = [];
-
-  for (let index = 0; index < unit.maxSp; index += 1) {
-    const shieldIcon = sceneRef.add.text(
-      startX + index * iconSpacing,
-      topY - 8,
-      RESOURCE_ICONS.sp,
-      {
-        fontFamily: 'Arial',
-        fontSize: spIconSize
-      }
-    ).setOrigin(0.5);
-
-    unit.spIcons.push(shieldIcon);
-  }
-
-  for (let index = 0; index < unit.maxHp; index += 1) {
-    const heartIcon = sceneRef.add.text(
-      startX + (unit.maxSp + index) * iconSpacing,
-      topY - 8,
-      RESOURCE_ICONS.hp,
-      {
-        fontFamily: 'Arial',
-        fontSize: hpIconSize
-      }
-    ).setOrigin(0.5);
-
-    unit.hpIcons.push(heartIcon);
-  }
-
-  addResourceRow(unit, 'ap', unit.maxAp, AP_BLOCK_SIZE, PHASER_COLORS.ap, x - 38, secondY);
-  addResourceRow(unit, 'pp', unit.maxPp, PP_BLOCK_SIZE, PHASER_COLORS.pp, x + 4, secondY);
-
-  refreshUnitResources(unit);
+function formatResourceCurrent(unit, resourceKey) {
+  return RESOURCE_ICONS[resourceKey].repeat(unit[resourceKey]);
 }
 
-function addResourceRow(unit, key, count, size, color, startX, y) {
-  for (let index = 0; index < count; index += 1) {
-    const node = sceneRef.add.rectangle(
-      startX + index * (size + RESOURCE_BLOCK_SPACING),
-      y,
-      size,
-      size,
-      color
-    ).setOrigin(0);
-
-    unit.resourceNodes.push({ key, index, node, color });
-  }
+function formatCharacterStats(unit) {
+  return [
+    `${unit.name} Knight`,
+    `HP: ${formatResourceCurrent(unit, 'hp')}`,
+    `SP: ${formatResourceCurrent(unit, 'sp')}`,
+    `AP: ${formatResourceCurrent(unit, 'ap')}`,
+    `PP: ${formatResourceCurrent(unit, 'pp')}`,
+    `LP: ${formatResourceCurrent(unit, 'lp')}`
+  ];
 }
 
-function refreshUnitResources(unit) {
-  unit.resourceNodes.forEach((resource) => {
-    const value = unit[resource.key];
-    const filled = resource.index < value;
-    const emptyColor = resource.key === 'lp' ? PHASER_COLORS.emptyLp : PHASER_COLORS.spent;
-    resource.node.setFillStyle(filled ? resource.color : emptyColor);
+function createInfoPanel() {
+  infoText = sceneRef.add.text(layout.info.x + 24, layout.info.y + 22, '', smallTextStyle());
+  refreshInfoPanel();
+}
+
+function refreshInfoPanel() {
+  if (!infoText) {
+    return;
+  }
+
+  const liveStats = units ? units.flatMap(formatCharacterStats) : [];
+  const lines = liveStats.length > 0 ? [...liveStats, '', ...INFO_TEXT] : INFO_TEXT;
+  infoText.setText(lines);
+}
+
+function showFloatingEffect(unit, text) {
+  const popup = sceneRef.add.text(unit.rect.x, unit.rect.y - UNIT_HEIGHT / 2 - 22, text, {
+    fontFamily: 'Arial',
+    fontSize: '24px',
+    color: COLORS.text
+  }).setOrigin(0.5);
+
+  sceneRef.tweens.add({
+    targets: popup,
+    alpha: 0,
+    duration: FLOATING_EFFECT_MS,
+    onComplete: () => popup.destroy()
   });
-
-  if (unit.spIcons) {
-    unit.spIcons.forEach((icon, index) => {
-      icon.setAlpha(index < unit.sp ? 1 : 0.25);
-    });
-  }
-
-  if (unit.hpIcons) {
-    unit.hpIcons.forEach((icon, index) => {
-      icon.setAlpha(index < unit.hp ? 1 : 0.25);
-    });
-  }
-
-  if (unit.hp <= 0) {
-    unit.rect.setAlpha(0.35);
-    unit.label.setText(`${unit.name} KO`);
-  }
 }
 
 function startBattle() {
@@ -369,8 +319,8 @@ function startRound() {
   livingUnits().forEach((unit) => {
     unit.ap = unit.maxAp;
     unit.pp = unit.maxPp;
-    refreshUnitResources(unit);
   });
+  refreshInfoPanel();
 
   if (round > 1) {
     appendLog(`Round ${round} starts.`);
@@ -403,11 +353,13 @@ function takeNextAction() {
   const defender = attacker.enemy;
   const tag = `[R${round}T${turn}A${action}]`;
   const selectedAction = ACTIONS.slash;
-  const effectText = resolveAction(attacker, defender, selectedAction);
-  appendLog(`${tag} ${attacker.name} uses ${selectedAction.name} on ${defender.name}.`, effectText);
+  const effect = resolveAction(attacker, defender, selectedAction);
+  appendLog(`${tag} ${attacker.name} uses ${selectedAction.name} on ${defender.name}.`, effect.logText);
 
-  refreshUnitResources(attacker);
-  refreshUnitResources(defender);
+  effect.floatingEffects.forEach((floatingEffect) => {
+    showFloatingEffect(floatingEffect.unit, floatingEffect.text);
+  });
+  refreshInfoPanel();
 
   if (isBattleOver()) {
     endBattle(attacker, defender);
@@ -425,25 +377,37 @@ function takeNextAction() {
 function resolveAction(attacker, defender, selectedAction) {
   attacker.ap = Math.max(0, attacker.ap - selectedAction.apCost);
   const effects = [formatResourceLoss(attacker.name, selectedAction.apCost, 'ap')];
+  const floatingEffects = [
+    { unit: attacker, text: formatResourcePopup(selectedAction.apCost, 'ap') }
+  ];
 
   if (defender.sp > 0) {
     const spDamage = Math.min(selectedAction.spDamage, defender.sp);
     defender.sp = Math.max(0, defender.sp - spDamage);
     effects.push(formatResourceLoss(defender.name, spDamage, 'sp'));
+    floatingEffects.push({ unit: defender, text: formatResourcePopup(spDamage, 'sp') });
   } else {
     const hpDamage = Math.min(selectedAction.hpDamage, defender.hp);
     defender.hp = Math.max(0, defender.hp - hpDamage);
     effects.push(formatResourceLoss(defender.name, hpDamage, 'hp'));
+    floatingEffects.push({ unit: defender, text: formatResourcePopup(hpDamage, 'hp') });
     if (defender.hp <= 0) {
       effects.push(`${defender.name} dies.`);
     }
   }
 
-  return `${effects.join(' | ')}`;
+  return {
+    logText: effects.join(' | '),
+    floatingEffects
+  };
 }
 
 function formatResourceLoss(unitName, amount, resourceKey) {
   return `${unitName} -${RESOURCE_ICONS[resourceKey].repeat(amount)}`;
+}
+
+function formatResourcePopup(amount, resourceKey) {
+  return `-${RESOURCE_ICONS[resourceKey].repeat(amount)}`;
 }
 
 function appendLog(actionText, effectText) {
@@ -471,7 +435,11 @@ function endBattle(winner, loser) {
   if (actionTimer) {
     actionTimer.remove(false);
   }
-  refreshUnitResources(loser);
+  if (loser) {
+    loser.rect.setAlpha(0.35);
+    loser.label.setText(`${loser.name} KO`);
+  }
+  refreshInfoPanel();
   appendLog('Battle ends.');
 }
 
