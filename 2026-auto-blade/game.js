@@ -125,18 +125,35 @@ const RP_BLOCK_SIZE = 12;
 const LP_BLOCK_SIZE = 12;
 const RESOURCE_BLOCK_SPACING = 2;
 
-const ACTION_DELAY_MS = 4000;
-const FLOATING_EFFECT_DURATION_MS = 1000;
+const ACTION_DELAY_MS = 5000;
+const FLOATING_EFFECT_DURATION_MS = ACTION_DELAY_MS * 0.35;
 const FLOATING_EFFECT_FONT_SIZE = 24;
-const FLOATING_DAMAGE_DELAY_MS = 450;
-const ATTACK_LUNGE_DISTANCE = 26;
-const ATTACK_LUNGE_DURATION_MS = 140;
+const RESOURCE_EFFECT_COMMIT_DELAY_MS = ACTION_DELAY_MS * 0.05;
+const RESOURCE_EFFECT_FADE_DELAY_MS = ACTION_DELAY_MS * 0.18;
+const ACTION_CAST_LABEL_DELAY_MS = 0;
+const ACTION_CAST_RESOURCE_DELAY_MS = ACTION_DELAY_MS * 0.06;
+const ACTION_CAST_COMMIT_DELAY_MS = ACTION_DELAY_MS * 0.11;
+const ATTACK_LUNGE_START_DELAY_MS = ACTION_DELAY_MS * 0.16;
+const REACTION_CAST_LABEL_DELAY_MS = ACTION_DELAY_MS * 0.26;
+const REACTION_CAST_RESOURCE_DELAY_MS = ACTION_DELAY_MS * 0.31;
+const REACTION_CAST_COMMIT_DELAY_MS = ACTION_DELAY_MS * 0.36;
+const DEFENSE_RESULT_DELAY_MS = ACTION_DELAY_MS * 0.44;
+const ATTACK_RETURN_DELAY_MS = ACTION_DELAY_MS * 0.52;
+const COUNTER_RESULT_DELAY_MS = ACTION_DELAY_MS * 0.62;
+const ATTACK_LUNGE_DISTANCE = 360;
+const ATTACK_LUNGE_DURATION_MS = ACTION_DELAY_MS * 0.08;
 const BLOCK_TILT_ANGLE = 12;
-const BLOCK_TILT_DURATION_MS = 140;
-const PARRY_SPIN_DURATION_MS = 280;
+const BLOCK_TILT_DURATION_MS = ACTION_DELAY_MS * 0.028;
+const PARRY_SPIN_DURATION_MS = ACTION_DELAY_MS * 0.14;
 const DAMAGE_BLINK_ALPHA = 0.4;
-const DAMAGE_BLINK_DURATION_MS = 90;
+const DAMAGE_BLINK_DURATION_MS = ACTION_DELAY_MS * 0.045;
 const DAMAGE_BLINK_REPEAT = 1;
+const ACTION_CAST_SPENT_ALPHA = 0.25;
+const ACTION_CAST_ICON_SPACING = 22;
+const REACTION_CAST_SPENT_ALPHA = 0.25;
+const REACTION_CAST_ICON_SPACING = 22;
+
+
 const INFO_PANEL_PADDING = 24;
 const INFO_COLUMN_GAP = 28;
 const INFO_TOOLTIP_HEIGHT = 82;
@@ -478,18 +495,189 @@ function renderCharacterPanel(unit, x, y, width, height) {
   });
 }
 
-function showFloatingEffect(unit, text) {
-  const popup = sceneRef.add.text(unit.rect.x, unit.rect.y - UNIT_HEIGHT / 2 - 22, text, {
-    fontFamily: 'Arial',
+function showReactionCastEffect(effect) {
+  const { unit, reaction, beforeRp, afterRp, maxRp, beforeLp, afterLp, maxLp } = effect;
+  const nodes = [];
+  const y = unit.rect.y - UNIT_HEIGHT / 2 - 48;
+  const icons = [];
+
+  const labelNode = sceneRef.add.text(
+    unit.rect.x,
+    y,
+    `${formatReactionCost(reaction)} ${reaction.name}`,
+    {
+      fontFamily: 'monospace',
+      fontSize: `${FLOATING_EFFECT_FONT_SIZE}px`,
+      color: COLORS.text
+    }
+  ).setOrigin(0.5);
+  nodes.push({ node: labelNode, entry: null });
+
+  for (let index = 0; index < maxRp; index += 1) {
+    icons.push({
+      key: 'rp',
+      icon: RESOURCE_ICONS.rp,
+      before: index < beforeRp,
+      after: index < afterRp
+    });
+  }
+
+  for (let index = 0; index < maxLp; index += 1) {
+    icons.push({
+      key: 'lp',
+      icon: RESOURCE_ICONS.lp,
+      before: index < beforeLp,
+      after: index < afterLp
+    });
+  }
+
+  const totalWidth = Math.max(icons.length - 1, 0) * REACTION_CAST_ICON_SPACING;
+  const startX = unit.rect.x - totalWidth / 2;
+
+  sceneRef.time.delayedCall(REACTION_CAST_RESOURCE_DELAY_MS - REACTION_CAST_LABEL_DELAY_MS, () => {
+    labelNode.destroy();
+    nodes.length = 0;
+    icons.forEach((entry, index) => {
+      const iconNode = sceneRef.add.text(
+        startX + index * REACTION_CAST_ICON_SPACING,
+        y,
+        entry.icon,
+        {
+          fontFamily: 'Arial',
+          fontSize: `${FLOATING_EFFECT_FONT_SIZE}px`,
+          color: COLORS.text
+        }
+      ).setOrigin(0.5);
+
+      if (!entry.before) {
+        iconNode.setAlpha(REACTION_CAST_SPENT_ALPHA);
+      }
+
+      nodes.push({ node: iconNode, entry });
+    });
+  });
+
+  sceneRef.time.delayedCall(REACTION_CAST_COMMIT_DELAY_MS - REACTION_CAST_LABEL_DELAY_MS, () => {
+    nodes.forEach(({ node, entry }) => {
+      if (!entry.after) {
+        node.setAlpha(REACTION_CAST_SPENT_ALPHA);
+      }
+    });
+  });
+
+  sceneRef.time.delayedCall(RESOURCE_EFFECT_FADE_DELAY_MS, () => {
+    sceneRef.tweens.add({
+      targets: nodes.map((item) => item.node),
+      alpha: 0,
+      duration: FLOATING_EFFECT_DURATION_MS,
+      onComplete: () => {
+        nodes.forEach((item) => item.node.destroy());
+      }
+    });
+  });
+}
+
+function showActionCastEffect(effect) {
+  const { unit, action, max, before, after } = effect;
+  const nodes = [];
+  const y = unit.rect.y - UNIT_HEIGHT / 2 - 48;
+  const labelNode = sceneRef.add.text(unit.rect.x, y, `${RESOURCE_ICONS.ap} ${action.name}`, {
+    fontFamily: 'monospace',
     fontSize: `${FLOATING_EFFECT_FONT_SIZE}px`,
     color: COLORS.text
   }).setOrigin(0.5);
 
-  sceneRef.tweens.add({
-    targets: popup,
-    alpha: 0,
-    duration: FLOATING_EFFECT_DURATION_MS,
-    onComplete: () => popup.destroy()
+  nodes.push(labelNode);
+
+  const totalWidth = Math.max(max - 1, 0) * ACTION_CAST_ICON_SPACING;
+  const startX = unit.rect.x - totalWidth / 2;
+
+  sceneRef.time.delayedCall(ACTION_CAST_RESOURCE_DELAY_MS - ACTION_CAST_LABEL_DELAY_MS, () => {
+    labelNode.destroy();
+    nodes.length = 0;
+
+    for (let index = 0; index < max; index += 1) {
+      const iconNode = sceneRef.add.text(
+        startX + index * ACTION_CAST_ICON_SPACING,
+        y,
+        RESOURCE_ICONS.ap,
+        {
+          fontFamily: 'Arial',
+          fontSize: `${FLOATING_EFFECT_FONT_SIZE}px`,
+          color: COLORS.text
+        }
+      ).setOrigin(0.5);
+
+      if (index >= before) {
+        iconNode.setAlpha(ACTION_CAST_SPENT_ALPHA);
+      }
+
+      nodes.push(iconNode);
+    }
+  });
+
+  sceneRef.time.delayedCall(ACTION_CAST_COMMIT_DELAY_MS - ACTION_CAST_LABEL_DELAY_MS, () => {
+    nodes.forEach((node, index) => {
+      if (index >= after) {
+        node.setAlpha(ACTION_CAST_SPENT_ALPHA);
+      }
+    });
+  });
+
+  sceneRef.time.delayedCall(RESOURCE_EFFECT_FADE_DELAY_MS, () => {
+    sceneRef.tweens.add({
+      targets: nodes,
+      alpha: 0,
+      duration: FLOATING_EFFECT_DURATION_MS,
+      onComplete: () => {
+        nodes.forEach((node) => node.destroy());
+      }
+    });
+  });
+}
+
+function showResourceChangeEffect(effect) {
+  const { unit, resourceKey, before, after, max } = effect;
+  const nodes = [];
+  const y = unit.rect.y - UNIT_HEIGHT / 2 - 48;
+  const icon = RESOURCE_ICONS[resourceKey];
+  const totalWidth = Math.max(max - 1, 0) * ACTION_CAST_ICON_SPACING;
+  const startX = unit.rect.x - totalWidth / 2;
+
+  for (let index = 0; index < max; index += 1) {
+    const iconNode = sceneRef.add.text(
+      startX + index * ACTION_CAST_ICON_SPACING,
+      y,
+      icon,
+      {
+        fontFamily: 'Arial',
+        fontSize: `${FLOATING_EFFECT_FONT_SIZE}px`,
+        color: COLORS.text
+      }
+    ).setOrigin(0.5);
+
+    if (index >= before) {
+      iconNode.setAlpha(ACTION_CAST_SPENT_ALPHA);
+    }
+
+    nodes.push(iconNode);
+  }
+
+  sceneRef.time.delayedCall(RESOURCE_EFFECT_COMMIT_DELAY_MS, () => {
+    nodes.forEach((node, index) => {
+      node.setAlpha(index < after ? 1 : ACTION_CAST_SPENT_ALPHA);
+    });
+  });
+
+  sceneRef.time.delayedCall(RESOURCE_EFFECT_FADE_DELAY_MS, () => {
+    sceneRef.tweens.add({
+      targets: nodes,
+      alpha: 0,
+      duration: FLOATING_EFFECT_DURATION_MS,
+      onComplete: () => {
+        nodes.forEach((node) => node.destroy());
+      }
+    });
   });
 }
 
@@ -500,22 +688,42 @@ function playAnimationEffect(animationEffect) {
     playParryAnimation(animationEffect.unit);
   } else if (animationEffect.type === 'damage') {
     playDamageBlink(animationEffect.unit);
+  } else if (animationEffect.type === 'lungeOut') {
+    playAttackLungeOut(animationEffect.unit, animationEffect.target);
+  } else if (animationEffect.type === 'lungeReturn') {
+    playAttackReturn(animationEffect.unit);
   }
 }
 
-function playAttackLunge(attacker, defender) {
+function playAttackLungeOut(attacker, defender) {
   const direction = defender.rect.x > attacker.rect.x ? 1 : -1;
-  const originalRectX = attacker.rect.x;
-  const originalLabelX = attacker.label.x;
+  attacker.homeRectX = attacker.rect.x;
+  attacker.homeLabelX = attacker.label.x;
 
   sceneRef.tweens.add({
     targets: [attacker.rect, attacker.label],
     x: `+=${ATTACK_LUNGE_DISTANCE * direction}`,
     duration: ATTACK_LUNGE_DURATION_MS,
-    yoyo: true,
+    ease: 'Quad.easeOut'
+  });
+}
+
+function playAttackReturn(attacker) {
+  sceneRef.tweens.add({
+    targets: attacker.rect,
+    x: attacker.homeRectX,
+    duration: ATTACK_LUNGE_DURATION_MS,
+    ease: 'Quad.easeInOut'
+  });
+
+  sceneRef.tweens.add({
+    targets: attacker.label,
+    x: attacker.homeLabelX,
+    duration: ATTACK_LUNGE_DURATION_MS,
+    ease: 'Quad.easeInOut',
     onComplete: () => {
-      attacker.rect.x = originalRectX;
-      attacker.label.x = originalLabelX;
+      attacker.rect.x = attacker.homeRectX;
+      attacker.label.x = attacker.homeLabelX;
     }
   });
 }
@@ -527,6 +735,7 @@ function playBlockAnimation(unit) {
     angle: BLOCK_TILT_ANGLE,
     duration: BLOCK_TILT_DURATION_MS,
     yoyo: true,
+    ease: 'Quad.easeOut',
     onComplete: () => {
       unit.rect.angle = 0;
     }
@@ -641,15 +850,26 @@ function takeNextAction() {
   const defender = attacker.enemy;
   const tag = `[R${round}T${turn}A${action}]`;
   const selectedAction = chooseAction(attacker, defender);
-  playAttackLunge(attacker, defender);
   const effect = resolveAction(attacker, defender, selectedAction);
 
   const actionCostText = RESOURCE_ICONS.ap.repeat(selectedAction.apCost);
   appendLog(`${tag} ${attacker.name} uses ${actionCostText}${selectedAction.name}.`, effect.logText);
 
-  effect.floatingEffects.forEach((floatingEffect) => {
-    sceneRef.time.delayedCall(floatingEffect.delayMs || 0, () => {
-      showFloatingEffect(floatingEffect.unit, floatingEffect.text);
+  effect.visualEffects.forEach((visualEffect) => {
+    sceneRef.time.delayedCall(visualEffect.delayMs || 0, () => {
+      if (visualEffect.type === 'actionCast') {
+        showActionCastEffect(visualEffect);
+        return;
+      }
+
+      if (visualEffect.type === 'reactionCast') {
+        showReactionCastEffect(visualEffect);
+        return;
+      }
+
+      if (visualEffect.type === 'resourceChange') {
+        showResourceChangeEffect(visualEffect);
+      }
     });
   });
   effect.animationEffects.forEach((animationEffect) => {
@@ -674,17 +894,37 @@ function takeNextAction() {
 }
 
 function resolveAction(attacker, defender, selectedAction) {
+  const attackerApBefore = attacker.ap;
   attacker.ap = Math.max(0, attacker.ap - selectedAction.apCost);
+  const attackerApAfter = attacker.ap;
 
   const effects = [];
-  const floatingEffects = [
+  const visualEffects = [
     {
+      type: 'actionCast',
       unit: attacker,
-      text: formatResourcePopup(selectedAction.apCost, 'ap'),
-      delayMs: 0
+      action: selectedAction,
+      costResourceKey: 'ap',
+      costAmount: selectedAction.apCost,
+      max: attacker.maxAp,
+      before: attackerApBefore,
+      after: attackerApAfter,
+      delayMs: ACTION_CAST_LABEL_DELAY_MS
     }
   ];
-  const animationEffects = [];
+  const animationEffects = [
+    {
+      type: 'lungeOut',
+      unit: attacker,
+      target: defender,
+      delayMs: ATTACK_LUNGE_START_DELAY_MS
+    },
+    {
+      type: 'lungeReturn',
+      unit: attacker,
+      delayMs: ATTACK_RETURN_DELAY_MS
+    }
+  ];
 
   const damageKey = defender.sp > 0 ? 'sp' : 'hp';
   const damageAmount = damageKey === 'sp' ? selectedAction.spDamage : selectedAction.hpDamage;
@@ -693,8 +933,14 @@ function resolveAction(attacker, defender, selectedAction) {
   const reaction = chooseReaction(defender, attacker, selectedAction);
 
   if (reaction) {
+    const defenderRpBefore = defender.rp;
+    const defenderLpBefore = defender.lp;
+
     defender.rp = Math.max(0, defender.rp - reaction.rpCost);
     defender.lp = Math.max(0, defender.lp - reaction.lpCost);
+
+    const defenderRpAfter = defender.rp;
+    const defenderLpAfter = defender.lp;
 
     const blockedAmount = Math.min(reaction.blockAmount, remainingDamage);
     remainingDamage = Math.max(0, remainingDamage - blockedAmount);
@@ -703,13 +949,20 @@ function resolveAction(attacker, defender, selectedAction) {
     animationEffects.push({
       type: reaction.key,
       unit: defender,
-      delayMs: FLOATING_DAMAGE_DELAY_MS
+      delayMs: REACTION_CAST_LABEL_DELAY_MS
     });
 
-    floatingEffects.push({
+    visualEffects.push({
+      type: 'reactionCast',
       unit: defender,
-      text: `-${formatReactionCost(reaction)}`,
-      delayMs: FLOATING_DAMAGE_DELAY_MS
+      reaction,
+      beforeRp: defenderRpBefore,
+      afterRp: defenderRpAfter,
+      maxRp: defender.maxRp,
+      beforeLp: defenderLpBefore,
+      afterLp: defenderLpAfter,
+      maxLp: defender.maxLp,
+      delayMs: REACTION_CAST_LABEL_DELAY_MS
     });
 
     if (remainingDamage <= 0) {
@@ -720,50 +973,64 @@ function resolveAction(attacker, defender, selectedAction) {
 
         if (lpGained > 0) {
           effects.push(`${defender.name} gains${RESOURCE_ICONS.lp.repeat(lpGained)}.`);
-          floatingEffects.push({
+          visualEffects.push({
+            type: 'resourceChange',
             unit: defender,
-            text: `+${RESOURCE_ICONS.lp.repeat(lpGained)}`,
-            delayMs: FLOATING_DAMAGE_DELAY_MS * 2
+            resourceKey: 'lp',
+            before: oldLp,
+            after: defender.lp,
+            max: defender.maxLp,
+            delayMs: DEFENSE_RESULT_DELAY_MS
           });
         }
       }
 
       if (reaction.counterSpDamage > 0) {
         const counterDamage = Math.min(reaction.counterSpDamage, attacker.sp);
+        const attackerSpBefore = attacker.sp;
         attacker.sp = Math.max(0, attacker.sp - counterDamage);
 
         if (counterDamage > 0) {
           effects.push(`${attacker.name} -${counterDamage}${RESOURCE_ICONS.sp}.`);
-          floatingEffects.push({
+          visualEffects.push({
+            type: 'resourceChange',
             unit: attacker,
-            text: formatResourcePopup(counterDamage, 'sp'),
-            delayMs: FLOATING_DAMAGE_DELAY_MS * 2
+            resourceKey: 'sp',
+            before: attackerSpBefore,
+            after: attacker.sp,
+            max: attacker.maxSp,
+            delayMs: COUNTER_RESULT_DELAY_MS
           });
           animationEffects.push({
             type: 'damage',
             unit: attacker,
-            delayMs: FLOATING_DAMAGE_DELAY_MS * 2
+            delayMs: COUNTER_RESULT_DELAY_MS
           });
         }
       }
 
       if (reaction.rpDamage > 0) {
         const rpDamage = Math.min(reaction.rpDamage, attacker.rp);
+        const attackerRpBefore = attacker.rp;
         attacker.rp = Math.max(0, attacker.rp - rpDamage);
 
         if (rpDamage > 0) {
           effects.push(`${attacker.name} -${rpDamage}${RESOURCE_ICONS.rp}.`);
-          floatingEffects.push({
+          visualEffects.push({
+            type: 'resourceChange',
             unit: attacker,
-            text: formatResourcePopup(rpDamage, 'rp'),
-            delayMs: FLOATING_DAMAGE_DELAY_MS * 3
+            resourceKey: 'rp',
+            before: attackerRpBefore,
+            after: attacker.rp,
+            max: attacker.maxRp,
+            delayMs: COUNTER_RESULT_DELAY_MS + RESOURCE_EFFECT_COMMIT_DELAY_MS
           });
         }
       }
 
       return {
         logText: effects.join(' '),
-        floatingEffects,
+        visualEffects,
         animationEffects
       };
     }
@@ -771,36 +1038,46 @@ function resolveAction(attacker, defender, selectedAction) {
 
   if (damageKey === 'sp') {
     const spDamage = Math.min(remainingDamage, defender.sp);
+    const defenderSpBefore = defender.sp;
     defender.sp = Math.max(0, defender.sp - spDamage);
 
     effects.push(`${defender.name} -${spDamage}${RESOURCE_ICONS.sp}.`);
-    floatingEffects.push({
+    visualEffects.push({
+      type: 'resourceChange',
       unit: defender,
-      text: formatResourcePopup(spDamage, 'sp'),
-      delayMs: reaction ? FLOATING_DAMAGE_DELAY_MS * 2 : FLOATING_DAMAGE_DELAY_MS
+      resourceKey: 'sp',
+      before: defenderSpBefore,
+      after: defender.sp,
+      max: defender.maxSp,
+      delayMs: DEFENSE_RESULT_DELAY_MS
     });
     if (spDamage > 0) {
       animationEffects.push({
         type: 'damage',
         unit: defender,
-        delayMs: reaction ? FLOATING_DAMAGE_DELAY_MS * 2 : FLOATING_DAMAGE_DELAY_MS
+        delayMs: DEFENSE_RESULT_DELAY_MS
       });
     }
   } else {
     const hpDamage = Math.min(remainingDamage, defender.hp);
+    const defenderHpBefore = defender.hp;
     defender.hp = Math.max(0, defender.hp - hpDamage);
 
     effects.push(`${defender.name} -${hpDamage}${RESOURCE_ICONS.hp}.`);
-    floatingEffects.push({
+    visualEffects.push({
+      type: 'resourceChange',
       unit: defender,
-      text: formatResourcePopup(hpDamage, 'hp'),
-      delayMs: reaction ? FLOATING_DAMAGE_DELAY_MS * 2 : FLOATING_DAMAGE_DELAY_MS
+      resourceKey: 'hp',
+      before: defenderHpBefore,
+      after: defender.hp,
+      max: defender.maxHp,
+      delayMs: DEFENSE_RESULT_DELAY_MS
     });
     if (hpDamage > 0) {
       animationEffects.push({
         type: 'damage',
         unit: defender,
-        delayMs: reaction ? FLOATING_DAMAGE_DELAY_MS * 2 : FLOATING_DAMAGE_DELAY_MS
+        delayMs: DEFENSE_RESULT_DELAY_MS
       });
     }
 
@@ -811,7 +1088,7 @@ function resolveAction(attacker, defender, selectedAction) {
 
   return {
     logText: effects.join(' '),
-    floatingEffects,
+    visualEffects,
     animationEffects
   };
 }
@@ -829,10 +1106,6 @@ function formatReactionCost(reaction) {
 
 function formatResourceGain(unitName, amount, resourceKey) {
   return `${unitName} +${RESOURCE_ICONS[resourceKey].repeat(amount)}`;
-}
-
-function formatResourcePopup(amount, resourceKey) {
-  return `-${RESOURCE_ICONS[resourceKey].repeat(amount)}`;
 }
 
 function appendLog(actionText, effectText) {
