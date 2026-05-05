@@ -1,25 +1,34 @@
-const GAME_WIDTH = 3840;
-const GAME_HEIGHT = 2160;
+const GAME_WIDTH = 1920;
+const GAME_HEIGHT = 1080;
+
+function cssHexToNumber(hex) {
+  return Number(hex.replace('#', '0x'));
+}
 
 const COLORS = {
-  background: 0x050506,
-  panel: 0x111116,
-  panelBorder: 0x2e2e38,
-  sky: 0x91c9ee,
-  grass: 0x358f3d,
-  infoPanel: 0x16161d,
+  background: '#050506',
+  panel: '#111116',
+  panelBorder: '#2e2e38',
+  sky: '#0e3b58',
+  grass: '#358f3d',
+  infoPanel: '#16161d',
   text: '#f5f5f5',
   mutedText: '#b9bbc8',
-  redKnight: 0xd84343,
-  blueKnight: 0x3f6fd9,
-  spent: 0x555862,
-  sp: 0x2e8fe8,
-  hp: 0xe04444,
-  ap: 0xf06a9a,
-  pp: 0x58a6ff,
-  lp: 0xf2cf45,
-  emptyLp: 0x5f5524
+  redKnight: '#d84343',
+  blueKnight: '#3f6fd9',
+  spent: '#555862',
+  sp: '#2e8fe8',
+  hp: '#e04444',
+  ap: '#f06a9a',
+  pp: '#58a6ff',
+  lp: '#f2cf45',
+  emptyLp: '#5f5524',
+  unitBorder: '#161616'
 };
+
+const PHASER_COLORS = Object.fromEntries(
+  Object.entries(COLORS).map(([key, value]) => [key, cssHexToNumber(value)])
+);
 
 const RESOURCE_ICONS = {
   hp: '❤️',
@@ -39,6 +48,33 @@ const ACTIONS = {
   }
 };
 
+const CHARACTER_CLASSES = {
+  knight: {
+    hp: 1,
+    maxHp: 1,
+    sp: 3,
+    maxSp: 3,
+    ap: 2,
+    maxAp: 2,
+    pp: 1,
+    maxPp: 1,
+    lp: 0,
+    maxLp: 1
+  },
+  squire: {
+    hp: 1,
+    maxHp: 1,
+    sp: 2,
+    maxSp: 2,
+    ap: 1,
+    maxAp: 1,
+    pp: 1,
+    maxPp: 1,
+    lp: 0,
+    maxLp: 1
+  }
+};
+
 const LEFT_PANEL_WIDTH_RATIO = 0.29;
 const CENTER_WIDTH_RATIO = 0.42;
 const RIGHT_PANEL_WIDTH_RATIO = 0.29;
@@ -50,48 +86,53 @@ const UNIT_LEFT_X_RATIO = 0.26;
 const UNIT_RIGHT_X_RATIO = 0.74;
 const UNIT_BASE_Y_RATIO = 0.85;
 
-const SP_BLOCK_SIZE = 16;
-const HP_BLOCK_SIZE = 16;
-const AP_BLOCK_SIZE = 14;
-const PP_BLOCK_SIZE = 14;
-const LP_BLOCK_SIZE = 14;
-const RESOURCE_BLOCK_SPACING = 5;
+const SP_BLOCK_SIZE = 12;
+const HP_BLOCK_SIZE = 12;
+const AP_BLOCK_SIZE = 8;
+const PP_BLOCK_SIZE = 8;
+const LP_BLOCK_SIZE = 8;
+const RESOURCE_BLOCK_SPACING = 2;
 
 const ACTION_DELAY_MS = 3000;
-const FONT_SIZE_HEADER = 48;
-const FONT_SIZE_BODY = 34;
-const FONT_SIZE_SMALL = 24;
-const LOG_MAX_LINES = 16;
-const LOG_LINE_HEIGHT = 38;
+const FONT_SIZE_HEADER = 24;
+const FONT_SIZE_BODY = 18;
+const FONT_SIZE_SMALL = 14;
+const LOG_MAX_LINES = 8;
+const LOG_LINE_HEIGHT = 20;
 
-const INFO_TEXT = [
-  'Key Stats:',
-  `HP: ${RESOURCE_ICONS.hp}`,
-  `SP: ${RESOURCE_ICONS.sp.repeat(3)}`,
-  `AP: ${RESOURCE_ICONS.ap.repeat(2)}`,
-  `PP: ${RESOURCE_ICONS.pp}`,
-  `LP: starts at 0 during combat and caps at 1 ${RESOURCE_ICONS.lp}`,
-  '',
-  'Skills:',
-  'A1: Slash',
-  'Cost: 1 AP',
-  'Damage: 2 SP or 1 HP',
-  'A2:',
-  'P1:',
-  'P2:',
-  '',
-  'Gambits:',
-  'Slash | enemy has 2+ SP',
-  'Slash',
-  '',
-  'Equipment:',
-  'RH: Broadsword (Grants Thrust)',
-  'LH: Buckler (Grants Parry)',
-  '',
-  'Hover Tooltip:',
-  'If you hover over anything above, it will explain it here.',
-  'We do not need to build this yet.'
-];
+function buildInfoText(characterClass = 'knight') {
+  const slash = ACTIONS.slash;
+  const stats = CHARACTER_CLASSES[characterClass];
+
+  return [
+    /*'Key Stats:',
+    `HP: ${RESOURCE_ICONS.hp.repeat(stats.maxHp)}`,
+    `SP: ${RESOURCE_ICONS.sp.repeat(stats.maxSp)}`,
+    `AP: ${RESOURCE_ICONS.ap.repeat(stats.maxAp)}`,
+    `PP: ${RESOURCE_ICONS.pp.repeat(stats.maxPp)}`,
+    `LP: ${RESOURCE_ICONS.lp.repeat(stats.maxLp)}`,
+    '',*/
+    'Skills:',
+    `A1: ${slash.name} | Cost: ${RESOURCE_ICONS.ap.repeat(slash.apCost)} | Damage: ${RESOURCE_ICONS.sp.repeat(slash.spDamage)} or ${RESOURCE_ICONS.hp.repeat(slash.hpDamage)}`,
+    'A2:',
+    'P1:',
+    'P2:',
+    '',
+    'Gambits:',
+    `${slash.name} | enemy has ${RESOURCE_ICONS.sp.repeat(2)}+`,
+    slash.name,
+    '',
+    'Equipment:',
+    'RH: Broadsword (Grants Thrust)',
+    'LH: Buckler (Grants Parry)',
+    '',
+    'Hover Tooltip:',
+    'If you hover over anything above, it will explain it here.',
+    'We do not need to build this yet.'
+  ];
+}
+const INFO_TEXT = buildInfoText('knight');
+
 
 let sceneRef;
 let layout;
@@ -108,7 +149,7 @@ const config = {
   type: Phaser.AUTO,
   width: GAME_WIDTH,
   height: GAME_HEIGHT,
-  backgroundColor: COLORS.background,
+  backgroundColor: PHASER_COLORS.background,
   render: {
     antialias: false,
     pixelArt: true,
@@ -153,33 +194,33 @@ function createLayout() {
   drawPanel(layout.left, 'Menu');
   sceneRef.add.text(layout.left.x + 28, 80, 'Ignore for now', bodyTextStyle());
 
-  sceneRef.add.rectangle(layout.battle.x, layout.battle.y, layout.battle.w, layout.battle.h, COLORS.sky)
+  sceneRef.add.rectangle(layout.battle.x, layout.battle.y, layout.battle.w, layout.battle.h, PHASER_COLORS.sky)
     .setOrigin(0);
-  sceneRef.add.rectangle(layout.grass.x, layout.grass.y, layout.grass.w, layout.grass.h, COLORS.grass)
+  sceneRef.add.rectangle(layout.grass.x, layout.grass.y, layout.grass.w, layout.grass.h, PHASER_COLORS.grass)
     .setOrigin(0);
   sceneRef.add.rectangle(layout.battle.x, layout.battle.y, layout.battle.w, layout.battle.h)
     .setOrigin(0)
-    .setStrokeStyle(2, COLORS.panelBorder);
+    .setStrokeStyle(2, PHASER_COLORS.panelBorder);
 
-  sceneRef.add.rectangle(layout.info.x, layout.info.y, layout.info.w, layout.info.h, COLORS.infoPanel)
+  sceneRef.add.rectangle(layout.info.x, layout.info.y, layout.info.w, layout.info.h, PHASER_COLORS.infoPanel)
     .setOrigin(0)
-    .setStrokeStyle(2, COLORS.panelBorder);
+    .setStrokeStyle(2, PHASER_COLORS.panelBorder);
   sceneRef.add.text(layout.info.x + 24, layout.info.y + 22, INFO_TEXT, smallTextStyle());
 
   drawPanel(layout.right, 'Combat Log');
 }
 
 function drawPanel(rect, title) {
-  sceneRef.add.rectangle(rect.x, rect.y, rect.w, rect.h, COLORS.panel)
+  sceneRef.add.rectangle(rect.x, rect.y, rect.w, rect.h, PHASER_COLORS.panel)
     .setOrigin(0)
-    .setStrokeStyle(2, COLORS.panelBorder);
+    .setStrokeStyle(2, PHASER_COLORS.panelBorder);
   sceneRef.add.text(rect.x + 28, 26, title, headerTextStyle());
 }
 
 function createUnits() {
   units = [
-    createKnight('K1', COLORS.redKnight, layout.battle.x + layout.battle.w * UNIT_LEFT_X_RATIO),
-    createKnight('K2', COLORS.blueKnight, layout.battle.x + layout.battle.w * UNIT_RIGHT_X_RATIO)
+    createCharacter('K1', 'knight', PHASER_COLORS.redKnight, layout.battle.x + layout.battle.w * UNIT_LEFT_X_RATIO),
+    createCharacter('K2', 'knight', PHASER_COLORS.blueKnight, layout.battle.x + layout.battle.w * UNIT_RIGHT_X_RATIO)
   ];
 
   units[0].enemy = units[1];
@@ -187,10 +228,12 @@ function createUnits() {
   units.forEach(drawUnitResources);
 }
 
-function createKnight(name, color, x) {
+function createCharacter(name, characterClass, color, x) {
+  const classStats = CHARACTER_CLASSES[characterClass];
+
   const baseY = layout.battle.y + layout.battle.h * UNIT_BASE_Y_RATIO;
   const rect = sceneRef.add.rectangle(x, baseY - UNIT_HEIGHT / 2, UNIT_WIDTH, UNIT_HEIGHT, color)
-    .setStrokeStyle(3, 0x161616);
+    .setStrokeStyle(3, PHASER_COLORS.unitBorder);
   const label = sceneRef.add.text(x, baseY - UNIT_HEIGHT / 2, name, {
     fontFamily: 'monospace',
     fontSize: '20px',
@@ -199,17 +242,18 @@ function createKnight(name, color, x) {
 
   return {
     name,
+    class: characterClass,
     color,
-    hp: 1,
-    maxHp: 1,
-    sp: 3,
-    maxSp: 3,
-    ap: 2,
-    maxAp: 2,
-    pp: 1,
-    maxPp: 1,
-    lp: 0,
-    maxLp: 1,
+    hp: classStats.hp,
+    maxHp: classStats.maxHp,
+    sp: classStats.sp,
+    maxSp: classStats.maxSp,
+    ap: classStats.ap,
+    maxAp: classStats.maxAp,
+    pp: classStats.pp,
+    maxPp: classStats.maxPp,
+    lp: classStats.lp,
+    maxLp: classStats.maxLp,
     rect,
     label,
     resourceNodes: []
@@ -221,8 +265,9 @@ function drawUnitResources(unit) {
   const topY = unit.rect.y - UNIT_HEIGHT / 2 - 54;
   const secondY = topY + 25;
 
-  const iconSize = '14px';
-  const iconSpacing = 18;
+  const spIconSize = `${SP_BLOCK_SIZE}px`;
+  const hpIconSize = `${HP_BLOCK_SIZE}px`;
+  const iconSpacing = Math.max(SP_BLOCK_SIZE, HP_BLOCK_SIZE) + RESOURCE_BLOCK_SPACING;
   const totalIcons = unit.maxSp + unit.maxHp;
   const startX = x - ((totalIcons - 1) * iconSpacing) / 2;
 
@@ -237,7 +282,7 @@ function drawUnitResources(unit) {
       RESOURCE_ICONS.sp,
       {
         fontFamily: 'Arial',
-        fontSize: iconSize
+        fontSize: spIconSize
       }
     ).setOrigin(0.5);
 
@@ -251,16 +296,15 @@ function drawUnitResources(unit) {
       RESOURCE_ICONS.hp,
       {
         fontFamily: 'Arial',
-        fontSize: iconSize
+        fontSize: hpIconSize
       }
     ).setOrigin(0.5);
 
     unit.hpIcons.push(heartIcon);
   }
 
-  addResourceRow(unit, 'ap', unit.maxAp, AP_BLOCK_SIZE, COLORS.ap, x - 38, secondY);
-  addResourceRow(unit, 'pp', unit.maxPp, PP_BLOCK_SIZE, COLORS.pp, x + 4, secondY);
-  addResourceRow(unit, 'lp', unit.maxLp, LP_BLOCK_SIZE, COLORS.lp, x + 26, secondY);
+  addResourceRow(unit, 'ap', unit.maxAp, AP_BLOCK_SIZE, PHASER_COLORS.ap, x - 38, secondY);
+  addResourceRow(unit, 'pp', unit.maxPp, PP_BLOCK_SIZE, PHASER_COLORS.pp, x + 4, secondY);
 
   refreshUnitResources(unit);
 }
@@ -283,7 +327,7 @@ function refreshUnitResources(unit) {
   unit.resourceNodes.forEach((resource) => {
     const value = unit[resource.key];
     const filled = resource.index < value;
-    const emptyColor = resource.key === 'lp' ? COLORS.emptyLp : COLORS.spent;
+    const emptyColor = resource.key === 'lp' ? PHASER_COLORS.emptyLp : PHASER_COLORS.spent;
     resource.node.setFillStyle(filled ? resource.color : emptyColor);
   });
 
