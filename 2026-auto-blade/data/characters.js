@@ -9,7 +9,9 @@ export const CHARACTER_CLASSES = {
     rp: 1,
     maxRp: 1,
     lp: 0,
-    maxLp: 1
+    maxLp: 1,
+    ip: 1,
+    maxIp: 1
   },
   squire: {
     hp: 1,
@@ -21,6 +23,8 @@ export const CHARACTER_CLASSES = {
     rp: 1,
     maxRp: 1,
     lp: 0,
-    maxLp: 1
+    maxLp: 1,
+    ip: 1,
+    maxIp: 1
   }
 };

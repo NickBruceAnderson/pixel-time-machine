@@ -1,6 +1,3 @@
-import { ACTIONS, REACTIONS } from './data/skills.js';
-import { CHARACTER_CLASSES } from './data/characters.js';
-
 const GAME_WIDTH = 1920;
 const GAME_HEIGHT = 1080;
 
@@ -38,7 +35,81 @@ const RESOURCE_ICONS = {
   sp: '🛡️',
   ap: '🔶',
   rp: '🔷',
-  lp: '⭐'
+  lp: '⭐',
+  ip: '🥾'
+};
+
+const ACTIONS = {
+  slash: {
+    key: 'slash',
+    name: 'Slash',
+    attackType: 'melee',
+    apCost: 1,
+    spDamage: 2,
+    hpDamage: 1
+  },
+  thrust: {
+    key: 'thrust',
+    name: 'Thrust',
+    attackType: 'melee',
+    apCost: 1,
+    spDamage: 1,
+    hpDamage: 2
+  }
+};
+
+const REACTIONS = {
+  block: {
+    key: 'block',
+    name: 'Block',
+    rpCost: 1,
+    lpCost: 0,
+    blockAmount: 3,
+    lpGainOnFullBlock: 1,
+    counterSpDamage: 0,
+    rpDamage: 0
+  },
+  parry: {
+    key: 'parry',
+    name: 'Parry',
+    rpCost: 1,
+    lpCost: 1,
+    blockAmount: 8,
+    lpGainOnFullBlock: 0,
+    counterSpDamage: 3,
+    rpDamage: 1
+  }
+};
+
+const CHARACTER_CLASSES = {
+  knight: {
+    hp: 1,
+    maxHp: 1,
+    sp: 3,
+    maxSp: 3,
+    ap: 2,
+    maxAp: 2,
+    rp: 1,
+    maxRp: 1,
+    lp: 0,
+    maxLp: 1,
+    ip: 1,
+    maxIp: 1
+  },
+  squire: {
+    hp: 1,
+    maxHp: 1,
+    sp: 2,
+    maxSp: 2,
+    ap: 1,
+    maxAp: 1,
+    rp: 1,
+    maxRp: 1,
+    lp: 0,
+    maxLp: 1,
+    ip: 1,
+    maxIp: 1
+  }
 };
 
 const LEFT_PANEL_WIDTH_RATIO = 0.29;
@@ -144,10 +215,11 @@ const COUNTER_RESOURCE_COMMIT_DURATION_MS = ms(250);
 const COUNTER_RESOURCE_FADE_DELAY_MS = ms(1000);
 const SECONDARY_RESOURCE_COMMIT_STAGGER_MS = ms(250);
 
+
 const RESOURCE_EFFECT_PREVIEW_AFTER_FADE_MS = ms(150);
 
 const RESOURCE_EFFECT_COMMIT_DELAY_MS =
-  RESOURCE_ROW_FADE_IN_DURATION_MS + RESOURCE_EFFECT_PREVIEW_AFTER_FADE_MS;
+  RESOURCE_ROW_FADE_IN_DURATION_MS + RESOURCE_EFFECT_PREVIEW_AFTER_FADE_MS;  RESOURCE_ROW_FADE_IN_DURATION_MS + RESOURCE_EFFECT_PREVIEW_AFTER_FADE_MS;
 const RESOURCE_EFFECT_FADE_DELAY_MS = FINAL_STATS_DURATION_MS;
 
 const ACTION_CAST_EFFECT_FADE_DELAY_MS =
@@ -227,6 +299,10 @@ function buildEquipmentRows() {
     {
       label: 'LH: Buckler',
       detail: '(Grants Parry)'
+    },
+    {
+      label: 'AR: Plate Mail',
+      detail: '(+2🛡️ -1🥾)'
     }
   ];
 }
@@ -244,7 +320,7 @@ let logRows = [];
 let round = 0;
 let turn = 1;
 let action = 1;
-let nextActorIndex = 0;
+let turnQueue = [];
 let battleEnded = false;
 let actionTimer;
 let infoPanelNodes = [];
@@ -358,6 +434,8 @@ function createCharacter(name, characterClass, color, x) {
     maxRp: classStats.maxRp,
     lp: classStats.lp,
     maxLp: classStats.maxLp,
+    ip: classStats.ip,
+    maxIp: classStats.maxIp,
     rect,
     label
   };
@@ -496,6 +574,7 @@ function renderCharacterPanel(unit, x, y, width, height) {
   addResourceLine('AP', 'ap');
   addResourceLine('RP', 'rp');
   addResourceLine('LP', 'lp');
+  addResourceLine('IP', 'ip');
 
   addBlankLine();
   addPanelLine('Skills:');
@@ -508,11 +587,11 @@ function renderCharacterPanel(unit, x, y, width, height) {
     `(Cost: ${thrust.apCost}${RESOURCE_ICONS.ap} | Damage: ${thrust.spDamage}${RESOURCE_ICONS.sp} or ${thrust.hpDamage}${RESOURCE_ICONS.hp})`
   );
   addSplitLine(
-    'P1: Block',
+    'R1: Block',
     `(Cost: ${block.rpCost}${RESOURCE_ICONS.rp} | Blocks: ${block.blockAmount}${RESOURCE_ICONS.sp} or ${block.blockAmount}${RESOURCE_ICONS.hp})`
   );
   addSplitLine(
-    'P2: Parry',
+    'R2: Parry',
     `(Cost: ${parry.rpCost}${RESOURCE_ICONS.rp}${parry.lpCost}${RESOURCE_ICONS.lp} | Blocks: ${parry.blockAmount}${RESOURCE_ICONS.sp} or ${parry.blockAmount}${RESOURCE_ICONS.hp})`
   );
   addBlankLine();
@@ -878,9 +957,9 @@ function startBattle() {
 
 function startRound() {
   round += 1;
-  turn = 1;
+  turn = 0;
   action = 1;
-  nextActorIndex = 0;
+  turnQueue = [];
 
   livingUnits().forEach((unit) => {
     unit.ap = unit.maxAp;
@@ -920,6 +999,31 @@ function chooseReaction(defender, attacker, selectedAction) {
   return null;
 }
 
+function buildTurnQueue(living) {
+  const eligible = living.filter((unit) => unit.ap > 0);
+  eligible.sort((a, b) => b.ip - a.ip);
+
+  const queue = [];
+  let i = 0;
+  while (i < eligible.length) {
+    let j = i + 1;
+    while (j < eligible.length && eligible[j].ip === eligible[i].ip) {
+      j += 1;
+    }
+    const tier = eligible.slice(i, j);
+    for (let k = tier.length - 1; k > 0; k -= 1) {
+      const m = Math.floor(Math.random() * (k + 1));
+      [tier[k], tier[m]] = [tier[m], tier[k]];
+    }
+    queue.push(...tier);
+    i = j;
+  }
+
+  turnQueue = queue;
+  turn += 1;
+  action = 1;
+}
+
 function takeNextAction() {
   if (battleEnded) {
     return;
@@ -931,13 +1035,15 @@ function takeNextAction() {
     return;
   }
 
-  if (living.every((unit) => unit.ap <= 0)) {
-    startRound();
-    return;
+  if (turnQueue.length === 0) {
+    if (living.every((unit) => unit.ap <= 0)) {
+      startRound();
+      return;
+    }
+    buildTurnQueue(living);
   }
 
-  const attacker = units[nextActorIndex];
-  nextActorIndex = (nextActorIndex + 1) % units.length;
+  const attacker = turnQueue.shift();
 
   if (attacker.hp <= 0 || attacker.ap <= 0) {
     return takeNextAction();
@@ -979,6 +1085,7 @@ function takeNextAction() {
     });
   });
 
+  action += 1;
   refreshInfoPanel();
 
   if (isBattleOver()) {
@@ -997,15 +1104,6 @@ function takeNextAction() {
     sceneRef.time.delayedCall(koDelayMs, () => {
       endBattle(attacker, defender);
     });
-
-    return;
-  }
-
-  if (action >= living.length) {
-    turn += 1;
-    action = 1;
-  } else {
-    action += 1;
   }
 }
 
