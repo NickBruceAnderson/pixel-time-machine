@@ -1,5 +1,5 @@
-const GAME_WIDTH = 1280;
-const GAME_HEIGHT = 720;
+const GAME_WIDTH = 3840;
+const GAME_HEIGHT = 2160;
 
 const COLORS = {
   background: 0x050506,
@@ -21,6 +21,24 @@ const COLORS = {
   emptyLp: 0x5f5524
 };
 
+const RESOURCE_ICONS = {
+  hp: '❤️',
+  sp: '🛡️',
+  ap: '🟥',
+  pp: '🟦',
+  lp: '🟨'
+};
+
+const ACTIONS = {
+  slash: {
+    key: 'slash',
+    name: 'Slash',
+    apCost: 1,
+    spDamage: 2,
+    hpDamage: 1
+  }
+};
+
 const LEFT_PANEL_WIDTH_RATIO = 0.29;
 const CENTER_WIDTH_RATIO = 0.42;
 const RIGHT_PANEL_WIDTH_RATIO = 0.29;
@@ -40,18 +58,19 @@ const LP_BLOCK_SIZE = 14;
 const RESOURCE_BLOCK_SPACING = 5;
 
 const ACTION_DELAY_MS = 3000;
-const FONT_SIZE_HEADER = 24;
-const FONT_SIZE_BODY = 15;
-const FONT_SIZE_SMALL = 13;
+const FONT_SIZE_HEADER = 48;
+const FONT_SIZE_BODY = 34;
+const FONT_SIZE_SMALL = 24;
 const LOG_MAX_LINES = 16;
+const LOG_LINE_HEIGHT = 38;
 
 const INFO_TEXT = [
   'Key Stats:',
-  'HP: 1',
-  'SP: 3',
-  'AP: 2',
-  'PP: 1',
-  'LP: starts at 0 during combat and caps at 1',
+  `HP: ${RESOURCE_ICONS.hp}`,
+  `SP: ${RESOURCE_ICONS.sp.repeat(3)}`,
+  `AP: ${RESOURCE_ICONS.ap.repeat(2)}`,
+  `PP: ${RESOURCE_ICONS.pp}`,
+  `LP: starts at 0 during combat and caps at 1 ${RESOURCE_ICONS.lp}`,
   '',
   'Skills:',
   'A1: Slash',
@@ -90,6 +109,11 @@ const config = {
   width: GAME_WIDTH,
   height: GAME_HEIGHT,
   backgroundColor: COLORS.background,
+  render: {
+    antialias: false,
+    pixelArt: true,
+    roundPixels: true
+  },
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH
@@ -196,13 +220,48 @@ function drawUnitResources(unit) {
   const x = unit.rect.x;
   const topY = unit.rect.y - UNIT_HEIGHT / 2 - 54;
   const secondY = topY + 25;
-  unit.resourceNodes = [];
 
-  addResourceRow(unit, 'sp', unit.maxSp, SP_BLOCK_SIZE, COLORS.sp, x - 46, topY);
-  addResourceRow(unit, 'hp', unit.maxHp, HP_BLOCK_SIZE, COLORS.hp, x + 20, topY);
+  const iconSize = '14px';
+  const iconSpacing = 18;
+  const totalIcons = unit.maxSp + unit.maxHp;
+  const startX = x - ((totalIcons - 1) * iconSpacing) / 2;
+
+  unit.resourceNodes = [];
+  unit.spIcons = [];
+  unit.hpIcons = [];
+
+  for (let index = 0; index < unit.maxSp; index += 1) {
+    const shieldIcon = sceneRef.add.text(
+      startX + index * iconSpacing,
+      topY - 8,
+      RESOURCE_ICONS.sp,
+      {
+        fontFamily: 'Arial',
+        fontSize: iconSize
+      }
+    ).setOrigin(0.5);
+
+    unit.spIcons.push(shieldIcon);
+  }
+
+  for (let index = 0; index < unit.maxHp; index += 1) {
+    const heartIcon = sceneRef.add.text(
+      startX + (unit.maxSp + index) * iconSpacing,
+      topY - 8,
+      RESOURCE_ICONS.hp,
+      {
+        fontFamily: 'Arial',
+        fontSize: iconSize
+      }
+    ).setOrigin(0.5);
+
+    unit.hpIcons.push(heartIcon);
+  }
+
   addResourceRow(unit, 'ap', unit.maxAp, AP_BLOCK_SIZE, COLORS.ap, x - 38, secondY);
   addResourceRow(unit, 'pp', unit.maxPp, PP_BLOCK_SIZE, COLORS.pp, x + 4, secondY);
   addResourceRow(unit, 'lp', unit.maxLp, LP_BLOCK_SIZE, COLORS.lp, x + 26, secondY);
+
   refreshUnitResources(unit);
 }
 
@@ -227,6 +286,18 @@ function refreshUnitResources(unit) {
     const emptyColor = resource.key === 'lp' ? COLORS.emptyLp : COLORS.spent;
     resource.node.setFillStyle(filled ? resource.color : emptyColor);
   });
+
+  if (unit.spIcons) {
+    unit.spIcons.forEach((icon, index) => {
+      icon.setAlpha(index < unit.sp ? 1 : 0.25);
+    });
+  }
+
+  if (unit.hpIcons) {
+    unit.hpIcons.forEach((icon, index) => {
+      icon.setAlpha(index < unit.hp ? 1 : 0.25);
+    });
+  }
 
   if (unit.hp <= 0) {
     unit.rect.setAlpha(0.35);
@@ -287,8 +358,9 @@ function takeNextAction() {
 
   const defender = attacker.enemy;
   const tag = `[R${round}T${turn}A${action}]`;
-  const effectText = resolveSlash(attacker, defender);
-  appendLog(`${tag} ${attacker.name} slashes ${defender.name}.`, effectText);
+  const selectedAction = ACTIONS.slash;
+  const effectText = resolveAction(attacker, defender, selectedAction);
+  appendLog(`${tag} ${attacker.name} uses ${selectedAction.name} on ${defender.name}.`, effectText);
 
   refreshUnitResources(attacker);
   refreshUnitResources(defender);
@@ -306,38 +378,42 @@ function takeNextAction() {
   }
 }
 
-function resolveSlash(attacker, defender) {
-  attacker.ap -= 1;
-  const effects = [`${attacker.name} -1 AP`];
+function resolveAction(attacker, defender, selectedAction) {
+  attacker.ap = Math.max(0, attacker.ap - selectedAction.apCost);
+  const effects = [formatResourceLoss(attacker.name, selectedAction.apCost, 'ap')];
 
   if (defender.sp > 0) {
-    const spDamage = Math.min(2, defender.sp);
-    defender.sp -= spDamage;
-    effects.push(`${defender.name} -${spDamage} SP`);
+    const spDamage = Math.min(selectedAction.spDamage, defender.sp);
+    defender.sp = Math.max(0, defender.sp - spDamage);
+    effects.push(formatResourceLoss(defender.name, spDamage, 'sp'));
   } else {
-    defender.hp = Math.max(0, defender.hp - 1);
-    effects.push(`${defender.name} -1 HP`);
+    const hpDamage = Math.min(selectedAction.hpDamage, defender.hp);
+    defender.hp = Math.max(0, defender.hp - hpDamage);
+    effects.push(formatResourceLoss(defender.name, hpDamage, 'hp'));
     if (defender.hp <= 0) {
       effects.push(`${defender.name} dies.`);
     }
   }
 
-  return `Effect: ${effects.join(' | ')}`;
+  return `${effects.join(' | ')}`;
+}
+
+function formatResourceLoss(unitName, amount, resourceKey) {
+  return `${unitName} -${RESOURCE_ICONS[resourceKey].repeat(amount)}`;
 }
 
 function appendLog(actionText, effectText) {
-  const lines = effectText ? [actionText, effectText] : [actionText];
-  lines.forEach((line) => {
-    const y = layout.right.y + 78 + logRows.length * 31;
-    const row = sceneRef.add.text(layout.right.x + 22, y, line, smallTextStyle());
-    row.setWordWrapWidth(layout.right.w - 44);
-    logRows.push(row);
-  });
+  const line = effectText ? `${actionText} => ${effectText}` : actionText;
+
+  const y = layout.right.y + 78 + logRows.length * LOG_LINE_HEIGHT;
+  const row = sceneRef.add.text(layout.right.x + 22, y, line, smallTextStyle());
+  row.setWordWrapWidth(layout.right.w - 44);
+  logRows.push(row);
 
   while (logRows.length > LOG_MAX_LINES) {
     logRows.shift().destroy();
     logRows.forEach((row, index) => {
-      row.setY(layout.right.y + 78 + index * 31);
+      row.setY(layout.right.y + 78 + index * LOG_LINE_HEIGHT);
     });
   }
 }
