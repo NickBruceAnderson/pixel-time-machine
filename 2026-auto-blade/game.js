@@ -94,38 +94,53 @@ const LP_BLOCK_SIZE = 8;
 const RESOURCE_BLOCK_SPACING = 2;
 
 const ACTION_DELAY_MS = 3000;
-const FLOATING_EFFECT_MS = 1000;
+const FLOATING_EFFECT_DURATION_MS = 1000;
+const FLOATING_EFFECT_FONT_SIZE = 24;
+const INFO_PANEL_PADDING = 24;
+const INFO_COLUMN_GAP = 28;
+const INFO_TOOLTIP_HEIGHT = 82;
+const INFO_DIVIDER_COLOR = COLORS.panelBorder;
 const FONT_SIZE_HEADER = 24;
 const FONT_SIZE_BODY = 18;
 const FONT_SIZE_SMALL = 14;
 const LOG_MAX_LINES = 8;
 const LOG_LINE_HEIGHT = 20;
 
-function buildInfoText(characterClass = 'knight') {
+function buildSkillLines() {
   const slash = ACTIONS.slash;
-  const stats = CHARACTER_CLASSES[characterClass];
 
   return [
     'Skills:',
     `A1: ${slash.name} | Cost: ${RESOURCE_ICONS.ap.repeat(slash.apCost)} | Damage: ${RESOURCE_ICONS.sp.repeat(slash.spDamage)} or ${RESOURCE_ICONS.hp.repeat(slash.hpDamage)}`,
     'A2:',
     'P1:',
-    'P2:',
-    '',
-    'Gambits:',
-    `${slash.name} | enemy has ${RESOURCE_ICONS.sp.repeat(2)}+`,
-    slash.name,
-    '',
-    'Equipment:',
-    'RH: Broadsword (Grants Thrust)',
-    'LH: Buckler (Grants Parry)',
-    '',
-    'Hover Tooltip:',
-    'If you hover over anything above, it will explain it here.',
-    'We do not need to build this yet.'
+    'P2:'
   ];
 }
-const INFO_TEXT = buildInfoText('knight');
+
+function buildGambitLines() {
+  const slash = ACTIONS.slash;
+
+  return [
+    'Gambits:',
+    `${slash.name} | enemy has ${RESOURCE_ICONS.sp.repeat(2)}+`,
+    slash.name
+  ];
+}
+
+function buildEquipmentLines() {
+  return [
+    'Equipment:',
+    'RH: Broadsword (Grants Thrust)',
+    'LH: Buckler (Grants Parry)'
+  ];
+}
+
+const TOOLTIP_TEXT = [
+  'Hover Tooltip:',
+  'If you hover over anything above, it will explain it here.',
+  'We do not need to build this yet.'
+];
 
 
 let sceneRef;
@@ -138,7 +153,7 @@ let action = 1;
 let nextActorIndex = 0;
 let battleEnded = false;
 let actionTimer;
-let infoText;
+let infoPanelNodes = [];
 
 const config = {
   type: Phaser.AUTO,
@@ -270,31 +285,86 @@ function formatCharacterStats(unit) {
 }
 
 function createInfoPanel() {
-  infoText = sceneRef.add.text(layout.info.x + 24, layout.info.y + 22, '', smallTextStyle());
+  const tooltipY = layout.info.y + layout.info.h - INFO_TOOLTIP_HEIGHT;
+  const dividerX = layout.info.x + layout.info.w / 2;
+
+  sceneRef.add.line(
+    0,
+    0,
+    dividerX,
+    layout.info.y + INFO_PANEL_PADDING,
+    dividerX,
+    tooltipY - INFO_PANEL_PADDING / 2,
+    cssHexToNumber(INFO_DIVIDER_COLOR)
+  ).setOrigin(0);
+
+  sceneRef.add.line(
+    0,
+    0,
+    layout.info.x + INFO_PANEL_PADDING,
+    tooltipY,
+    layout.info.x + layout.info.w - INFO_PANEL_PADDING,
+    tooltipY,
+    cssHexToNumber(INFO_DIVIDER_COLOR)
+  ).setOrigin(0);
+
+  const tooltipText = sceneRef.add.text(
+    layout.info.x + INFO_PANEL_PADDING,
+    tooltipY + 14,
+    TOOLTIP_TEXT,
+    smallTextStyle()
+  );
+  tooltipText.setWordWrapWidth(layout.info.w - INFO_PANEL_PADDING * 2);
+
   refreshInfoPanel();
 }
 
 function refreshInfoPanel() {
-  if (!infoText) {
+  if (!units) {
     return;
   }
 
-  const liveStats = units ? units.flatMap(formatCharacterStats) : [];
-  const lines = liveStats.length > 0 ? [...liveStats, '', ...INFO_TEXT] : INFO_TEXT;
-  infoText.setText(lines);
+  infoPanelNodes.forEach((node) => node.destroy());
+  infoPanelNodes = [];
+
+  const tooltipY = layout.info.y + layout.info.h - INFO_TOOLTIP_HEIGHT;
+  const columnY = layout.info.y + INFO_PANEL_PADDING;
+  const columnHeight = tooltipY - columnY - INFO_PANEL_PADDING;
+  const columnWidth = (layout.info.w - INFO_PANEL_PADDING * 2 - INFO_COLUMN_GAP) / 2;
+  const leftX = layout.info.x + INFO_PANEL_PADDING;
+  const rightX = leftX + columnWidth + INFO_COLUMN_GAP;
+
+  renderCharacterPanel(units[0], leftX, columnY, columnWidth, columnHeight);
+  renderCharacterPanel(units[1], rightX, columnY, columnWidth, columnHeight);
+}
+
+function renderCharacterPanel(unit, x, y, width, height) {
+  const lines = [
+    ...formatCharacterStats(unit),
+    '',
+    ...buildSkillLines(),
+    '',
+    ...buildGambitLines(),
+    '',
+    ...buildEquipmentLines()
+  ];
+
+  const text = sceneRef.add.text(x, y, lines, smallTextStyle());
+  text.setWordWrapWidth(width);
+  infoPanelNodes.push(text);
 }
 
 function showFloatingEffect(unit, text) {
   const popup = sceneRef.add.text(unit.rect.x, unit.rect.y - UNIT_HEIGHT / 2 - 22, text, {
     fontFamily: 'Arial',
-    fontSize: '24px',
+    fontSize: `${FLOATING_EFFECT_FONT_SIZE}px`,
     color: COLORS.text
   }).setOrigin(0.5);
 
   sceneRef.tweens.add({
     targets: popup,
     alpha: 0,
-    duration: FLOATING_EFFECT_MS,
+    duration: FLOATING_EFFECT_DURATION_MS,
     onComplete: () => popup.destroy()
   });
 }
