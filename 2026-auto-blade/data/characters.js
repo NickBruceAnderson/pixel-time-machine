@@ -1,13 +1,13 @@
 export const CHARACTER_CLASSES = {
   knight: {
-    hp: 1,
-    maxHp: 1,
+    hp: 2,
+    maxHp: 2,
     sp: 3,
     maxSp: 3,
     ap: 2,
     maxAp: 2,
-    rp: 1,
-    maxRp: 1,
+    rp: 2,
+    maxRp: 2,
     lp: 0,
     maxLp: 1,
     ip: 1,

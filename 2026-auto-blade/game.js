@@ -44,6 +44,11 @@ const RESOURCE_ICONS = {
   ip: '🥾'
 };
 
+const ms = (value) => Math.round(value);
+
+let battleSpeedMultiplier = 3;
+
+// Layout
 const LEFT_PANEL_WIDTH_RATIO = 0.29;
 const CENTER_WIDTH_RATIO = 0.42;
 const RIGHT_PANEL_WIDTH_RATIO = 0.29;
@@ -51,55 +56,166 @@ const BATTLE_WINDOW_HEIGHT_RATIO = 0.48;
 
 const UNIT_SIZE = 70;
 
-// Formation layout tunables
+// Formation
 const FORMATION_ROWS = ['front', 'middle', 'back'];
 const FORMATION_COLS = [0, 1, 2];
 const FORMATION_ROW_ORDER_RED = ['back', 'middle', 'front'];
 const FORMATION_ROW_ORDER_BLUE = ['front', 'middle', 'back'];
+
 const BATTLE_GRID_WIDTH = 330;
 const BATTLE_GRID_HEIGHT = 348;
 const BATTLE_GRID_SIDE_PADDING = 30;
 const BATTLE_GRID_TOP_RATIO = 0.20;
 const BATTLE_GRID_LINE_SIZE = 2;
 
+// Panels
+const INFO_PANEL_PADDING = 24;
+const INFO_COLUMN_GAP = 28;
+const INFO_TOOLTIP_HEIGHT = 82;
+const INFO_DIVIDER_COLOR = COLORS.panelBorder;
+
+const SIDE_GRID_PADDING = 40;
+const SIDE_GRID_TOP = 82;
+const SIDE_CARD_WIDTH = 132;
+const SIDE_CARD_HEIGHT = 136;
+const SIDE_GRID_COLUMN_GAP = 28;
+const SIDE_GRID_ROW_GAP = 20;
+
+const COMBAT_LOG_TOP_OFFSET = 650;
+const COMBAT_LOG_LEFT_PADDING = 28;
+const TEAM_STATUS_PANEL_HEIGHT = COMBAT_LOG_TOP_OFFSET - SIDE_GRID_TOP - SIDE_GRID_PADDING;
+
+const LOG_MAX_LINES = 16;
+const LOG_LINE_HEIGHT = 20;
+
+// Text
+const FONT_SIZE_HEADER = 24;
+const FONT_SIZE_BODY = 12;
+const FONT_SIZE_SMALL = 12;
+
+// Resource blocks
 const SP_BLOCK_SIZE = 16;
 const HP_BLOCK_SIZE = 16;
 const AP_BLOCK_SIZE = 12;
 const RP_BLOCK_SIZE = 12;
 const LP_BLOCK_SIZE = 12;
-const RESOURCE_BLOCK_SPACING = 2;
+const RESOURCE_BLOCK_SPACING = 1;
 
-// 1 = normal, 2 = 2x, 3 = testing, 4 = fast-forward
-let battleSpeedMultiplier = 3;
+// HUD: CAST
+const CAST_TITLE_FONT_SIZE = 12;
+const POPUP_RESOURCE_FONT_SIZE = 12;
+const CAST_CALLOUT_Y_OFFSET = -50;
+const CAST_CALLOUT_WIDTH = 80;
+const CAST_CALLOUT_HEIGHT = 20;
+const CAST_CALLOUT_PADDING = 1;
+const CAST_CALLOUT_BORDER_COLOR = '#ffffff';
+const CAST_CALLOUT_BACKGROUND_COLOR = '#050506';
 
-const ms = (value) => Math.round(value);
+// HUD: AP/RP/LP
+const CAST_CALLOUT_RESOURCE_X_OFFSET = 4;
+const CAST_CALLOUT_RESOURCE_Y_GAP = -10;
+const CAST_CALLOUT_RESOURCE_GAP = 2;
 
+const ACTION_CAST_ICON_SPACING = 6;
+const ACTION_CAST_SPENT_ALPHA = 0.10;
+
+const REACTION_CAST_ICON_SPACING = 22;
+const REACTION_CAST_SPENT_ALPHA = 0.10;
+
+const POPUP_RESOURCE_ROW_GAP = 1;
+
+// HUD: UNIT TOGGLE
+const SHOW_BATTLE_UNIT_HUD = true;
+
+// HUD: HP/SP
+const SHOW_BATTLE_STATE_ROW = true;
+const BATTLE_STATE_ROW_X_OFFSET = 4;
+const BATTLE_STATE_ROW_Y_OFFSET = -8;
+const BATTLE_STATE_ICON_SPACING = 6;
+const BATTLE_STATE_RESOURCE_GAP = 4;
+const BATTLE_STATE_FULL_ALPHA = 1;
+const BATTLE_STATE_EMPTY_ALPHA = 0.20;
+const BATTLE_STATE_HIT_DIM_DURATION_MS = ms(260);
+
+// HUD: RP/AP
+const BATTLE_RESOURCE_ROW_Y_OFFSET = 76;
+const BATTLE_RESOURCE_ROW_LEFT_X_OFFSET = 4;
+const BATTLE_RESOURCE_ROW_RIGHT_X_OFFSET = -4;
+const BATTLE_RESOURCE_ICON_SPACING = 6;
+const BATTLE_RESOURCE_GROUP_GAP = 4;
+const BATTLE_RESOURCE_FONT_SIZE = 12;
+
+// HUD: LP
+const BATTLE_LP_SHOW = true;
+const BATTLE_LP_X_OFFSET = 30;
+const BATTLE_LP_Y_OFFSET = -28;
+const BATTLE_LP_FONT_SIZE = 14;
+const BATTLE_LP_CORNER_X_INSET = 8;
+const BATTLE_LP_CORNER_Y_INSET = 8;
+
+// HUD: DAMAGE
+const DAMAGE_POPUP_Y_OFFSET = 80;
+const DAMAGE_NUMBER_X_OFFSET = 0;
+const DAMAGE_NUMBER_Y_OFFSET = 70;
+const DAMAGE_NUMBER_FONT_SIZE = 30;
+const DAMAGE_NUMBER_DURATION_MS = ms(1000);
+const DAMAGE_NUMBER_FLOAT_Y = 20;
+const DAMAGE_NUMBER_HOLD_MS = ms(1000);
+
+// Battle start
 const START_BATTLE_DELAY_MS = ms(250);
 
-// Tune these like normal durations.
+// Action timing
 const ATTACK_TITLE_DURATION_MS = ms(350);
 const ATTACK_RESOURCE_PREVIEW_DURATION_MS = ms(850);
 const ATTACK_RESOURCE_COMMIT_DURATION_MS = ms(200);
 const POST_ATTACK_RESOURCE_PAUSE_MS = ms(150);
 
-const LUNGE_DURATION_MS = ms(450);
-const FREEZE_DURATION_MS = ms(300);
-
 const DEFENDER_TITLE_DURATION_MS = ATTACK_TITLE_DURATION_MS;
 const DEFENDER_RESOURCE_PREVIEW_DURATION_MS = ATTACK_RESOURCE_PREVIEW_DURATION_MS;
 const DEFENDER_RESOURCE_COMMIT_DURATION_MS = ATTACK_RESOURCE_COMMIT_DURATION_MS;
-
 const DEFENDER_LP_GAIN_STAGGER_MS = ms(250);
 
-// This is really post-defender hold time right now.
-const ATTACKER_COUNTER_RESOURCE_DURATION_MS = ms(450);
-
+// Movement timing
+const LUNGE_DURATION_MS = ms(450);
+const FREEZE_DURATION_MS = ms(300);
 const RETURN_DURATION_MS = ms(450);
+
+const ATTACK_LUNGE_DISTANCE = 360;
+const ATTACK_LUNGE_STOP_DISTANCE = 72;
+
+// Result timing
+const ATTACKER_COUNTER_RESOURCE_DURATION_MS = ms(450);
 const FINAL_STATS_DURATION_MS = ms(750);
 const CLEANUP_BUFFER_MS = ms(300);
 
-// Derived timeline. Do not tune these directly.
-const ACTION_CAST_LABEL_DELAY_MS = ms(0);
+const FLOATING_EFFECT_DURATION_MS = ms(300);
+const RESOURCE_ROW_FADE_IN_DURATION_MS = ms(250);
+const COUNTER_RESOURCE_PREVIEW_DURATION_MS = ms(500);
+const COUNTER_RESOURCE_COMMIT_DURATION_MS = ms(250);
+const COUNTER_RESOURCE_FADE_DELAY_MS = ms(1000);
+const SECONDARY_RESOURCE_COMMIT_STAGGER_MS = ms(250);
+
+const RESOURCE_EFFECT_PREVIEW_AFTER_FADE_MS = ms(150);
+const RESOURCE_EFFECT_FADE_DELAY_MS = FINAL_STATS_DURATION_MS;
+
+// Hit animations
+const BLOCK_TILT_ANGLE = 12;
+const BLOCK_TILT_DURATION_MS = ms(180);
+
+const PARRY_SPIN_DURATION_MS = ms(450);
+
+const DAMAGE_BLINK_ALPHA = 0.4;
+const DAMAGE_BLINK_DURATION_MS = ms(160);
+const DAMAGE_BLINK_REPEAT = 1;
+
+// KO
+const KO_FADE_ALPHA = 0.10;
+const KO_REMOVE_DELAY_MS = ms(500);
+
+// Derived timing
+const ACTION_CAST_LABEL_DELAY_MS =
+  ms(0);
 
 const ACTION_CAST_RESOURCE_DELAY_MS =
   ACTION_CAST_LABEL_DELAY_MS + ms(90);
@@ -131,7 +247,8 @@ const DEFENSE_RESULT_DELAY_MS =
 const COUNTER_RESULT_DELAY_MS =
   DEFENSE_RESULT_DELAY_MS;
 
-const NO_REACTION_IMPACT_PAUSE_MS = ms(200);
+const NO_REACTION_IMPACT_PAUSE_MS =
+  ms(200);
 
 const NO_REACTION_RESULT_DELAY_MS =
   ATTACK_LUNGE_START_DELAY_MS + ATTACK_LUNGE_DURATION_MS + NO_REACTION_IMPACT_PAUSE_MS;
@@ -142,21 +259,12 @@ const NO_REACTION_RETURN_DELAY_MS =
 const ACTION_DELAY_MS =
   DEFENSE_RESULT_DELAY_MS + FINAL_STATS_DURATION_MS + CLEANUP_BUFFER_MS;
 
-const FLOATING_EFFECT_DURATION_MS = ms(300);
-const CAST_TITLE_FONT_SIZE = 24;
-const POPUP_RESOURCE_FONT_SIZE = 17;
-const RESOURCE_ROW_FADE_IN_DURATION_MS = ms(250);
-const COUNTER_RESOURCE_PREVIEW_DURATION_MS = ms(500);
-const COUNTER_RESOURCE_COMMIT_DURATION_MS = ms(250);
-const COUNTER_RESOURCE_FADE_DELAY_MS = ms(1000);
-const SECONDARY_RESOURCE_COMMIT_STAGGER_MS = ms(250);
-
-
-const RESOURCE_EFFECT_PREVIEW_AFTER_FADE_MS = ms(150);
+const COMBAT_ZOOM_KEY = 'F';
+const COMBAT_ZOOM_PADDING = 24;
+const COMBAT_ZOOM_DURATION_MS = ms(250);
 
 const RESOURCE_EFFECT_COMMIT_DELAY_MS =
-  RESOURCE_ROW_FADE_IN_DURATION_MS + RESOURCE_EFFECT_PREVIEW_AFTER_FADE_MS;  RESOURCE_ROW_FADE_IN_DURATION_MS + RESOURCE_EFFECT_PREVIEW_AFTER_FADE_MS;
-const RESOURCE_EFFECT_FADE_DELAY_MS = FINAL_STATS_DURATION_MS;
+  RESOURCE_ROW_FADE_IN_DURATION_MS + RESOURCE_EFFECT_PREVIEW_AFTER_FADE_MS;
 
 const ACTION_CAST_EFFECT_FADE_DELAY_MS =
   ACTION_CAST_COMMIT_DELAY_MS + ms(600);
@@ -167,79 +275,25 @@ const REACTION_CAST_EFFECT_FADE_DELAY_MS =
 const REACTION_RESOURCE_GAIN_DELAY_MS =
   REACTION_CAST_COMMIT_DELAY_MS;
 
-const ATTACK_LUNGE_DISTANCE = 360;
-const ATTACK_LUNGE_STOP_DISTANCE = 72;
-
-const BLOCK_TILT_ANGLE = 12;
-const BLOCK_TILT_DURATION_MS = ms(180);
-
-const PARRY_SPIN_DURATION_MS = ms(450);
-
-const DAMAGE_BLINK_ALPHA = 0.4;
-const DAMAGE_BLINK_DURATION_MS = ms(160);
-const DAMAGE_BLINK_REPEAT = 1;
-
-const ACTION_CAST_SPENT_ALPHA = 0.10;
-const ACTION_CAST_ICON_SPACING = 22;
-
-const REACTION_CAST_SPENT_ALPHA = 0.10;
-const REACTION_CAST_ICON_SPACING = 22;
-
-const CAST_CALLOUT_Y_OFFSET = 86;
-const CAST_CALLOUT_WIDTH = 150;
-const CAST_CALLOUT_HEIGHT = 42;
-const CAST_CALLOUT_PADDING = 10;
-const CAST_CALLOUT_BORDER_COLOR = '#ffffff';
-const CAST_CALLOUT_BACKGROUND_COLOR = '#050506';
-const CAST_CALLOUT_RESOURCE_GAP = 14;
-const CAST_CALLOUT_RESOURCE_Y_GAP = 2;
-const POPUP_RESOURCE_ROW_GAP = 22;
-const DAMAGE_POPUP_Y_OFFSET = 72;
-const BATTLE_STATE_ROW_Y_OFFSET = 20;
-const BATTLE_STATE_ICON_SPACING = 20;
-const BATTLE_STATE_RESOURCE_GAP = 14;
-const BATTLE_STATE_FULL_ALPHA = 1;
-const BATTLE_STATE_EMPTY_ALPHA = 0.16;
-const BATTLE_STATE_HIT_DIM_DURATION_MS = ms(260);
-
-const INFO_PANEL_PADDING = 24;
-const INFO_COLUMN_GAP = 28;
-const INFO_TOOLTIP_HEIGHT = 82;
-const INFO_DIVIDER_COLOR = COLORS.panelBorder;
-const SIDE_GRID_PADDING = 40;
-const SIDE_GRID_TOP = 82;
-const SIDE_CARD_WIDTH = 132;
-const SIDE_CARD_HEIGHT = 136;
-const SIDE_GRID_COLUMN_GAP = 28;
-const SIDE_GRID_ROW_GAP = 20;
-const COMBAT_LOG_TOP_OFFSET = 650;
-const COMBAT_LOG_LEFT_PADDING = 28;
-const TEAM_STATUS_PANEL_HEIGHT = COMBAT_LOG_TOP_OFFSET - SIDE_GRID_TOP - SIDE_GRID_PADDING;
-const FONT_SIZE_HEADER = 24;
-const FONT_SIZE_BODY = 12;
-const FONT_SIZE_SMALL = 12;
-const LOG_MAX_LINES = 16;
-const LOG_LINE_HEIGHT = 20;
-
 function buildGambitRows() {
   return [
     {
       label: 'G1: Parry',
       detail: `[player has ${RESOURCE_ICONS.rp}] [player has ${RESOURCE_ICONS.lp}]`
     },
-    {
-      label: 'G2: Block',
-      detail: `[player has ${RESOURCE_ICONS.rp}]`
-    },
-    {
-      label: 'G3: Thrust',
-      detail: `[enemy has 0 ${RESOURCE_ICONS.sp}]`
-    },
-    {
-      label: 'G4: Slash',
-      detail: `[enemy has 2+${RESOURCE_ICONS.sp}]`
-    }
-  ];
+  {
+    label: 'G2: Block',
+    detail: `[player has ${RESOURCE_ICONS.rp}]`
+  },
+  {
+    label: 'G3: Thrust',
+    detail: `[enemy has 0 ${RESOURCE_ICONS.sp}]`
+  },
+  {
+    label: 'G4: Slash',
+    detail: `[enemy has 2+${RESOURCE_ICONS.sp}]`
+  }
+];
 }
 
 function buildEquipmentRows() {
@@ -280,6 +334,7 @@ let infoPanelNodes = [];
 let statusPanelNodes = [];
 let currentAttacker = null;
 let currentDefender = null;
+let combatZoomMode = false;
 
 const config = {
   type: Phaser.AUTO,
@@ -320,8 +375,29 @@ function create() {
   sceneRef.input.keyboard.on('keydown-TWO', () => setBattleSpeed(2));
   sceneRef.input.keyboard.on('keydown-THREE', () => setBattleSpeed(3));
   sceneRef.input.keyboard.on('keydown-FOUR', () => setBattleSpeed(4));
+  sceneRef.input.keyboard.on(`keydown-${COMBAT_ZOOM_KEY}`, toggleCombatZoomMode);
 
   startBattle();
+}
+
+function toggleCombatZoomMode() {
+  combatZoomMode = !combatZoomMode;
+  const camera = sceneRef.cameras.main;
+
+  if (!combatZoomMode) {
+    camera.pan(GAME_WIDTH / 2, GAME_HEIGHT / 2, COMBAT_ZOOM_DURATION_MS, 'Quad.easeInOut');
+    camera.zoomTo(1, COMBAT_ZOOM_DURATION_MS, 'Quad.easeInOut');
+    return;
+  }
+
+  const targetW = layout.battle.w + COMBAT_ZOOM_PADDING * 2;
+  const targetH = layout.battle.h + COMBAT_ZOOM_PADDING * 2;
+  const zoom = Math.min(GAME_WIDTH / targetW, GAME_HEIGHT / targetH);
+  const centerX = layout.battle.x + layout.battle.w / 2;
+  const centerY = layout.battle.y + layout.battle.h / 2;
+
+  camera.pan(centerX, centerY, COMBAT_ZOOM_DURATION_MS, 'Quad.easeInOut');
+  camera.zoomTo(zoom, COMBAT_ZOOM_DURATION_MS, 'Quad.easeInOut');
 }
 
 function createLayout() {
@@ -418,69 +494,187 @@ function createCharacter(name, characterClass, color, teamKey, row, col) {
     maxIp: classStats.maxIp,
     rect,
     label,
-    battleStateNodes: {
-      sp: [],
-      hp: []
+    battleHudNodes: {
+      top: [],
+      bottomLeft: [],
+      bottomRight: [],
+      lp: []
     }
   };
 
-  createBattleStateResourceRow(unit);
+  refreshBattleUnitHud(unit);
   return unit;
 }
 
-function createBattleStateResourceRow(unit) {
-  const entries = [
-    { key: 'sp', max: unit.maxSp },
-    { key: 'hp', max: unit.maxHp }
-  ];
-  const totalSlots = entries.reduce((sum, entry) => sum + entry.max, 0);
-  const totalWidth = Math.max(0, totalSlots - 1) * BATTLE_STATE_ICON_SPACING + BATTLE_STATE_RESOURCE_GAP;
-  let cursorX = unit.rect.x - totalWidth / 2;
-  const y = unit.rect.y - UNIT_SIZE / 2 - BATTLE_STATE_ROW_Y_OFFSET;
+function getCurrentIconRowWidth(entries, iconSpacing, groupGap) {
+  const visibleEntries = entries.filter((entry) => entry.current > 0);
+  const totalIcons = visibleEntries.reduce((sum, entry) => sum + entry.current, 0);
+  if (totalIcons <= 0) {
+    return 0;
+  }
+
+  return (totalIcons - 1) * iconSpacing + Math.max(0, visibleEntries.length - 1) * groupGap;
+}
+
+function addBattleHudIcon(unit, groupKey, x, y, resourceKey, fontSize) {
+  const node = sceneRef.add.text(x, y, RESOURCE_ICONS[resourceKey], {
+    fontFamily: 'Arial',
+    fontSize: `${fontSize}px`,
+    color: COLORS.text
+  }).setOrigin(0.5, 0.5);
+
+  node.resourceKey = resourceKey;
+  node.setAlpha(BATTLE_STATE_FULL_ALPHA);
+  unit.battleHudNodes[groupKey].push(node);
+}
+
+function drawBattleHudIconRow(unit, groupKey, entries, startX, y, iconSpacing, groupGap, fontSize) {
+  let cursorX = startX;
 
   entries.forEach((entry, entryIndex) => {
-    for (let index = 0; index < entry.max; index += 1) {
-      const node = sceneRef.add.text(cursorX, y, RESOURCE_ICONS[entry.key], {
-        fontFamily: 'Arial',
-        fontSize: `${POPUP_RESOURCE_FONT_SIZE}px`,
-        color: COLORS.text
-      }).setOrigin(0.5, 0.5);
-      unit.battleStateNodes[entry.key].push(node);
-      cursorX += BATTLE_STATE_ICON_SPACING;
+    for (let index = 0; index < entry.current; index += 1) {
+      addBattleHudIcon(unit, groupKey, cursorX, y, entry.key, fontSize);
+      cursorX += iconSpacing;
     }
 
-    if (entryIndex < entries.length - 1) {
-      cursorX += BATTLE_STATE_RESOURCE_GAP;
+    if (entry.current > 0 && entries.slice(entryIndex + 1).some((nextEntry) => nextEntry.current > 0)) {
+      cursorX += groupGap;
     }
   });
+}
 
-  refreshBattleStateResourceRow(unit);
+function createBattleStateResourceRow(unit) {
+  if (!SHOW_BATTLE_UNIT_HUD || !SHOW_BATTLE_STATE_ROW || !hasBattlefieldVisuals(unit)) {
+    return;
+  }
+
+  const entries = unit.teamKey === 'blue'
+    ? [
+      { key: 'sp', current: unit.sp },
+      { key: 'hp', current: unit.hp }
+    ]
+    : [
+      { key: 'hp', current: unit.hp },
+      { key: 'sp', current: unit.sp }
+    ];
+
+  const totalWidth = getCurrentIconRowWidth(entries, BATTLE_STATE_ICON_SPACING, BATTLE_STATE_RESOURCE_GAP);
+
+  const startX = unit.teamKey === 'blue'
+    ? unit.rect.x + UNIT_SIZE / 2 - totalWidth - BATTLE_STATE_ROW_X_OFFSET
+    : unit.rect.x - UNIT_SIZE / 2 + BATTLE_STATE_ROW_X_OFFSET;
+
+  const y = unit.rect.y - UNIT_SIZE / 2 + BATTLE_STATE_ROW_Y_OFFSET;
+
+  drawBattleHudIconRow(
+    unit,
+    'top',
+    entries,
+    startX,
+    y,
+    BATTLE_STATE_ICON_SPACING,
+    BATTLE_STATE_RESOURCE_GAP,
+    POPUP_RESOURCE_FONT_SIZE
+  );
+}
+
+function createBattleResourceRow(unit) {
+  if (!SHOW_BATTLE_UNIT_HUD || !hasBattlefieldVisuals(unit)) {
+    return;
+  }
+
+  const entries = unit.teamKey === 'blue'
+    ? [
+      { key: 'rp', current: unit.rp },
+      { key: 'ap', current: unit.ap }
+    ]
+    : [
+      { key: 'ap', current: unit.ap },
+      { key: 'rp', current: unit.rp }
+    ];
+
+  const totalWidth = getCurrentIconRowWidth(
+    entries,
+    BATTLE_RESOURCE_ICON_SPACING,
+    BATTLE_RESOURCE_GROUP_GAP
+  );
+
+  const startX = unit.teamKey === 'blue'
+    ? unit.rect.x + UNIT_SIZE / 2 - totalWidth + BATTLE_RESOURCE_ROW_RIGHT_X_OFFSET
+    : unit.rect.x - UNIT_SIZE / 2 + BATTLE_RESOURCE_ROW_LEFT_X_OFFSET;
+
+  const y = unit.rect.y - UNIT_SIZE / 2 + BATTLE_RESOURCE_ROW_Y_OFFSET;
+
+  drawBattleHudIconRow(
+    unit,
+    'bottomLeft',
+    entries,
+    startX,
+    y,
+    BATTLE_RESOURCE_ICON_SPACING,
+    BATTLE_RESOURCE_GROUP_GAP,
+    BATTLE_RESOURCE_FONT_SIZE
+  );
+}
+
+function createBattleLpMarker(unit) {
+  if (!SHOW_BATTLE_UNIT_HUD || !BATTLE_LP_SHOW || !hasBattlefieldVisuals(unit) || unit.lp <= 0) {
+    return;
+  }
+
+  const x = unit.teamKey === 'blue'
+    ? unit.rect.x - UNIT_SIZE / 2 + BATTLE_LP_CORNER_X_INSET
+    : unit.rect.x + UNIT_SIZE / 2 - BATTLE_LP_CORNER_X_INSET;
+
+  const y = unit.rect.y + UNIT_SIZE / 2 - BATTLE_LP_CORNER_Y_INSET;
+
+  addBattleHudIcon(
+    unit,
+    'lp',
+    x,
+    y,
+    'lp',
+    BATTLE_LP_FONT_SIZE
+  );
+}
+
+function destroyBattleUnitHud(unit) {
+  if (!unit || !unit.battleHudNodes) {
+    return;
+  }
+
+  Object.keys(unit.battleHudNodes).forEach((groupKey) => {
+    unit.battleHudNodes[groupKey].forEach((node) => {
+      if (isLiveBattlefieldNode(node)) {
+        node.destroy();
+      }
+    });
+
+    unit.battleHudNodes[groupKey] = [];
+  });
+}
+
+function refreshBattleUnitHud(unit) {
+  if (!unit || !unit.battleHudNodes) {
+    return;
+  }
+
+  destroyBattleUnitHud(unit);
+  if (!SHOW_BATTLE_UNIT_HUD || !hasBattlefieldVisuals(unit)) {
+    return;
+  }
+
+  createBattleStateResourceRow(unit);
+  createBattleResourceRow(unit);
+  createBattleLpMarker(unit);
 }
 
 function refreshBattleStateResourceRow(unit) {
-  ['sp', 'hp'].forEach((resourceKey) => {
-    unit.battleStateNodes[resourceKey].forEach((node, index) => {
-      node.setAlpha(index < unit[resourceKey] ? BATTLE_STATE_FULL_ALPHA : BATTLE_STATE_EMPTY_ALPHA);
-    });
-  });
+  refreshBattleUnitHud(unit);
 }
 
 function animateBattleStateResourceLoss(unit, resourceKey, before, after) {
-  const nodes = unit.battleStateNodes[resourceKey] || [];
-  nodes.forEach((node, index) => {
-    if (index < after || index >= before) {
-      node.setAlpha(index < unit[resourceKey] ? BATTLE_STATE_FULL_ALPHA : BATTLE_STATE_EMPTY_ALPHA);
-      return;
-    }
-
-    node.setAlpha(BATTLE_STATE_FULL_ALPHA);
-    sceneRef.tweens.add({
-      targets: node,
-      alpha: BATTLE_STATE_EMPTY_ALPHA,
-      duration: BATTLE_STATE_HIT_DIM_DURATION_MS,
-      ease: 'Quad.easeOut'
-    });
-  });
+  refreshBattleStateResourceRow(unit);
 }
 
 function getFormationPosition(teamKey, row, col) {
@@ -845,9 +1039,11 @@ function showReactionCastEffect(effect) {
 
   sceneRef.time.delayedCall(REACTION_CAST_COMMIT_DELAY_MS - REACTION_CAST_LABEL_DELAY_MS, () => {
     callout.commitResourceState('rp');
+    refreshBattleUnitHud(effect.unit);
 
     sceneRef.time.delayedCall(DEFENDER_LP_GAIN_STAGGER_MS, () => {
       callout.commitResourceState('lp');
+      refreshBattleUnitHud(effect.unit);
     });
   });
 
@@ -879,6 +1075,7 @@ function showActionCastEffect(effect) {
 
   sceneRef.time.delayedCall(ACTION_CAST_COMMIT_DELAY_MS - ACTION_CAST_LABEL_DELAY_MS, () => {
     callout.commitResourceState();
+    refreshBattleUnitHud(effect.unit);
   });
 
   sceneRef.time.delayedCall(ACTION_CAST_EFFECT_FADE_DELAY_MS, () => {
@@ -909,12 +1106,14 @@ function showCounterResourceRowEffect(effect) {
   sceneRef.time.delayedCall(COUNTER_RESOURCE_PREVIEW_DURATION_MS, () => {
     callout.commitResourceState('hp');
     callout.commitResourceState('sp');
+    refreshBattleUnitHud(effect.unit);
   });
 
   sceneRef.time.delayedCall(COUNTER_RESOURCE_PREVIEW_DURATION_MS + SECONDARY_RESOURCE_COMMIT_STAGGER_MS, () => {
     callout.commitResourceState('ap');
     callout.commitResourceState('rp');
     callout.commitResourceState('lp');
+    refreshBattleUnitHud(effect.unit);
   });
 
   sceneRef.time.delayedCall(
@@ -933,6 +1132,7 @@ function showCounterResourceRowEffect(effect) {
 function createCombatCallout({ unit, titleText, resources, yOffset, showTitle = true }) {
   const nodes = [];
   const resourceNodes = [];
+  const showCastResources = !SHOW_BATTLE_UNIT_HUD;
   const x = unit.rect.x;
   const y = unit.rect.y - UNIT_SIZE / 2 - yOffset;
   const top = y - CAST_CALLOUT_HEIGHT / 2;
@@ -959,6 +1159,10 @@ function createCombatCallout({ unit, titleText, resources, yOffset, showTitle = 
   nodes.push(...titleNodes);
 
   function showResources() {
+    if (!showCastResources) {
+      return;
+    }
+
     drawResourceRow(resources.filter((resource) => ['ap', 'rp', 'lp'].includes(resource.key)), resourceY);
   }
 
@@ -976,7 +1180,7 @@ function createCombatCallout({ unit, titleText, resources, yOffset, showTitle = 
 
     const totalWidth = Math.max(iconEntries.length - 1, 0) * ACTION_CAST_ICON_SPACING +
       (rowResources.length - 1) * CAST_CALLOUT_RESOURCE_GAP;
-    let cursorX = x - totalWidth / 2;
+    let cursorX = x - totalWidth / 2 + CAST_CALLOUT_RESOURCE_X_OFFSET;
     let previousKey = null;
 
     iconEntries.forEach((entry) => {
@@ -1069,6 +1273,37 @@ function showResourceChangeEffect(effect) {
   });
 }
 
+function showDamageNumberEffect(effect) {
+  const lostAmount = effect.before - effect.after;
+  if (lostAmount <= 0 && !effect.showZeroDamage) {
+    return;
+  }
+
+  const node = sceneRef.add.text(
+    effect.unit.rect.x + DAMAGE_NUMBER_X_OFFSET,
+    effect.unit.rect.y - DAMAGE_NUMBER_Y_OFFSET,
+    `-${Math.max(0, lostAmount)}${RESOURCE_ICONS[effect.resourceKey]}`,
+    {
+      fontFamily: 'Arial',
+      fontSize: `${DAMAGE_NUMBER_FONT_SIZE}px`,
+      color: COLORS.text,
+      stroke: COLORS.background,
+      strokeThickness: 4
+    }
+  ).setOrigin(0.5, 0.5);
+
+  sceneRef.time.delayedCall(DAMAGE_NUMBER_HOLD_MS, () => {
+    sceneRef.tweens.add({
+      targets: node,
+      y: node.y - DAMAGE_NUMBER_FLOAT_Y,
+      alpha: 0,
+      duration: DAMAGE_NUMBER_DURATION_MS,
+      ease: 'Quad.easeOut',
+      onComplete: () => node.destroy()
+    });
+  });
+}
+
 function playAnimationEffect(animationEffect) {
   if (animationEffect.type === 'block') {
     playBlockAnimation(animationEffect.unit);
@@ -1085,7 +1320,22 @@ function playAnimationEffect(animationEffect) {
   }
 }
 
+function isLiveBattlefieldNode(node) {
+  return node && node.scene;
+}
+
+function hasBattlefieldVisuals(unit) {
+  return unit &&
+    !unit.isBattlefieldRemoved &&
+    isLiveBattlefieldNode(unit.rect) &&
+    isLiveBattlefieldNode(unit.label);
+}
+
 function playAttackLungeOut(attacker, defender) {
+  if (!hasBattlefieldVisuals(attacker) || !hasBattlefieldVisuals(defender)) {
+    return;
+  }
+
   const dx = defender.rect.x - attacker.rect.x;
   const dy = defender.rect.y - attacker.rect.y;
   const len = Math.sqrt(dx * dx + dy * dy);
@@ -1115,6 +1365,10 @@ function playAttackLungeOut(attacker, defender) {
 }
 
 function playAttackReturn(attacker) {
+  if (!hasBattlefieldVisuals(attacker)) {
+    return;
+  }
+
   const stateNodes = getBattleStateNodes(attacker);
   sceneRef.tweens.add({
     targets: attacker.rect,
@@ -1136,6 +1390,10 @@ function playAttackReturn(attacker) {
       attacker.label.x = attacker.homeLabelX;
       attacker.label.y = attacker.homeLabelY;
       (attacker.homeStateNodePositions || []).forEach((entry) => {
+        if (!isLiveBattlefieldNode(entry.node)) {
+          return;
+        }
+
         entry.node.x = entry.x;
         entry.node.y = entry.y;
       });
@@ -1159,10 +1417,11 @@ function playAttackReturn(attacker) {
 }
 
 function getBattleStateNodes(unit) {
-  return [
-    ...unit.battleStateNodes.sp,
-    ...unit.battleStateNodes.hp
-  ];
+  if (!unit || !unit.battleHudNodes) {
+    return [];
+  }
+
+  return Object.values(unit.battleHudNodes).flat().filter(isLiveBattlefieldNode);
 }
 
 function playBlockAnimation(unit) {
@@ -1193,6 +1452,10 @@ function playParryAnimation(unit) {
 }
 
 function playDamageBlink(unit) {
+  if (!hasBattlefieldVisuals(unit)) {
+    return;
+  }
+
   unit.rect.setAlpha(1);
   sceneRef.tweens.add({
     targets: unit.rect,
@@ -1207,8 +1470,26 @@ function playDamageBlink(unit) {
 }
 
 function markUnitKo(unit) {
-  unit.rect.setAlpha(0.10);
+  if (!hasBattlefieldVisuals(unit) || unit.koRemovalScheduled) {
+    return;
+  }
+
+  unit.koRemovalScheduled = true;
+  unit.rect.setAlpha(KO_FADE_ALPHA);
+  unit.label.setAlpha(KO_FADE_ALPHA);
   unit.label.setText(`${unit.name} KO`);
+  getBattleStateNodes(unit).forEach((node) => node.setAlpha(KO_FADE_ALPHA));
+
+  sceneRef.time.delayedCall(KO_REMOVE_DELAY_MS, () => {
+    [unit.rect, unit.label, ...getBattleStateNodes(unit)].forEach((node) => {
+      if (isLiveBattlefieldNode(node)) {
+        node.destroy();
+      }
+    });
+
+    destroyBattleUnitHud(unit);
+    unit.isBattlefieldRemoved = true;
+  });
 }
 
 function startBattle() {
@@ -1248,7 +1529,9 @@ function startRound() {
   livingUnits().forEach((unit) => {
     unit.ap = unit.maxAp;
     unit.rp = unit.maxRp;
+    refreshBattleUnitHud(unit);
   });
+
   refreshInfoPanel();
 
   if (round > 1) {
@@ -1364,10 +1647,13 @@ function takeNextAction() {
             visualEffect.before,
             visualEffect.after
           );
+
+          showDamageNumberEffect(visualEffect);
           return;
         }
 
         showResourceChangeEffect(visualEffect);
+        refreshBattleUnitHud(visualEffect.unit);
         return;
       }
 
@@ -1490,6 +1776,19 @@ function resolveAction(attacker, defender, selectedAction) {
     visualEffects.push(reactionCastEffect);
 
     if (remainingDamage <= 0) {
+      const maxKey = damageKey === 'sp' ? 'maxSp' : 'maxHp';
+      visualEffects.push({
+        type: 'resourceChange',
+        unit: defender,
+        resourceKey: damageKey,
+        before: defender[damageKey],
+        after: defender[damageKey],
+        max: defender[maxKey],
+        yOffset: DAMAGE_POPUP_Y_OFFSET,
+        delayMs: COUNTER_RESULT_DELAY_MS,
+        showZeroDamage: true
+      });
+
       const counterRowEffect = {
         type: 'counterResourceRow',
         unit: attacker,
@@ -1682,8 +1981,7 @@ function endBattle(losingTeamKey) {
     actionTimer.remove(false);
   }
   units.filter((unit) => unit.teamKey === losingTeamKey && unit.hp <= 0).forEach((unit) => {
-    unit.rect.setAlpha(0.10);
-    unit.label.setText(`${unit.name} KO`);
+    markUnitKo(unit);
   });
   refreshInfoPanel();
   const winner = losingTeamKey === 'red' ? 'Blue' : 'Red';
@@ -1718,3 +2016,4 @@ function smallTextStyle() {
     lineSpacing: 4
   };
 }
+
