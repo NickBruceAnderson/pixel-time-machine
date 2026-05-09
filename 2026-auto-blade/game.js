@@ -56,17 +56,48 @@ const BATTLE_WINDOW_HEIGHT_RATIO = 0.48;
 
 const UNIT_SIZE = 70;
 
+// Knight idle sprite
+const KNIGHT_IDLE_TEXTURE_KEY = 'knight-idle';
+const KNIGHT_IDLE_ASSET_PATH = 'assets/knight/Knight-Idle.png';
+const KNIGHT_IDLE_FRAME_WIDTH = 16;
+const KNIGHT_IDLE_FRAME_HEIGHT = 16;
+const KNIGHT_IDLE_DEFAULT_FRAME = 0;
+const KNIGHT_IDLE_TWITCH_FRAME = 1;
+const KNIGHT_IDLE_SCALE = 4;
+const KNIGHT_IDLE_TWITCH_MIN_DELAY_MS = ms(30000);
+const KNIGHT_IDLE_TWITCH_MAX_DELAY_MS = ms(45000);
+const KNIGHT_IDLE_TWITCH_HOLD_MS = ms(0);
+const SHOW_BATTLE_UNIT_NAME_LABELS = false;
+
 // Formation
 const FORMATION_ROWS = ['front', 'middle', 'back'];
 const FORMATION_COLS = [0, 1, 2];
 const FORMATION_ROW_ORDER_RED = ['back', 'middle', 'front'];
 const FORMATION_ROW_ORDER_BLUE = ['front', 'middle', 'back'];
 
+// Battlefield presentation
+const BATTLE_HORIZON_RATIO = 0.50;
+const FORMATION_GRASS_FILL_COLOR = '#3c9a42';
+const FORMATION_GRASS_ALPHA = 0.18;
+const FORMATION_GRID_LINE_COLOR = '#23652d';
+const FORMATION_GRID_LINE_ALPHA = 0.45;
+const FORMATION_GRID_LINE_SIZE = 2;
+const FORMATION_GRASS_TOP_PADDING = 18;
+const FORMATION_GRASS_BOTTOM_PADDING = 22;
+const SHOW_BATTLE_GRID_LINES = false;
+const BATTLE_GRID_TOGGLE_KEY = 'G';
+const BATTLE_GRID_LINE_ALPHA_VISIBLE = 0.45;
+const BATTLE_GRID_LINE_ALPHA_HIDDEN = 0;
+const UNIT_VISUAL_Y_OFFSET = 0;
+const UNIT_SPRITE_FORWARD_X_OFFSET = 12;
+const UNIT_SHADOW_COLOR = '#071309';
+const UNIT_SHADOW_ALPHA = 0.38;
+const UNIT_SHADOW_WIDTH = 40;
+const UNIT_SHADOW_HEIGHT = 12;
+const UNIT_SHADOW_Y_OFFSET = 32;
+
 const BATTLE_GRID_WIDTH = 330;
-const BATTLE_GRID_HEIGHT = 348;
 const BATTLE_GRID_SIDE_PADDING = 30;
-const BATTLE_GRID_TOP_RATIO = 0.20;
-const BATTLE_GRID_LINE_SIZE = 2;
 
 // Panels
 const INFO_PANEL_PADDING = 24;
@@ -117,7 +148,6 @@ const RESOURCE_BLOCK_SPACING = 1;
 
 // HUD: CAST
 const CAST_TITLE_FONT_SIZE = 12;
-const POPUP_RESOURCE_FONT_SIZE = 12;
 const CAST_CALLOUT_Y_OFFSET = -50;
 const CAST_CALLOUT_WIDTH = 80;
 const CAST_CALLOUT_HEIGHT = 20;
@@ -143,26 +173,27 @@ const SHOW_BATTLE_UNIT_HUD = true;
 
 // HUD: HP/SP
 const SHOW_BATTLE_STATE_ROW = true;
-const BATTLE_STATE_ROW_X_OFFSET = 4;
-const BATTLE_STATE_ROW_Y_OFFSET = -8;
+const BATTLE_STATE_ROW_X_OFFSET = 0;
+const BATTLE_STATE_ROW_Y_OFFSET = -25;
 const BATTLE_STATE_ICON_SPACING = 6;
 const BATTLE_STATE_RESOURCE_GAP = 4;
 const BATTLE_STATE_FULL_ALPHA = 1;
 const BATTLE_STATE_EMPTY_ALPHA = 0.20;
 const BATTLE_STATE_HIT_DIM_DURATION_MS = ms(260);
+const POPUP_RESOURCE_FONT_SIZE = 8;
 
 // HUD: RP/AP
-const BATTLE_RESOURCE_ROW_Y_OFFSET = 76;
-const BATTLE_RESOURCE_ROW_LEFT_X_OFFSET = 4;
-const BATTLE_RESOURCE_ROW_RIGHT_X_OFFSET = -4;
+const BATTLE_RESOURCE_ROW_Y_OFFSET = 30;
+const BATTLE_RESOURCE_ROW_LEFT_X_OFFSET = 0;
+const BATTLE_RESOURCE_ROW_RIGHT_X_OFFSET = 0;
 const BATTLE_RESOURCE_ICON_SPACING = 6;
 const BATTLE_RESOURCE_GROUP_GAP = 4;
-const BATTLE_RESOURCE_FONT_SIZE = 12;
+const BATTLE_RESOURCE_FONT_SIZE = 8;
 
 // HUD: LP
 const BATTLE_LP_SHOW = true;
 const BATTLE_LP_X_OFFSET = 30;
-const BATTLE_LP_Y_OFFSET = -28;
+const BATTLE_LP_Y_OFFSET = 34;
 const BATTLE_LP_FONT_SIZE = 14;
 const BATTLE_LP_CORNER_X_INSET = 8;
 const BATTLE_LP_CORNER_Y_INSET = 8;
@@ -170,8 +201,8 @@ const BATTLE_LP_CORNER_Y_INSET = 8;
 // HUD: DAMAGE
 const DAMAGE_POPUP_Y_OFFSET = 80;
 const DAMAGE_NUMBER_X_OFFSET = 0;
-const DAMAGE_NUMBER_Y_OFFSET = 70;
-const DAMAGE_NUMBER_FONT_SIZE = 30;
+const DAMAGE_NUMBER_Y_OFFSET = 50;
+const DAMAGE_NUMBER_FONT_SIZE = 18;
 const DAMAGE_NUMBER_DURATION_MS = ms(1000);
 const DAMAGE_NUMBER_FLOAT_Y = 20;
 const DAMAGE_NUMBER_HOLD_MS = ms(1000);
@@ -352,7 +383,9 @@ let infoPanelNodes = [];
 let statusPanelNodes = [];
 let currentAttacker = null;
 let currentDefender = null;
-let combatZoomMode = false;
+let combatZoomMode = true;
+let isBattleGridLineVisible = SHOW_BATTLE_GRID_LINES;
+let battleGridLineNodes = [];
 
 const config = {
   type: Phaser.AUTO,
@@ -369,15 +402,24 @@ const config = {
     autoCenter: Phaser.Scale.CENTER_BOTH
   },
   scene: {
+    preload,
     create
   }
 };
 
 new Phaser.Game(config);
 
+function preload() {
+  this.load.spritesheet(KNIGHT_IDLE_TEXTURE_KEY, KNIGHT_IDLE_ASSET_PATH, {
+    frameWidth: KNIGHT_IDLE_FRAME_WIDTH,
+    frameHeight: KNIGHT_IDLE_FRAME_HEIGHT
+  });
+}
+
 function create() {
   sceneRef = this;
   createLayout();
+  applyCombatZoomMode(false);
 
   speedLabel = sceneRef.add.text(
     layout.left.x + SIDE_GRID_PADDING,
@@ -394,17 +436,37 @@ function create() {
   sceneRef.input.keyboard.on('keydown-THREE', () => setBattleSpeed(3));
   sceneRef.input.keyboard.on('keydown-FOUR', () => setBattleSpeed(4));
   sceneRef.input.keyboard.on(`keydown-${COMBAT_ZOOM_KEY}`, toggleCombatZoomMode);
+  sceneRef.input.keyboard.on(`keydown-${BATTLE_GRID_TOGGLE_KEY}`, toggleBattleGridLines);
 
   startBattle();
 }
 
+function toggleBattleGridLines() {
+  setBattleGridLineVisibility(!isBattleGridLineVisible);
+}
+
+function setBattleGridLineVisibility(isVisible) {
+  isBattleGridLineVisible = isVisible;
+  const alpha = isVisible ? BATTLE_GRID_LINE_ALPHA_VISIBLE : BATTLE_GRID_LINE_ALPHA_HIDDEN;
+  battleGridLineNodes.forEach((node) => {
+    node.setAlpha(alpha);
+  });
+}
+
 function toggleCombatZoomMode() {
   combatZoomMode = !combatZoomMode;
+  applyCombatZoomMode(true);
+}
+
+function applyCombatZoomMode(animate = true) {
   const camera = sceneRef.cameras.main;
 
+  const duration = animate ? COMBAT_ZOOM_DURATION_MS : 0;
+  const ease = 'Quad.easeInOut';
+
   if (!combatZoomMode) {
-    camera.pan(GAME_WIDTH / 2, GAME_HEIGHT / 2, COMBAT_ZOOM_DURATION_MS, 'Quad.easeInOut');
-    camera.zoomTo(1, COMBAT_ZOOM_DURATION_MS, 'Quad.easeInOut');
+    camera.pan(GAME_WIDTH / 2, GAME_HEIGHT / 2, duration, ease);
+    camera.zoomTo(1, duration, ease);
     return;
   }
 
@@ -414,8 +476,8 @@ function toggleCombatZoomMode() {
   const centerX = layout.battle.x + layout.battle.w / 2;
   const centerY = layout.battle.y + layout.battle.h / 2;
 
-  camera.pan(centerX, centerY, COMBAT_ZOOM_DURATION_MS, 'Quad.easeInOut');
-  camera.zoomTo(zoom, COMBAT_ZOOM_DURATION_MS, 'Quad.easeInOut');
+  camera.pan(centerX, centerY, duration, ease);
+  camera.zoomTo(zoom, duration, ease);
 }
 
 function createLayout() {
@@ -425,7 +487,8 @@ function createLayout() {
   const centerX = leftW;
   const rightX = leftW + centerW;
   const battleH = GAME_HEIGHT * BATTLE_WINDOW_HEIGHT_RATIO;
-  const grassH = 48;
+  const grassY = battleH * BATTLE_HORIZON_RATIO;
+  const grassH = battleH - grassY;
 
   layout = {
     left: { x: 0, y: 0, w: leftW, h: GAME_HEIGHT },
@@ -433,17 +496,17 @@ function createLayout() {
     right: { x: rightX, y: 0, w: rightW, h: GAME_HEIGHT },
     battle: { x: centerX, y: 0, w: centerW, h: battleH },
     info: { x: centerX, y: battleH, w: centerW, h: GAME_HEIGHT - battleH },
-    grass: { x: centerX, y: battleH - grassH, w: centerW, h: grassH }
+    grass: { x: centerX, y: grassY, w: centerW, h: grassH }
   };
 
   drawPanel(layout.left, 'Red Team');
 
-  sceneRef.add.rectangle(layout.battle.x, layout.battle.y, layout.battle.w, layout.battle.h, PHASER_COLORS.sky)
+  sceneRef.add.rectangle(layout.battle.x, layout.battle.y, layout.battle.w, layout.grass.y, PHASER_COLORS.sky)
+    .setOrigin(0);
+  sceneRef.add.rectangle(layout.grass.x, layout.grass.y, layout.grass.w, layout.grass.h, PHASER_COLORS.grass)
     .setOrigin(0);
   drawBattleFormationGrid('red');
   drawBattleFormationGrid('blue');
-  sceneRef.add.rectangle(layout.grass.x, layout.grass.y, layout.grass.w, layout.grass.h, PHASER_COLORS.grass)
-    .setOrigin(0);
   sceneRef.add.rectangle(layout.battle.x, layout.battle.y, layout.battle.w, layout.battle.h)
     .setOrigin(0)
     .setStrokeStyle(2, PHASER_COLORS.panelBorder);
@@ -482,14 +545,35 @@ function createUnits() {
 function createCharacter(name, characterClass, color, teamKey, row, col) {
   const classStats = CHARACTER_CLASSES[characterClass];
   const { x, baseY } = getFormationPosition(teamKey, row, col);
+  const spriteX = x + (teamKey === 'red'
+    ? UNIT_SPRITE_FORWARD_X_OFFSET
+    : -UNIT_SPRITE_FORWARD_X_OFFSET);
+  
+  const shadow = sceneRef.add.ellipse(
+    x,
+    baseY + UNIT_SHADOW_Y_OFFSET,
+    UNIT_SHADOW_WIDTH,
+    UNIT_SHADOW_HEIGHT,
+    cssHexToNumber(UNIT_SHADOW_COLOR)
+  )
+    .setAlpha(UNIT_SHADOW_ALPHA);
 
-  const rect = sceneRef.add.rectangle(x, baseY - UNIT_SIZE / 2, UNIT_SIZE, UNIT_SIZE, color)
-    .setStrokeStyle(3, PHASER_COLORS.unitBorder);
-  const label = sceneRef.add.text(x, baseY - UNIT_SIZE / 2, name, {
+  const rect = sceneRef.add.sprite(
+    spriteX,
+    baseY,
+    KNIGHT_IDLE_TEXTURE_KEY,
+    KNIGHT_IDLE_DEFAULT_FRAME
+  )
+    .setScale(KNIGHT_IDLE_SCALE)
+    .setFlipX(teamKey === 'blue');
+  
+  const label = sceneRef.add.text(spriteX, baseY, name, {
     fontFamily: 'monospace',
     fontSize: '20px',
     color: COLORS.text
-  }).setOrigin(0.5);
+  })
+    .setOrigin(0.5)
+    .setVisible(SHOW_BATTLE_UNIT_NAME_LABELS);
 
   const unit = {
     name,
@@ -510,6 +594,7 @@ function createCharacter(name, characterClass, color, teamKey, row, col) {
     maxLp: classStats.maxLp,
     ip: classStats.ip,
     maxIp: classStats.maxIp,
+    shadow,
     rect,
     label,
     battleHudNodes: {
@@ -521,7 +606,46 @@ function createCharacter(name, characterClass, color, teamKey, row, col) {
   };
 
   refreshBattleUnitHud(unit);
+  startKnightIdle(unit);
   return unit;
+}
+
+function startKnightIdle(unit) {
+  if (!hasBattlefieldVisuals(unit) || unit.hp <= 0) {
+    return;
+  }
+
+  unit.rect.setFrame(KNIGHT_IDLE_DEFAULT_FRAME);
+  scheduleKnightIdleTwitch(unit);
+}
+
+function scheduleKnightIdleTwitch(unit) {
+  if (!hasBattlefieldVisuals(unit) || unit.hp <= 0) {
+    return;
+  }
+
+  const delayMs = KNIGHT_IDLE_TWITCH_MIN_DELAY_MS +
+    Math.random() * (KNIGHT_IDLE_TWITCH_MAX_DELAY_MS - KNIGHT_IDLE_TWITCH_MIN_DELAY_MS);
+
+  sceneRef.time.delayedCall(delayMs, () => {
+    playKnightIdleTwitch(unit);
+  });
+}
+
+function playKnightIdleTwitch(unit) {
+  if (!hasBattlefieldVisuals(unit) || unit.hp <= 0) {
+    return;
+  }
+
+  unit.rect.setFrame(KNIGHT_IDLE_TWITCH_FRAME);
+  sceneRef.time.delayedCall(KNIGHT_IDLE_TWITCH_HOLD_MS, () => {
+    if (!hasBattlefieldVisuals(unit) || unit.hp <= 0) {
+      return;
+    }
+
+    unit.rect.setFrame(KNIGHT_IDLE_DEFAULT_FRAME);
+    scheduleKnightIdleTwitch(unit);
+  });
 }
 
 function getCurrentIconRowWidth(entries, iconSpacing, groupGap) {
@@ -579,10 +703,10 @@ function createBattleStateResourceRow(unit) {
   const totalWidth = getCurrentIconRowWidth(entries, BATTLE_STATE_ICON_SPACING, BATTLE_STATE_RESOURCE_GAP);
 
   const startX = unit.teamKey === 'blue'
-    ? unit.rect.x + UNIT_SIZE / 2 - totalWidth - BATTLE_STATE_ROW_X_OFFSET
-    : unit.rect.x - UNIT_SIZE / 2 + BATTLE_STATE_ROW_X_OFFSET;
+    ? unit.rect.x - totalWidth / 2 - BATTLE_STATE_ROW_X_OFFSET
+    : unit.rect.x - totalWidth / 2 + BATTLE_STATE_ROW_X_OFFSET;
 
-  const y = unit.rect.y - UNIT_SIZE / 2 + BATTLE_STATE_ROW_Y_OFFSET;
+  const y = unit.rect.y + BATTLE_STATE_ROW_Y_OFFSET;
 
   drawBattleHudIconRow(
     unit,
@@ -618,10 +742,10 @@ function createBattleResourceRow(unit) {
   );
 
   const startX = unit.teamKey === 'blue'
-    ? unit.rect.x + UNIT_SIZE / 2 - totalWidth + BATTLE_RESOURCE_ROW_RIGHT_X_OFFSET
-    : unit.rect.x - UNIT_SIZE / 2 + BATTLE_RESOURCE_ROW_LEFT_X_OFFSET;
+    ? unit.rect.x - totalWidth / 2 + BATTLE_RESOURCE_ROW_RIGHT_X_OFFSET
+    : unit.rect.x - totalWidth / 2 + BATTLE_RESOURCE_ROW_LEFT_X_OFFSET;
 
-  const y = unit.rect.y - UNIT_SIZE / 2 + BATTLE_RESOURCE_ROW_Y_OFFSET;
+  const y = unit.rect.y + BATTLE_RESOURCE_ROW_Y_OFFSET;
 
   drawBattleHudIconRow(
     unit,
@@ -641,10 +765,10 @@ function createBattleLpMarker(unit) {
   }
 
   const x = unit.teamKey === 'blue'
-    ? unit.rect.x - UNIT_SIZE / 2 + BATTLE_LP_CORNER_X_INSET
-    : unit.rect.x + UNIT_SIZE / 2 - BATTLE_LP_CORNER_X_INSET;
+    ? unit.rect.x - BATTLE_LP_X_OFFSET + BATTLE_LP_CORNER_X_INSET
+    : unit.rect.x + BATTLE_LP_X_OFFSET - BATTLE_LP_CORNER_X_INSET;
 
-  const y = unit.rect.y + UNIT_SIZE / 2 - BATTLE_LP_CORNER_Y_INSET;
+  const y = unit.rect.y + BATTLE_LP_Y_OFFSET - BATTLE_LP_CORNER_Y_INSET;
 
   addBattleHudIcon(
     unit,
@@ -702,7 +826,7 @@ function getFormationPosition(teamKey, row, col) {
   const cellH = gridRect.h / FORMATION_COLS.length;
   const x = gridRect.x + cellW * rowOrder.indexOf(row) + cellW / 2;
   const slotCenterY = gridRect.y + cellH * col + cellH / 2;
-  const baseY = slotCenterY + UNIT_SIZE / 2;
+  const baseY = slotCenterY + UNIT_VISUAL_Y_OFFSET;
   return { x, baseY };
 }
 
@@ -712,9 +836,9 @@ function getBattleGridRect(teamKey) {
     : layout.battle.x + layout.battle.w - BATTLE_GRID_SIDE_PADDING - BATTLE_GRID_WIDTH;
   return {
     x,
-    y: layout.battle.y + layout.battle.h * BATTLE_GRID_TOP_RATIO,
+    y: layout.grass.y + FORMATION_GRASS_TOP_PADDING,
     w: BATTLE_GRID_WIDTH,
-    h: BATTLE_GRID_HEIGHT
+    h: layout.grass.h - FORMATION_GRASS_TOP_PADDING - FORMATION_GRASS_BOTTOM_PADDING
   };
 }
 
@@ -723,19 +847,50 @@ function drawBattleFormationGrid(teamKey) {
   const cellW = rect.w / FORMATION_ROWS.length;
   const cellH = rect.h / FORMATION_COLS.length;
 
-  sceneRef.add.rectangle(rect.x, rect.y, rect.w, rect.h, PHASER_COLORS.formationGrid)
+  sceneRef.add.rectangle(rect.x, rect.y, rect.w, rect.h, cssHexToNumber(FORMATION_GRASS_FILL_COLOR))
     .setOrigin(0)
-    .setStrokeStyle(BATTLE_GRID_LINE_SIZE, PHASER_COLORS.formationGridLine);
+    .setAlpha(FORMATION_GRASS_ALPHA);
+
+  addBattleGridLineNode(rect.x, rect.y, rect.w, FORMATION_GRID_LINE_SIZE, 0, 0);
+  addBattleGridLineNode(rect.x, rect.y + rect.h, rect.w, FORMATION_GRID_LINE_SIZE, 0, 0.5);
+  addBattleGridLineNode(rect.x, rect.y, FORMATION_GRID_LINE_SIZE, rect.h, 0, 0);
+  addBattleGridLineNode(rect.x + rect.w, rect.y, FORMATION_GRID_LINE_SIZE, rect.h, 0.5, 0);
 
   for (let index = 1; index < FORMATION_ROWS.length; index += 1) {
-    sceneRef.add.rectangle(rect.x + cellW * index, rect.y, BATTLE_GRID_LINE_SIZE, rect.h, PHASER_COLORS.formationGridLine)
-      .setOrigin(0.5, 0);
+    addBattleGridLineNode(
+      rect.x + cellW * index,
+      rect.y,
+      FORMATION_GRID_LINE_SIZE,
+      rect.h,
+      0.5,
+      0
+    );
   }
 
   for (let index = 1; index < FORMATION_COLS.length; index += 1) {
-    sceneRef.add.rectangle(rect.x, rect.y + cellH * index, rect.w, BATTLE_GRID_LINE_SIZE, PHASER_COLORS.formationGridLine)
-      .setOrigin(0, 0.5);
+    addBattleGridLineNode(
+      rect.x,
+      rect.y + cellH * index,
+      rect.w,
+      FORMATION_GRID_LINE_SIZE,
+      0,
+      0.5
+    );
   }
+}
+
+function addBattleGridLineNode(x, y, width, height, originX, originY) {
+  const node = sceneRef.add.rectangle(
+    x,
+    y,
+    width,
+    height,
+    cssHexToNumber(FORMATION_GRID_LINE_COLOR)
+  )
+    .setOrigin(originX, originY)
+    .setAlpha(isBattleGridLineVisible ? BATTLE_GRID_LINE_ALPHA_VISIBLE : BATTLE_GRID_LINE_ALPHA_HIDDEN);
+
+  battleGridLineNodes.push(node);
 }
 
 function firstLivingUnit(teamKey) {
@@ -1408,6 +1563,8 @@ function playAttackLungeOut(attacker, defender) {
   attacker.homeRectY = attacker.rect.y;
   attacker.homeLabelX = attacker.label.x;
   attacker.homeLabelY = attacker.label.y;
+  attacker.homeShadowX = attacker.shadow.x;
+  attacker.homeShadowY = attacker.shadow.y;
   attacker.homeStateNodePositions = stateNodes.map((node) => ({ node, x: node.x, y: node.y }));
 
   if (len < 1) {
@@ -1419,7 +1576,7 @@ function playAttackLungeOut(attacker, defender) {
   const lungeDistance = Math.max(0, len - ATTACK_LUNGE_STOP_DISTANCE);
 
   sceneRef.tweens.add({
-    targets: [attacker.rect, attacker.label, ...stateNodes],
+    targets: [attacker.rect, attacker.label, attacker.shadow, ...stateNodes],
     x: `+=${nx * lungeDistance}`,
     y: `+=${ny * lungeDistance}`,
     duration: ATTACK_LUNGE_DURATION_MS,
@@ -1442,6 +1599,14 @@ function playAttackReturn(attacker) {
   });
 
   sceneRef.tweens.add({
+    targets: attacker.shadow,
+    x: attacker.homeShadowX,
+    y: attacker.homeShadowY,
+    duration: ATTACK_LUNGE_DURATION_MS,
+    ease: 'Quad.easeInOut'
+  });
+
+  sceneRef.tweens.add({
     targets: attacker.label,
     x: attacker.homeLabelX,
     y: attacker.homeLabelY,
@@ -1452,6 +1617,8 @@ function playAttackReturn(attacker) {
       attacker.rect.y = attacker.homeRectY;
       attacker.label.x = attacker.homeLabelX;
       attacker.label.y = attacker.homeLabelY;
+      attacker.shadow.x = attacker.homeShadowX;
+      attacker.shadow.y = attacker.homeShadowY;
       (attacker.homeStateNodePositions || []).forEach((entry) => {
         if (!isLiveBattlefieldNode(entry.node)) {
           return;
@@ -1540,11 +1707,12 @@ function markUnitKo(unit) {
   unit.koRemovalScheduled = true;
   unit.rect.setAlpha(KO_FADE_ALPHA);
   unit.label.setAlpha(KO_FADE_ALPHA);
+  unit.shadow.setAlpha(KO_FADE_ALPHA);
   unit.label.setText(`${unit.name} KO`);
   getBattleStateNodes(unit).forEach((node) => node.setAlpha(KO_FADE_ALPHA));
 
   sceneRef.time.delayedCall(KO_REMOVE_DELAY_MS, () => {
-    [unit.rect, unit.label, ...getBattleStateNodes(unit)].forEach((node) => {
+    [unit.rect, unit.label, unit.shadow, ...getBattleStateNodes(unit)].forEach((node) => {
       if (isLiveBattlefieldNode(node)) {
         node.destroy();
       }
