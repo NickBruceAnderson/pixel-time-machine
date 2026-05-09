@@ -74,6 +74,7 @@ const INFO_COLUMN_GAP = 28;
 const INFO_TOOLTIP_HEIGHT = 82;
 const INFO_DIVIDER_COLOR = COLORS.panelBorder;
 
+const SHOW_SIDE_TEAM_STATUS_CARDS = false;
 const SIDE_GRID_PADDING = 40;
 const SIDE_GRID_TOP = 82;
 const SIDE_CARD_WIDTH = 132;
@@ -81,9 +82,22 @@ const SIDE_CARD_HEIGHT = 136;
 const SIDE_GRID_COLUMN_GAP = 28;
 const SIDE_GRID_ROW_GAP = 20;
 
+
 const COMBAT_LOG_TOP_OFFSET = 650;
 const COMBAT_LOG_LEFT_PADDING = 28;
 const TEAM_STATUS_PANEL_HEIGHT = COMBAT_LOG_TOP_OFFSET - SIDE_GRID_TOP - SIDE_GRID_PADDING;
+
+const COMBAT_LOG_TOGGLE_X_OFFSET = 432;
+const COMBAT_LOG_TOGGLE_Y_OFFSET = 0;
+const COMBAT_LOG_TOGGLE_WIDTH = 48;
+const COMBAT_LOG_TOGGLE_HEIGHT = 28;
+const COMBAT_LOG_TOGGLE_PADDING = 8;
+const COMBAT_LOG_TOGGLE_FONT_SIZE = 12;
+const COMBAT_LOG_TOGGLE_VISIBLE_LABEL = 'X';
+const COMBAT_LOG_TOGGLE_HIDDEN_LABEL = 'LOG';
+const COMBAT_LOG_TOGGLE_FILL_COLOR = COLORS.infoPanel;
+const COMBAT_LOG_TOGGLE_BORDER_COLOR = COLORS.panelBorder;
+const COMBAT_LOG_TOGGLE_TEXT_COLOR = COLORS.text;
 
 const LOG_MAX_LINES = 16;
 const LOG_LINE_HEIGHT = 20;
@@ -260,7 +274,7 @@ const ACTION_DELAY_MS =
   DEFENSE_RESULT_DELAY_MS + FINAL_STATS_DURATION_MS + CLEANUP_BUFFER_MS;
 
 const COMBAT_ZOOM_KEY = 'F';
-const COMBAT_ZOOM_PADDING = 24;
+const COMBAT_ZOOM_PADDING = 0;
 const COMBAT_ZOOM_DURATION_MS = ms(250);
 
 const RESOURCE_EFFECT_COMMIT_DELAY_MS =
@@ -323,6 +337,10 @@ let sceneRef;
 let layout;
 let units;
 let logRows = [];
+let combatLogHeader;
+let combatLogToggleButton;
+let combatLogToggleLabel;
+let isCombatLogVisible = true;
 let round = 0;
 let turn = 1;
 let action = 1;
@@ -945,6 +963,10 @@ function renderTeamStatusPanels() {
   statusPanelNodes.forEach((node) => node.destroy());
   statusPanelNodes = [];
 
+  if (!SHOW_SIDE_TEAM_STATUS_CARDS) {
+    return;
+  }
+
   renderTeamStatusPanel('red', {
     x: layout.left.x + SIDE_GRID_PADDING,
     y: layout.left.y + SIDE_GRID_TOP,
@@ -1013,11 +1035,52 @@ function renderCompactUnitCard(unit, x, y, width, height) {
 }
 
 function renderCombatLogHeader() {
-  sceneRef.add.text(
+  combatLogHeader = sceneRef.add.text(
     layout.right.x + COMBAT_LOG_LEFT_PADDING,
     layout.right.y + COMBAT_LOG_TOP_OFFSET,
     'Combat Log',
     headerTextStyle()
+  );
+  createCombatLogToggle();
+}
+
+function createCombatLogToggle() {
+  const x = layout.right.x + COMBAT_LOG_TOGGLE_X_OFFSET;
+  const y = layout.right.y + COMBAT_LOG_TOP_OFFSET + COMBAT_LOG_TOGGLE_Y_OFFSET;
+
+  combatLogToggleButton = sceneRef.add.rectangle(
+    x,
+    y,
+    COMBAT_LOG_TOGGLE_WIDTH,
+    COMBAT_LOG_TOGGLE_HEIGHT,
+    cssHexToNumber(COMBAT_LOG_TOGGLE_FILL_COLOR)
+  )
+    .setOrigin(0)
+    .setStrokeStyle(1, cssHexToNumber(COMBAT_LOG_TOGGLE_BORDER_COLOR))
+    .setInteractive({ useHandCursor: true });
+
+  combatLogToggleLabel = sceneRef.add.text(
+    x + COMBAT_LOG_TOGGLE_PADDING,
+    y + COMBAT_LOG_TOGGLE_PADDING,
+    COMBAT_LOG_TOGGLE_VISIBLE_LABEL,
+    combatLogToggleTextStyle()
+  );
+
+  combatLogToggleButton.on('pointerdown', toggleCombatLog);
+  combatLogToggleLabel.setInteractive({ useHandCursor: true });
+  combatLogToggleLabel.on('pointerdown', toggleCombatLog);
+}
+
+function toggleCombatLog() {
+  setCombatLogVisible(!isCombatLogVisible);
+}
+
+function setCombatLogVisible(isVisible) {
+  isCombatLogVisible = isVisible;
+  combatLogHeader.setVisible(isCombatLogVisible);
+  logRows.forEach((row) => row.setVisible(isCombatLogVisible));
+  combatLogToggleLabel.setText(
+    isCombatLogVisible ? COMBAT_LOG_TOGGLE_VISIBLE_LABEL : COMBAT_LOG_TOGGLE_HIDDEN_LABEL
   );
 }
 
@@ -1961,6 +2024,7 @@ function appendLog(actionText, effectText) {
   const y = logStartY + logRows.length * LOG_LINE_HEIGHT;
   const row = sceneRef.add.text(layout.right.x + COMBAT_LOG_LEFT_PADDING, y, line, smallTextStyle());
   row.setWordWrapWidth(layout.right.w - COMBAT_LOG_LEFT_PADDING * 2);
+  row.setVisible(isCombatLogVisible);
   logRows.push(row);
 
   while (logRows.length > LOG_MAX_LINES) {
@@ -2014,6 +2078,14 @@ function smallTextStyle() {
     fontSize: `${FONT_SIZE_SMALL}px`,
     color: COLORS.text,
     lineSpacing: 4
+  };
+}
+
+function combatLogToggleTextStyle() {
+  return {
+    fontFamily: 'monospace',
+    fontSize: `${COMBAT_LOG_TOGGLE_FONT_SIZE}px`,
+    color: COMBAT_LOG_TOGGLE_TEXT_COLOR
   };
 }
 
