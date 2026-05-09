@@ -64,9 +64,49 @@ const KNIGHT_IDLE_FRAME_HEIGHT = 16;
 const KNIGHT_IDLE_DEFAULT_FRAME = 0;
 const KNIGHT_IDLE_TWITCH_FRAME = 1;
 const KNIGHT_IDLE_SCALE = 4;
-const KNIGHT_IDLE_TWITCH_MIN_DELAY_MS = ms(30000);
-const KNIGHT_IDLE_TWITCH_MAX_DELAY_MS = ms(45000);
-const KNIGHT_IDLE_TWITCH_HOLD_MS = ms(0);
+const KNIGHT_RANDOM_IDLE_TWITCH_ENABLED = false;
+const KNIGHT_RANDOM_IDLE_TWITCH_TEST_KEY = 'I';
+const KNIGHT_RANDOM_IDLE_TWITCH_DELAY_MS = ms(15000);
+const KNIGHT_RANDOM_IDLE_TWITCH_HOLD_MS = ms(1000);
+const KNIGHT_ATTACK_TEXTURE_KEY = 'knight-attack';
+const KNIGHT_ATTACK_ASSET_PATH = 'assets/knight/Knight-Attack.png';
+const KNIGHT_ATTACK_FRAME_WIDTH = 16;
+const KNIGHT_ATTACK_FRAME_HEIGHT = 16;
+const KNIGHT_ATTACK_START_FRAME = 0;
+const KNIGHT_ATTACK_END_FRAME = 5;
+const KNIGHT_ATTACK_FRAME_RATE = 12;
+const KNIGHT_ATTACK_ANIMATION_KEY = 'knight-attack';
+const KNIGHT_ATTACK_ACTION_KEYS = ['slash', 'thrust'];
+const KNIGHT_ATTACK_ANIMATION_DURATION_MS = ms(
+  (KNIGHT_ATTACK_END_FRAME - KNIGHT_ATTACK_START_FRAME + 1) /
+    KNIGHT_ATTACK_FRAME_RATE *
+    1000
+);
+const KNIGHT_ATTACK_FINAL_POSE_HOLD_MS = ms(1000);
+const KNIGHT_BLOCK_PARRY_TEXTURE_KEY = 'knight-block-parry';
+const KNIGHT_BLOCK_PARRY_ASSET_PATH = 'assets/knight/Knight-Block-Parry.png';
+const KNIGHT_BLOCK_PARRY_FRAME_WIDTH = 16;
+const KNIGHT_BLOCK_PARRY_FRAME_HEIGHT = 16;
+const KNIGHT_BLOCK_START_FRAME = 0;
+const KNIGHT_BLOCK_END_FRAME = 2;
+const KNIGHT_BLOCK_FRAME_RATE = 10;
+const KNIGHT_BLOCK_ANIMATION_KEY = 'knight-block';
+const KNIGHT_BLOCK_FINAL_POSE_HOLD_MS = ms(1000);
+const KNIGHT_BLOCK_SYNC_LEAD_FRAMES = 1;
+const KNIGHT_BLOCK_SYNC_LEAD_MS = ms(
+  KNIGHT_BLOCK_SYNC_LEAD_FRAMES / KNIGHT_BLOCK_FRAME_RATE * 1000
+);
+const KNIGHT_PARRY_START_FRAME = 0;
+const KNIGHT_PARRY_END_FRAME = 11;
+const KNIGHT_PARRY_FRAME_RATE = 12;
+const KNIGHT_PARRY_ANIMATION_KEY = 'knight-parry';
+const KNIGHT_PARRY_FINAL_POSE_HOLD_MS = ms(1000);
+const KNIGHT_PARRY_FLOURISH_FRAME_COUNT = 7;
+const KNIGHT_PARRY_SYNC_LEAD_MS = ms(
+  (KNIGHT_PARRY_END_FRAME - KNIGHT_PARRY_START_FRAME + 1 - KNIGHT_PARRY_FLOURISH_FRAME_COUNT) /
+    KNIGHT_PARRY_FRAME_RATE *
+    1000
+);
 const SHOW_BATTLE_UNIT_NAME_LABELS = false;
 
 // Formation
@@ -148,7 +188,7 @@ const RESOURCE_BLOCK_SPACING = 1;
 
 // HUD: CAST
 const CAST_TITLE_FONT_SIZE = 12;
-const CAST_CALLOUT_Y_OFFSET = -50;
+const CAST_CALLOUT_Y_OFFSET = 0;
 const CAST_CALLOUT_WIDTH = 80;
 const CAST_CALLOUT_HEIGHT = 20;
 const CAST_CALLOUT_PADDING = 1;
@@ -171,30 +211,22 @@ const POPUP_RESOURCE_ROW_GAP = 1;
 // HUD: UNIT TOGGLE
 const SHOW_BATTLE_UNIT_HUD = true;
 
-// HUD: HP/SP
-const SHOW_BATTLE_STATE_ROW = true;
-const BATTLE_STATE_ROW_X_OFFSET = 0;
-const BATTLE_STATE_ROW_Y_OFFSET = -25;
-const BATTLE_STATE_ICON_SPACING = 6;
-const BATTLE_STATE_RESOURCE_GAP = 4;
+// HUD: Main resources
+const BATTLE_MAIN_RESOURCE_ROW_Y_OFFSET = 40;
+const BATTLE_MAIN_RESOURCE_ICON_SPACING = 3;
+const BATTLE_MAIN_RESOURCE_GROUP_GAP = 0;
+const BATTLE_MAIN_RESOURCE_MAJOR_GAP = 12;
+const BATTLE_MAIN_RESOURCE_FONT_SIZE = 8;
 const BATTLE_STATE_FULL_ALPHA = 1;
 const BATTLE_STATE_EMPTY_ALPHA = 0.20;
 const BATTLE_STATE_HIT_DIM_DURATION_MS = ms(260);
-const POPUP_RESOURCE_FONT_SIZE = 8;
-
-// HUD: RP/AP
-const BATTLE_RESOURCE_ROW_Y_OFFSET = 30;
-const BATTLE_RESOURCE_ROW_LEFT_X_OFFSET = 0;
-const BATTLE_RESOURCE_ROW_RIGHT_X_OFFSET = 0;
-const BATTLE_RESOURCE_ICON_SPACING = 6;
-const BATTLE_RESOURCE_GROUP_GAP = 4;
-const BATTLE_RESOURCE_FONT_SIZE = 8;
+//const POPUP_RESOURCE_FONT_SIZE = 4;
 
 // HUD: LP
 const BATTLE_LP_SHOW = true;
 const BATTLE_LP_X_OFFSET = 30;
 const BATTLE_LP_Y_OFFSET = 34;
-const BATTLE_LP_FONT_SIZE = 14;
+const BATTLE_LP_FONT_SIZE = 10;
 const BATTLE_LP_CORNER_X_INSET = 8;
 const BATTLE_LP_CORNER_Y_INSET = 8;
 
@@ -244,12 +276,6 @@ const SECONDARY_RESOURCE_COMMIT_STAGGER_MS = ms(250);
 const RESOURCE_EFFECT_PREVIEW_AFTER_FADE_MS = ms(150);
 const RESOURCE_EFFECT_FADE_DELAY_MS = FINAL_STATS_DURATION_MS;
 
-// Hit animations
-const BLOCK_TILT_ANGLE = 12;
-const BLOCK_TILT_DURATION_MS = ms(180);
-
-const PARRY_SPIN_DURATION_MS = ms(450);
-
 const DAMAGE_BLINK_ALPHA = 0.4;
 const DAMAGE_BLINK_DURATION_MS = ms(160);
 const DAMAGE_BLINK_REPEAT = 1;
@@ -274,6 +300,9 @@ const ATTACK_LUNGE_START_DELAY_MS =
 const ATTACK_LUNGE_DURATION_MS =
   LUNGE_DURATION_MS;
 
+const ATTACK_ANIMATION_START_DELAY_MS =
+  ATTACK_LUNGE_START_DELAY_MS + ATTACK_LUNGE_DURATION_MS;
+
 const REACTION_CAST_LABEL_DELAY_MS =
   ATTACK_LUNGE_START_DELAY_MS + ATTACK_LUNGE_DURATION_MS + FREEZE_DURATION_MS;
 
@@ -296,10 +325,10 @@ const NO_REACTION_IMPACT_PAUSE_MS =
   ms(200);
 
 const NO_REACTION_RESULT_DELAY_MS =
-  ATTACK_LUNGE_START_DELAY_MS + ATTACK_LUNGE_DURATION_MS + NO_REACTION_IMPACT_PAUSE_MS;
+  ATTACK_ANIMATION_START_DELAY_MS + KNIGHT_ATTACK_ANIMATION_DURATION_MS + NO_REACTION_IMPACT_PAUSE_MS;
 
 const NO_REACTION_RETURN_DELAY_MS =
-  NO_REACTION_RESULT_DELAY_MS + ms(250);
+  NO_REACTION_RESULT_DELAY_MS + KNIGHT_ATTACK_FINAL_POSE_HOLD_MS;
 
 const ACTION_DELAY_MS =
   DEFENSE_RESULT_DELAY_MS + FINAL_STATS_DURATION_MS + CLEANUP_BUFFER_MS;
@@ -386,6 +415,7 @@ let currentDefender = null;
 let combatZoomMode = true;
 let isBattleGridLineVisible = SHOW_BATTLE_GRID_LINES;
 let battleGridLineNodes = [];
+let isKnightRandomIdleTwitchEnabled = KNIGHT_RANDOM_IDLE_TWITCH_ENABLED;
 
 const config = {
   type: Phaser.AUTO,
@@ -414,10 +444,19 @@ function preload() {
     frameWidth: KNIGHT_IDLE_FRAME_WIDTH,
     frameHeight: KNIGHT_IDLE_FRAME_HEIGHT
   });
+  this.load.spritesheet(KNIGHT_ATTACK_TEXTURE_KEY, KNIGHT_ATTACK_ASSET_PATH, {
+    frameWidth: KNIGHT_ATTACK_FRAME_WIDTH,
+    frameHeight: KNIGHT_ATTACK_FRAME_HEIGHT
+  });
+  this.load.spritesheet(KNIGHT_BLOCK_PARRY_TEXTURE_KEY, KNIGHT_BLOCK_PARRY_ASSET_PATH, {
+    frameWidth: KNIGHT_BLOCK_PARRY_FRAME_WIDTH,
+    frameHeight: KNIGHT_BLOCK_PARRY_FRAME_HEIGHT
+  });
 }
 
 function create() {
   sceneRef = this;
+  createKnightAnimations();
   createLayout();
   applyCombatZoomMode(false);
 
@@ -437,8 +476,39 @@ function create() {
   sceneRef.input.keyboard.on('keydown-FOUR', () => setBattleSpeed(4));
   sceneRef.input.keyboard.on(`keydown-${COMBAT_ZOOM_KEY}`, toggleCombatZoomMode);
   sceneRef.input.keyboard.on(`keydown-${BATTLE_GRID_TOGGLE_KEY}`, toggleBattleGridLines);
+  sceneRef.input.keyboard.on(`keydown-${KNIGHT_RANDOM_IDLE_TWITCH_TEST_KEY}`, toggleKnightRandomIdleTwitch);
 
   startBattle();
+}
+
+function createKnightAnimations() {
+  sceneRef.anims.create({
+    key: KNIGHT_ATTACK_ANIMATION_KEY,
+    frames: sceneRef.anims.generateFrameNumbers(KNIGHT_ATTACK_TEXTURE_KEY, {
+      start: KNIGHT_ATTACK_START_FRAME,
+      end: KNIGHT_ATTACK_END_FRAME
+    }),
+    frameRate: KNIGHT_ATTACK_FRAME_RATE,
+    repeat: 0
+  });
+  sceneRef.anims.create({
+    key: KNIGHT_BLOCK_ANIMATION_KEY,
+    frames: sceneRef.anims.generateFrameNumbers(KNIGHT_BLOCK_PARRY_TEXTURE_KEY, {
+      start: KNIGHT_BLOCK_START_FRAME,
+      end: KNIGHT_BLOCK_END_FRAME
+    }),
+    frameRate: KNIGHT_BLOCK_FRAME_RATE,
+    repeat: 0
+  });
+  sceneRef.anims.create({
+    key: KNIGHT_PARRY_ANIMATION_KEY,
+    frames: sceneRef.anims.generateFrameNumbers(KNIGHT_BLOCK_PARRY_TEXTURE_KEY, {
+      start: KNIGHT_PARRY_START_FRAME,
+      end: KNIGHT_PARRY_END_FRAME
+    }),
+    frameRate: KNIGHT_PARRY_FRAME_RATE,
+    repeat: 0
+  });
 }
 
 function toggleBattleGridLines() {
@@ -611,40 +681,91 @@ function createCharacter(name, characterClass, color, teamKey, row, col) {
 }
 
 function startKnightIdle(unit) {
-  if (!hasBattlefieldVisuals(unit) || unit.hp <= 0) {
+  if (!hasBattlefieldVisuals(unit) || unit.hp <= 0 || unit.isPlayingKnightAnimation) {
     return;
   }
 
-  unit.rect.setFrame(KNIGHT_IDLE_DEFAULT_FRAME);
-  scheduleKnightIdleTwitch(unit);
+  setKnightIdle(unit);
+  startKnightRandomIdleTwitch(unit);
 }
 
-function scheduleKnightIdleTwitch(unit) {
-  if (!hasBattlefieldVisuals(unit) || unit.hp <= 0) {
-    return;
-  }
-
-  const delayMs = KNIGHT_IDLE_TWITCH_MIN_DELAY_MS +
-    Math.random() * (KNIGHT_IDLE_TWITCH_MAX_DELAY_MS - KNIGHT_IDLE_TWITCH_MIN_DELAY_MS);
-
-  sceneRef.time.delayedCall(delayMs, () => {
-    playKnightIdleTwitch(unit);
-  });
-}
-
-function playKnightIdleTwitch(unit) {
-  if (!hasBattlefieldVisuals(unit) || unit.hp <= 0) {
-    return;
-  }
-
-  unit.rect.setFrame(KNIGHT_IDLE_TWITCH_FRAME);
-  sceneRef.time.delayedCall(KNIGHT_IDLE_TWITCH_HOLD_MS, () => {
-    if (!hasBattlefieldVisuals(unit) || unit.hp <= 0) {
+function toggleKnightRandomIdleTwitch() {
+  isKnightRandomIdleTwitchEnabled = !isKnightRandomIdleTwitchEnabled;
+  units.forEach((unit) => {
+    if (isKnightRandomIdleTwitchEnabled) {
+      startKnightRandomIdleTwitch(unit);
       return;
     }
 
-    unit.rect.setFrame(KNIGHT_IDLE_DEFAULT_FRAME);
-    scheduleKnightIdleTwitch(unit);
+    stopKnightRandomIdleTwitch(unit);
+    if (!unit.isPlayingKnightAnimation) {
+      setKnightIdle(unit);
+    }
+  });
+}
+
+function canRunKnightRandomIdleTwitch(unit) {
+  return isKnightRandomIdleTwitchEnabled &&
+    hasBattlefieldVisuals(unit) &&
+    unit.hp > 0 &&
+    !unit.isPlayingKnightAnimation;
+}
+
+function setKnightIdle(unit) {
+  unit.rect.stop();
+  unit.rect.setTexture(KNIGHT_IDLE_TEXTURE_KEY, KNIGHT_IDLE_DEFAULT_FRAME);
+  unit.rect.setFrame(KNIGHT_IDLE_DEFAULT_FRAME);
+  unit.rect.setFlipX(unit.teamKey === 'blue');
+}
+
+function stopKnightRandomIdleTwitch(unit) {
+  if (unit.idleTwitchEvent) {
+    unit.idleTwitchEvent.remove(false);
+    unit.idleTwitchEvent = null;
+  }
+
+  if (unit.idleTwitchHoldEvent) {
+    unit.idleTwitchHoldEvent.remove(false);
+    unit.idleTwitchHoldEvent = null;
+  }
+}
+
+function startKnightRandomIdleTwitch(unit) {
+  if (!canRunKnightRandomIdleTwitch(unit)) {
+    return;
+  }
+
+  setKnightIdle(unit);
+  scheduleKnightRandomIdleTwitch(unit);
+}
+
+function scheduleKnightRandomIdleTwitch(unit) {
+  if (!canRunKnightRandomIdleTwitch(unit)) {
+    return;
+  }
+
+  stopKnightRandomIdleTwitch(unit);
+  unit.idleTwitchEvent = sceneRef.time.delayedCall(KNIGHT_RANDOM_IDLE_TWITCH_DELAY_MS, () => {
+    unit.idleTwitchEvent = null;
+    playKnightRandomIdleTwitch(unit);
+  });
+}
+
+function playKnightRandomIdleTwitch(unit) {
+  if (!canRunKnightRandomIdleTwitch(unit)) {
+    return;
+  }
+
+  unit.rect.setTexture(KNIGHT_IDLE_TEXTURE_KEY, KNIGHT_IDLE_TWITCH_FRAME);
+  unit.rect.setFrame(KNIGHT_IDLE_TWITCH_FRAME);
+  unit.idleTwitchHoldEvent = sceneRef.time.delayedCall(KNIGHT_RANDOM_IDLE_TWITCH_HOLD_MS, () => {
+    unit.idleTwitchHoldEvent = null;
+    if (!canRunKnightRandomIdleTwitch(unit)) {
+      return;
+    }
+
+    setKnightIdle(unit);
+    scheduleKnightRandomIdleTwitch(unit);
   });
 }
 
@@ -685,78 +806,62 @@ function drawBattleHudIconRow(unit, groupKey, entries, startX, y, iconSpacing, g
   });
 }
 
-function createBattleStateResourceRow(unit) {
-  if (!SHOW_BATTLE_UNIT_HUD || !SHOW_BATTLE_STATE_ROW || !hasBattlefieldVisuals(unit)) {
-    return;
-  }
-
-  const entries = unit.teamKey === 'blue'
-    ? [
-      { key: 'sp', current: unit.sp },
-      { key: 'hp', current: unit.hp }
-    ]
-    : [
-      { key: 'hp', current: unit.hp },
-      { key: 'sp', current: unit.sp }
-    ];
-
-  const totalWidth = getCurrentIconRowWidth(entries, BATTLE_STATE_ICON_SPACING, BATTLE_STATE_RESOURCE_GAP);
-
-  const startX = unit.teamKey === 'blue'
-    ? unit.rect.x - totalWidth / 2 - BATTLE_STATE_ROW_X_OFFSET
-    : unit.rect.x - totalWidth / 2 + BATTLE_STATE_ROW_X_OFFSET;
-
-  const y = unit.rect.y + BATTLE_STATE_ROW_Y_OFFSET;
-
-  drawBattleHudIconRow(
-    unit,
-    'top',
-    entries,
-    startX,
-    y,
-    BATTLE_STATE_ICON_SPACING,
-    BATTLE_STATE_RESOURCE_GAP,
-    POPUP_RESOURCE_FONT_SIZE
-  );
-}
-
-function createBattleResourceRow(unit) {
+function createBattleMainResourceRow(unit) {
   if (!SHOW_BATTLE_UNIT_HUD || !hasBattlefieldVisuals(unit)) {
     return;
   }
 
-  const entries = unit.teamKey === 'blue'
+  const rowGroups = unit.teamKey === 'blue'
     ? [
-      { key: 'rp', current: unit.rp },
-      { key: 'ap', current: unit.ap }
+      [
+        { key: 'sp', current: unit.sp },
+        { key: 'hp', current: unit.hp }
+      ],
+      [
+        { key: 'ap', current: unit.ap },
+        { key: 'rp', current: unit.rp }
+      ]
     ]
     : [
-      { key: 'ap', current: unit.ap },
-      { key: 'rp', current: unit.rp }
+      [
+        { key: 'rp', current: unit.rp },
+        { key: 'ap', current: unit.ap }
+      ],
+      [
+        { key: 'hp', current: unit.hp },
+        { key: 'sp', current: unit.sp }
+      ]
     ];
 
-  const totalWidth = getCurrentIconRowWidth(
+  const groupWidths = rowGroups.map((entries) => getCurrentIconRowWidth(
     entries,
-    BATTLE_RESOURCE_ICON_SPACING,
-    BATTLE_RESOURCE_GROUP_GAP
-  );
+    BATTLE_MAIN_RESOURCE_ICON_SPACING,
+    BATTLE_MAIN_RESOURCE_GROUP_GAP
+  ));
+  const visibleGroupCount = groupWidths.filter((width) => width > 0).length;
+  const totalWidth = groupWidths.reduce((sum, width) => sum + width, 0) +
+    Math.max(0, visibleGroupCount - 1) * BATTLE_MAIN_RESOURCE_MAJOR_GAP;
 
-  const startX = unit.teamKey === 'blue'
-    ? unit.rect.x - totalWidth / 2 + BATTLE_RESOURCE_ROW_RIGHT_X_OFFSET
-    : unit.rect.x - totalWidth / 2 + BATTLE_RESOURCE_ROW_LEFT_X_OFFSET;
+  let cursorX = unit.shadow.x - totalWidth / 2;
+  const y = unit.rect.y + BATTLE_MAIN_RESOURCE_ROW_Y_OFFSET;
 
-  const y = unit.rect.y + BATTLE_RESOURCE_ROW_Y_OFFSET;
+  rowGroups.forEach((entries, groupIndex) => {
+    if (groupWidths[groupIndex] <= 0) {
+      return;
+    }
 
-  drawBattleHudIconRow(
-    unit,
-    'bottomLeft',
-    entries,
-    startX,
-    y,
-    BATTLE_RESOURCE_ICON_SPACING,
-    BATTLE_RESOURCE_GROUP_GAP,
-    BATTLE_RESOURCE_FONT_SIZE
-  );
+    drawBattleHudIconRow(
+      unit,
+      'top',
+      entries,
+      cursorX,
+      y,
+      BATTLE_MAIN_RESOURCE_ICON_SPACING,
+      BATTLE_MAIN_RESOURCE_GROUP_GAP,
+      BATTLE_MAIN_RESOURCE_FONT_SIZE
+    );
+    cursorX += groupWidths[groupIndex] + BATTLE_MAIN_RESOURCE_MAJOR_GAP;
+  });
 }
 
 function createBattleLpMarker(unit) {
@@ -806,8 +911,7 @@ function refreshBattleUnitHud(unit) {
     return;
   }
 
-  createBattleStateResourceRow(unit);
-  createBattleResourceRow(unit);
+  createBattleMainResourceRow(unit);
   createBattleLpMarker(unit);
 }
 
@@ -1293,6 +1397,9 @@ function showActionCastEffect(effect) {
 
   sceneRef.time.delayedCall(ACTION_CAST_COMMIT_DELAY_MS - ACTION_CAST_LABEL_DELAY_MS, () => {
     callout.commitResourceState();
+  });
+
+  sceneRef.time.delayedCall(ATTACK_LUNGE_START_DELAY_MS - ACTION_CAST_LABEL_DELAY_MS, () => {
     refreshBattleUnitHud(effect.unit);
   });
 
@@ -1351,7 +1458,7 @@ function createCombatCallout({ unit, titleText, resources, yOffset, showTitle = 
   const nodes = [];
   const resourceNodes = [];
   const showCastResources = !SHOW_BATTLE_UNIT_HUD;
-  const x = unit.rect.x;
+  const x = unit.shadow.x;
   const y = unit.rect.y - UNIT_SIZE / 2 - yOffset;
   const top = y - CAST_CALLOUT_HEIGHT / 2;
   const resourceY = y + CAST_CALLOUT_HEIGHT / 2 + CAST_CALLOUT_RESOURCE_Y_GAP;
@@ -1498,7 +1605,7 @@ function showDamageNumberEffect(effect) {
   }
 
   const node = sceneRef.add.text(
-    effect.unit.rect.x + DAMAGE_NUMBER_X_OFFSET,
+    effect.unit.shadow.x + DAMAGE_NUMBER_X_OFFSET,
     effect.unit.rect.y - DAMAGE_NUMBER_Y_OFFSET,
     `-${Math.max(0, lostAmount)}${RESOURCE_ICONS[effect.resourceKey]}`,
     {
@@ -1525,6 +1632,8 @@ function showDamageNumberEffect(effect) {
 function playAnimationEffect(animationEffect) {
   if (animationEffect.type === 'block') {
     playBlockAnimation(animationEffect.unit);
+  } else if (animationEffect.type === 'attack') {
+    playKnightAttack(animationEffect.unit);
   } else if (animationEffect.type === 'parry') {
     playParryAnimation(animationEffect.unit);
   } else if (animationEffect.type === 'damage') {
@@ -1536,6 +1645,96 @@ function playAnimationEffect(animationEffect) {
   } else if (animationEffect.type === 'lungeReturn') {
     playAttackReturn(animationEffect.unit);
   }
+}
+
+function playKnightAttack(unit) {
+  playKnightOneShotAnimation(
+    unit,
+    KNIGHT_ATTACK_TEXTURE_KEY,
+    KNIGHT_ATTACK_ANIMATION_KEY,
+    KNIGHT_ATTACK_FINAL_POSE_HOLD_MS
+  );
+}
+
+function playKnightOneShotAnimation(unit, textureKey, animationKey, finalPoseHoldMs) {
+  if (!hasBattlefieldVisuals(unit) || unit.hp <= 0) {
+    return;
+  }
+
+  stopKnightRandomIdleTwitch(unit);
+
+  unit.isPlayingKnightAnimation = true;
+  unit.knightAnimationKey = animationKey;
+  unit.knightAnimationRunId = (unit.knightAnimationRunId || 0) + 1;
+  const runId = unit.knightAnimationRunId;
+  unit.rect.stop();
+  unit.rect.setTexture(textureKey, getKnightAnimationStartFrame(animationKey));
+  unit.rect.setFlipX(unit.teamKey === 'blue');
+  unit.rect.play(animationKey);
+
+  const finish = () => holdKnightFinalPose(unit, animationKey, runId, finalPoseHoldMs);
+  unit.rect.once('animationcomplete', finish);
+  sceneRef.time.delayedCall(getKnightAnimationDurationMs(animationKey) + finalPoseHoldMs + ms(50), () => {
+    finishKnightOneShotAnimation(unit, animationKey, runId);
+  });
+}
+
+function holdKnightFinalPose(unit, animationKey, runId, finalPoseHoldMs) {
+  if (!unit.isPlayingKnightAnimation ||
+      unit.knightAnimationKey !== animationKey ||
+      unit.knightAnimationRunId !== runId) {
+    return;
+  }
+
+  sceneRef.time.delayedCall(finalPoseHoldMs, () => {
+    finishKnightOneShotAnimation(unit, animationKey, runId);
+  });
+}
+
+function finishKnightOneShotAnimation(unit, animationKey, runId) {
+  if (!unit.isPlayingKnightAnimation ||
+      unit.knightAnimationKey !== animationKey ||
+      unit.knightAnimationRunId !== runId) {
+    return;
+  }
+
+  unit.isPlayingKnightAnimation = false;
+  unit.knightAnimationKey = null;
+
+  if (!hasBattlefieldVisuals(unit) || unit.hp <= 0) {
+    return;
+  }
+
+  setKnightIdle(unit);
+  startKnightRandomIdleTwitch(unit);
+}
+
+function getKnightAnimationStartFrame(animationKey) {
+  if (animationKey === KNIGHT_ATTACK_ANIMATION_KEY) {
+    return KNIGHT_ATTACK_START_FRAME;
+  }
+
+  if (animationKey === KNIGHT_BLOCK_ANIMATION_KEY) {
+    return KNIGHT_BLOCK_START_FRAME;
+  }
+
+  return KNIGHT_PARRY_START_FRAME;
+}
+
+function getKnightAnimationDurationMs(animationKey) {
+  if (animationKey === KNIGHT_ATTACK_ANIMATION_KEY) {
+    return getFrameAnimationDurationMs(KNIGHT_ATTACK_START_FRAME, KNIGHT_ATTACK_END_FRAME, KNIGHT_ATTACK_FRAME_RATE);
+  }
+
+  if (animationKey === KNIGHT_BLOCK_ANIMATION_KEY) {
+    return getFrameAnimationDurationMs(KNIGHT_BLOCK_START_FRAME, KNIGHT_BLOCK_END_FRAME, KNIGHT_BLOCK_FRAME_RATE);
+  }
+
+  return getFrameAnimationDurationMs(KNIGHT_PARRY_START_FRAME, KNIGHT_PARRY_END_FRAME, KNIGHT_PARRY_FRAME_RATE);
+}
+
+function getFrameAnimationDurationMs(startFrame, endFrame, frameRate) {
+  return ms((endFrame - startFrame + 1) / frameRate * 1000);
 }
 
 function isLiveBattlefieldNode(node) {
@@ -1655,30 +1854,21 @@ function getBattleStateNodes(unit) {
 }
 
 function playBlockAnimation(unit) {
-  unit.rect.angle = 0;
-  sceneRef.tweens.add({
-    targets: unit.rect,
-    angle: BLOCK_TILT_ANGLE,
-    duration: BLOCK_TILT_DURATION_MS,
-    yoyo: true,
-    ease: 'Quad.easeOut',
-    onComplete: () => {
-      unit.rect.angle = 0;
-    }
-  });
+  playKnightOneShotAnimation(
+    unit,
+    KNIGHT_BLOCK_PARRY_TEXTURE_KEY,
+    KNIGHT_BLOCK_ANIMATION_KEY,
+    KNIGHT_BLOCK_FINAL_POSE_HOLD_MS
+  );
 }
 
 function playParryAnimation(unit) {
-  unit.rect.angle = 0;
-  sceneRef.tweens.add({
-    targets: unit.rect,
-    angle: 360,
-    duration: PARRY_SPIN_DURATION_MS,
-    ease: 'Quad.easeOut',
-    onComplete: () => {
-      unit.rect.angle = 0;
-    }
-  });
+  playKnightOneShotAnimation(
+    unit,
+    KNIGHT_BLOCK_PARRY_TEXTURE_KEY,
+    KNIGHT_PARRY_ANIMATION_KEY,
+    KNIGHT_PARRY_FINAL_POSE_HOLD_MS
+  );
 }
 
 function playDamageBlink(unit) {
@@ -1705,6 +1895,9 @@ function markUnitKo(unit) {
   }
 
   unit.koRemovalScheduled = true;
+  stopKnightRandomIdleTwitch(unit);
+  unit.isPlayingKnightAnimation = false;
+  unit.knightAnimationKey = null;
   unit.rect.setAlpha(KO_FADE_ALPHA);
   unit.label.setAlpha(KO_FADE_ALPHA);
   unit.shadow.setAlpha(KO_FADE_ALPHA);
@@ -1853,7 +2046,15 @@ function takeNextAction() {
   setActiveCombatants(attacker, defender);
   const tag = `[R${round}T${turn}A${action}]`;
   const selectedAction = chooseAction(attacker, defender);
+  const attackerApBeforeResolve = attacker.ap;
+  if (attackerApBeforeResolve <= 0) {
+    console.debug(`DEBUG ${tag} ${attacker.name} blocked AP before=${attackerApBeforeResolve} action=${selectedAction.name}`);
+    return takeNextAction();
+  }
   const effect = resolveAction(attacker, defender, selectedAction);
+  console.debug(
+    `DEBUG ${tag} ${attacker.name} AP before=${attackerApBeforeResolve} after=${attacker.ap} action=${selectedAction.name}`
+  );
 
   const actionCostText = RESOURCE_ICONS.ap.repeat(selectedAction.apCost);
   appendLog(`${tag} ${attacker.name} uses ${actionCostText}${selectedAction.name}.`, effect.logText);
@@ -1963,6 +2164,13 @@ function resolveAction(attacker, defender, selectedAction) {
       delayMs: returnDelayMs
     }
   ];
+  if (KNIGHT_ATTACK_ACTION_KEYS.includes(selectedAction.key)) {
+    animationEffects.unshift({
+      type: 'attack',
+      unit: attacker,
+      delayMs: ATTACK_ANIMATION_START_DELAY_MS
+    });
+  }
 
   const damageKey = defender.sp > 0 ? 'sp' : 'hp';
   const damageAmount = damageKey === 'sp' ? selectedAction.spDamage : selectedAction.hpDamage;
@@ -1985,7 +2193,9 @@ function resolveAction(attacker, defender, selectedAction) {
     animationEffects.push({
       type: reaction.key,
       unit: defender,
-      delayMs: REACTION_CAST_LABEL_DELAY_MS
+      delayMs: reaction.key === 'parry'
+        ? Math.max(0, ATTACK_ANIMATION_START_DELAY_MS - KNIGHT_PARRY_SYNC_LEAD_MS)
+        : Math.max(0, REACTION_CAST_LABEL_DELAY_MS - KNIGHT_BLOCK_SYNC_LEAD_MS)
     });
 
     const reactionCastEffect = {
