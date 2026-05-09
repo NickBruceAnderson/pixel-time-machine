@@ -117,8 +117,13 @@ const FORMATION_ROW_ORDER_BLUE = ['front', 'middle', 'back'];
 
 // Battlefield presentation
 const BATTLE_HORIZON_RATIO = 0.50;
-const FORMATION_GRASS_FILL_COLOR = '#3c9a42';
-const FORMATION_GRASS_ALPHA = 0.18;
+const SKY_STAR_COUNT = 42;
+const SKY_STAR_COLOR = '#f5f5f5';
+const SKY_STAR_ALPHA = 0.36;
+const SKY_STAR_MIN_SIZE = 1;
+const SKY_STAR_MAX_SIZE = 2;
+const SKY_STAR_TOP_PADDING = 18;
+const SKY_STAR_BOTTOM_PADDING = 22;
 const FORMATION_GRID_LINE_COLOR = '#23652d';
 const FORMATION_GRID_LINE_ALPHA = 0.45;
 const FORMATION_GRID_LINE_SIZE = 2;
@@ -221,6 +226,22 @@ const BATTLE_STATE_FULL_ALPHA = 1;
 const BATTLE_STATE_EMPTY_ALPHA = 0.20;
 const BATTLE_STATE_HIT_DIM_DURATION_MS = ms(260);
 //const POPUP_RESOURCE_FONT_SIZE = 4;
+
+const DEPTH_BACKGROUND = 0;
+const DEPTH_GRID = 10;
+const DEPTH_SHADOW = 20;
+const DEPTH_UNIT = 30;
+const DEPTH_UNIT_HUD = 40;
+const DEPTH_DAMAGE_TEXT = 80;
+const DEPTH_COMBAT_CALLOUT = 100;
+const BATTLE_RESOURCE_CENTER_DEPTH_BONUS = 3;
+const BLUE_RESOURCE_DEPTH_BONUS = {
+  sp: 24,
+  hp: 20,
+  ap: 14,
+  rp: 10,
+  lp: 28
+};
 
 // HUD: LP
 const BATTLE_LP_SHOW = true;
@@ -572,9 +593,12 @@ function createLayout() {
   drawPanel(layout.left, 'Red Team');
 
   sceneRef.add.rectangle(layout.battle.x, layout.battle.y, layout.battle.w, layout.grass.y, PHASER_COLORS.sky)
-    .setOrigin(0);
+    .setOrigin(0)
+    .setDepth(DEPTH_BACKGROUND);
+  drawSkyStars();
   sceneRef.add.rectangle(layout.grass.x, layout.grass.y, layout.grass.w, layout.grass.h, PHASER_COLORS.grass)
-    .setOrigin(0);
+    .setOrigin(0)
+    .setDepth(DEPTH_BACKGROUND);
   drawBattleFormationGrid('red');
   drawBattleFormationGrid('blue');
   sceneRef.add.rectangle(layout.battle.x, layout.battle.y, layout.battle.w, layout.battle.h)
@@ -594,7 +618,8 @@ function drawPanel(rect, title) {
   sceneRef.add.rectangle(rect.x, rect.y, rect.w, rect.h, PHASER_COLORS.panel)
     .setOrigin(0)
     .setStrokeStyle(2, PHASER_COLORS.panelBorder);
-  sceneRef.add.text(rect.x + 28, 26, title, headerTextStyle());
+  sceneRef.add.text(rect.x + rect.w / 2, 26, title, headerTextStyle())
+    .setOrigin(0.5, 0);
 }
 
 function createUnits() {
@@ -627,6 +652,7 @@ function createCharacter(name, characterClass, color, teamKey, row, col) {
     cssHexToNumber(UNIT_SHADOW_COLOR)
   )
     .setAlpha(UNIT_SHADOW_ALPHA);
+  shadow.setDepth(DEPTH_SHADOW);
 
   const rect = sceneRef.add.sprite(
     spriteX,
@@ -636,6 +662,7 @@ function createCharacter(name, characterClass, color, teamKey, row, col) {
   )
     .setScale(KNIGHT_IDLE_SCALE)
     .setFlipX(teamKey === 'blue');
+  rect.setDepth(DEPTH_UNIT);
   
   const label = sceneRef.add.text(spriteX, baseY, name, {
     fontFamily: 'monospace',
@@ -643,7 +670,8 @@ function createCharacter(name, characterClass, color, teamKey, row, col) {
     color: COLORS.text
   })
     .setOrigin(0.5)
-    .setVisible(SHOW_BATTLE_UNIT_NAME_LABELS);
+    .setVisible(SHOW_BATTLE_UNIT_NAME_LABELS)
+    .setDepth(DEPTH_UNIT_HUD);
 
   const unit = {
     name,
@@ -788,7 +816,29 @@ function addBattleHudIcon(unit, groupKey, x, y, resourceKey, fontSize) {
 
   node.resourceKey = resourceKey;
   node.setAlpha(BATTLE_STATE_FULL_ALPHA);
+  node.setDepth(getBattleResourceDepth(unit, x, resourceKey));
   unit.battleHudNodes[groupKey].push(node);
+}
+
+function getBattleResourceDepth(unit, x, resourceKey) {
+  return DEPTH_UNIT_HUD + getResourceOverlapBonus(unit, resourceKey, x);
+}
+
+function getResourceOverlapBonus(unit, resourceKey, x) {
+  const centerBonus = getBattleCenterOverlapBonus(x);
+
+  if (unit.teamKey !== 'blue') {
+    return centerBonus;
+  }
+
+  return centerBonus + (BLUE_RESOURCE_DEPTH_BONUS[resourceKey] || 0);
+}
+
+function getBattleCenterOverlapBonus(x) {
+  const battleCenterX = layout.battle.x + layout.battle.w / 2;
+  const maxDistance = layout.battle.w / 2;
+  const normalizedDistance = Math.min(1, Math.abs(x - battleCenterX) / maxDistance);
+  return Math.round((1 - normalizedDistance) * BATTLE_RESOURCE_CENTER_DEPTH_BONUS);
 }
 
 function drawBattleHudIconRow(unit, groupKey, entries, startX, y, iconSpacing, groupGap, fontSize) {
@@ -951,10 +1001,6 @@ function drawBattleFormationGrid(teamKey) {
   const cellW = rect.w / FORMATION_ROWS.length;
   const cellH = rect.h / FORMATION_COLS.length;
 
-  sceneRef.add.rectangle(rect.x, rect.y, rect.w, rect.h, cssHexToNumber(FORMATION_GRASS_FILL_COLOR))
-    .setOrigin(0)
-    .setAlpha(FORMATION_GRASS_ALPHA);
-
   addBattleGridLineNode(rect.x, rect.y, rect.w, FORMATION_GRID_LINE_SIZE, 0, 0);
   addBattleGridLineNode(rect.x, rect.y + rect.h, rect.w, FORMATION_GRID_LINE_SIZE, 0, 0.5);
   addBattleGridLineNode(rect.x, rect.y, FORMATION_GRID_LINE_SIZE, rect.h, 0, 0);
@@ -992,7 +1038,8 @@ function addBattleGridLineNode(x, y, width, height, originX, originY) {
     cssHexToNumber(FORMATION_GRID_LINE_COLOR)
   )
     .setOrigin(originX, originY)
-    .setAlpha(isBattleGridLineVisible ? BATTLE_GRID_LINE_ALPHA_VISIBLE : BATTLE_GRID_LINE_ALPHA_HIDDEN);
+    .setAlpha(isBattleGridLineVisible ? BATTLE_GRID_LINE_ALPHA_VISIBLE : BATTLE_GRID_LINE_ALPHA_HIDDEN)
+    .setDepth(DEPTH_GRID);
 
   battleGridLineNodes.push(node);
 }
@@ -1330,6 +1377,25 @@ function createCombatLogToggle() {
   combatLogToggleLabel.on('pointerdown', toggleCombatLog);
 }
 
+function drawSkyStars() {
+  const skyTop = layout.battle.y + SKY_STAR_TOP_PADDING;
+  const skyBottom = layout.grass.y - SKY_STAR_BOTTOM_PADDING;
+  const skyHeight = Math.max(0, skyBottom - skyTop);
+
+  for (let index = 0; index < SKY_STAR_COUNT; index += 1) {
+    const xRatio = ((index * 37) % 101) / 100;
+    const yRatio = ((index * 53) % 97) / 96;
+    const sizeRatio = ((index * 29) % 100) / 100;
+    const x = layout.battle.x + xRatio * layout.battle.w;
+    const y = skyTop + yRatio * skyHeight;
+    const size = SKY_STAR_MIN_SIZE + sizeRatio * (SKY_STAR_MAX_SIZE - SKY_STAR_MIN_SIZE);
+
+    sceneRef.add.circle(x, y, size, cssHexToNumber(SKY_STAR_COLOR))
+      .setAlpha(SKY_STAR_ALPHA)
+      .setDepth(DEPTH_BACKGROUND);
+  }
+}
+
 function toggleCombatLog() {
   setCombatLogVisible(!isCombatLogVisible);
 }
@@ -1471,13 +1537,17 @@ function createCombatCallout({ unit, titleText, resources, yOffset, showTitle = 
       CAST_CALLOUT_WIDTH,
       CAST_CALLOUT_HEIGHT,
       cssHexToNumber(CAST_CALLOUT_BACKGROUND_COLOR)
-    ).setStrokeStyle(2, cssHexToNumber(CAST_CALLOUT_BORDER_COLOR));
+    )
+      .setStrokeStyle(2, cssHexToNumber(CAST_CALLOUT_BORDER_COLOR))
+      .setDepth(DEPTH_COMBAT_CALLOUT);
 
     const title = sceneRef.add.text(x, top + CAST_CALLOUT_PADDING + 1, titleText, {
       fontFamily: 'monospace',
       fontSize: `${CAST_TITLE_FONT_SIZE}px`,
       color: COLORS.text
-    }).setOrigin(0.5, 0);
+    })
+      .setOrigin(0.5, 0)
+      .setDepth(DEPTH_COMBAT_CALLOUT);
 
     titleNodes.push(background, title);
   }
@@ -1517,7 +1587,9 @@ function createCombatCallout({ unit, titleText, resources, yOffset, showTitle = 
         fontFamily: 'Arial',
         fontSize: `${POPUP_RESOURCE_FONT_SIZE}px`,
         color: COLORS.text
-      }).setOrigin(0.5, 0);
+      })
+        .setOrigin(0.5, 0)
+        .setDepth(DEPTH_COMBAT_CALLOUT);
 
       const targetAlpha = entry.index < entry.resource.before ? 1 : ACTION_CAST_SPENT_ALPHA;
 
@@ -1615,7 +1687,8 @@ function showDamageNumberEffect(effect) {
       stroke: COLORS.background,
       strokeThickness: 4
     }
-  ).setOrigin(0.5, 0.5);
+  ).setOrigin(0.5, 0.5)
+    .setDepth(DEPTH_DAMAGE_TEXT);
 
   sceneRef.time.delayedCall(DAMAGE_NUMBER_HOLD_MS, () => {
     sceneRef.tweens.add({
