@@ -24,8 +24,8 @@ const COLORS = {
   spent: '#555862',
   sp: '#2e8fe8',
   hp: '#e04444',
-  ap: '#f06a9a',
-  rp: '#58a6ff',
+  ap: '#d83535',
+  rp: '#1a53a8',
   lp: '#f2cf45',
   emptyLp: '#5f5524',
   unitBorder: '#161616'
@@ -38,8 +38,8 @@ const PHASER_COLORS = Object.fromEntries(
 const RESOURCE_ICONS = {
   hp: '❤️',
   sp: '🛡️',
-  ap: '🔶',
-  rp: '🔷',
+  ap: '⬤',
+  rp: '⬤',
   lp: '⭐',
   ip: '🥾'
 };
@@ -227,11 +227,17 @@ const CAST_CALLOUT_BACKGROUND_COLOR = '#050506';
 const SHOW_BATTLE_UNIT_HUD = true;
 
 // HUD: Main resources
+const BATTLE_MAIN_RESOURCE_STATIC_SLOTS = true;
+const BATTLE_MAIN_RESOURCE_FONT_SIZE = 12;
 const BATTLE_MAIN_RESOURCE_ROW_Y_OFFSET = 78;
-const BATTLE_MAIN_RESOURCE_ICON_SPACING = 12;
+const BATTLE_MAIN_RESOURCE_ICON_SPACING = 8;
 const BATTLE_MAIN_RESOURCE_GROUP_GAP = 0;
 const BATTLE_MAIN_RESOURCE_MAJOR_GAP = 18;
-const BATTLE_MAIN_RESOURCE_FONT_SIZE = 14;
+const BATTLE_MAIN_RESOURCE_EMPTY_ALPHA = 0.16;
+const BATTLE_MAIN_RESOURCE_STATIC_MAX_SLOTS = 4;
+const BATTLE_MAIN_RESOURCE_STATIC_ICON_SPACING = 10;
+const BATTLE_MAIN_RESOURCE_STATIC_GROUP_GAP = 20;
+const BATTLE_MAIN_RESOURCE_STATIC_ROW_GAP = 14;
 const BATTLE_STATE_FULL_ALPHA = 1;
 
 const DEPTH_BACKGROUND = 0;
@@ -242,6 +248,17 @@ const DEPTH_UNIT_HUD = 40;
 const DEPTH_DAMAGE_TEXT = 80;
 const DEPTH_COMBAT_CALLOUT = 100;
 const BATTLE_RESOURCE_CENTER_DEPTH_BONUS = 30;
+
+// HUD: Resource backplate
+const BATTLE_HUD_BACKPLATE_ENABLED = true;
+const BATTLE_HUD_BACKPLATE_WIDTH = 90;
+const BATTLE_HUD_BACKPLATE_HEIGHT = 30;
+const BATTLE_HUD_BACKPLATE_Y_OFFSET = 85;
+const BATTLE_HUD_BACKPLATE_COLOR = '#050506';
+const BATTLE_HUD_BACKPLATE_ALPHA = 0.0;
+const BATTLE_HUD_BACKPLATE_BORDER_COLOR = '#2e2e38';
+const BATTLE_HUD_BACKPLATE_BORDER_THICKNESS = 1;
+const BATTLE_HUD_BACKPLATE_DEPTH = DEPTH_UNIT_HUD - 1;
 
 // HUD: LP
 const BATTLE_LP_SHOW = true;
@@ -961,17 +978,21 @@ function getCurrentIconRowWidth(entries, iconSpacing, groupGap) {
   return (totalIcons - 1) * iconSpacing + Math.max(0, visibleEntries.length - 1) * groupGap;
 }
 
-function addBattleHudIcon(unit, groupKey, x, y, resourceKey, fontSize) {
+function addBattleHudIcon(unit, groupKey, x, y, resourceKey, fontSize, alpha = BATTLE_STATE_FULL_ALPHA) {
   const node = sceneRef.add.text(x, y, RESOURCE_ICONS[resourceKey], {
     fontFamily: 'Arial',
     fontSize: `${fontSize}px`,
-    color: COLORS.text
+    color: getResourceIconColor(resourceKey)
   }).setOrigin(0.5, 0.5);
 
   node.resourceKey = resourceKey;
-  node.setAlpha(BATTLE_STATE_FULL_ALPHA);
+  node.setAlpha(alpha);
   node.setDepth(getBattleResourceDepth(unit, x, resourceKey));
   unit.battleHudNodes[groupKey].push(node);
+}
+
+function getResourceIconColor(resourceKey) {
+  return COLORS[resourceKey] || COLORS.text;
 }
 
 function getBattleResourceDepth(unit, x, resourceKey) {
@@ -1008,8 +1029,36 @@ function getBattleHudAnchor(unit) {
   };
 }
 
+function createBattleHudBackplate(unit) {
+  if (!BATTLE_HUD_BACKPLATE_ENABLED || !hasBattlefieldVisuals(unit)) {
+    return;
+  }
+
+  const anchor = getBattleHudAnchor(unit);
+  const plate = sceneRef.add.rectangle(
+    anchor.rowX,
+    anchor.rowY + BATTLE_HUD_BACKPLATE_Y_OFFSET,
+    BATTLE_HUD_BACKPLATE_WIDTH,
+    BATTLE_HUD_BACKPLATE_HEIGHT,
+    cssHexToNumber(BATTLE_HUD_BACKPLATE_COLOR)
+  )
+    .setOrigin(0.5, 0.5)
+    .setAlpha(BATTLE_HUD_BACKPLATE_ALPHA)
+    .setStrokeStyle(BATTLE_HUD_BACKPLATE_BORDER_THICKNESS, cssHexToNumber(BATTLE_HUD_BACKPLATE_BORDER_COLOR))
+    .setDepth(BATTLE_HUD_BACKPLATE_DEPTH);
+
+  unit.battleHudNodes.top.push(plate);
+}
+
 function createBattleMainResourceRow(unit) {
   if (!SHOW_BATTLE_UNIT_HUD || !hasBattlefieldVisuals(unit)) {
+    return;
+  }
+
+  createBattleHudBackplate(unit);
+
+  if (BATTLE_MAIN_RESOURCE_STATIC_SLOTS) {
+    createStaticBattleMainResourceRows(unit);
     return;
   }
 
@@ -1020,14 +1069,14 @@ function createBattleMainResourceRow(unit) {
         { key: 'hp', current: unit.hp }
       ],
       [
-        { key: 'ap', current: unit.ap },
-        { key: 'rp', current: unit.rp }
+        { key: 'rp', current: unit.rp },
+        { key: 'ap', current: unit.ap }
       ]
     ]
     : [
       [
-        { key: 'rp', current: unit.rp },
-        { key: 'ap', current: unit.ap }
+        { key: 'ap', current: unit.ap },
+        { key: 'rp', current: unit.rp }
       ],
       [
         { key: 'hp', current: unit.hp },
@@ -1064,6 +1113,76 @@ function createBattleMainResourceRow(unit) {
       BATTLE_MAIN_RESOURCE_FONT_SIZE
     );
     cursorX += groupWidths[groupIndex] + BATTLE_MAIN_RESOURCE_MAJOR_GAP;
+  });
+}
+
+function getStaticBattleResourceRows(unit) {
+  return unit.teamKey === 'blue'
+    ? [
+      ['sp', 'hp'],
+      ['rp', 'ap']
+    ]
+    : [
+      ['hp', 'sp'],
+      ['ap', 'rp']
+    ];
+}
+
+function getStaticBattleResourceGroupWidth(unit, resourceKey) {
+  const maxKey = `max${resourceKey.charAt(0).toUpperCase()}${resourceKey.slice(1)}`;
+  const slots = Math.min(unit[maxKey], BATTLE_MAIN_RESOURCE_STATIC_MAX_SLOTS);
+  return Math.max(0, slots - 1) * BATTLE_MAIN_RESOURCE_STATIC_ICON_SPACING;
+}
+
+function getStaticBattleResourceReservedGroupWidth() {
+  return (BATTLE_MAIN_RESOURCE_STATIC_MAX_SLOTS - 1) * BATTLE_MAIN_RESOURCE_STATIC_ICON_SPACING;
+}
+
+function isStaticResourceSlotFull(unit, resourceKey, index, slots) {
+  const current = unit[resourceKey];
+  if (unit.teamKey === 'blue') {
+    return index >= slots - current;
+  }
+  return index < current;
+}
+
+function drawStaticBattleResourceGroup(unit, resourceKey, startX, y) {
+  const maxKey = `max${resourceKey.charAt(0).toUpperCase()}${resourceKey.slice(1)}`;
+  const slots = Math.min(unit[maxKey], BATTLE_MAIN_RESOURCE_STATIC_MAX_SLOTS);
+
+  for (let index = 0; index < slots; index += 1) {
+    addBattleHudIcon(
+      unit,
+      'top',
+      startX + index * BATTLE_MAIN_RESOURCE_STATIC_ICON_SPACING,
+      y,
+      resourceKey,
+      BATTLE_MAIN_RESOURCE_FONT_SIZE,
+      isStaticResourceSlotFull(unit, resourceKey, index, slots) ? BATTLE_STATE_FULL_ALPHA : BATTLE_MAIN_RESOURCE_EMPTY_ALPHA
+    );
+  }
+}
+
+function createStaticBattleMainResourceRows(unit) {
+  const anchor = getBattleHudAnchor(unit);
+  const rows = getStaticBattleResourceRows(unit);
+  const firstY = anchor.rowY + BATTLE_MAIN_RESOURCE_ROW_Y_OFFSET;
+
+  rows.forEach((row, rowIndex) => {
+    const reservedGroupWidth = getStaticBattleResourceReservedGroupWidth();
+    const totalWidth = reservedGroupWidth * row.length +
+      Math.max(0, row.length - 1) * BATTLE_MAIN_RESOURCE_STATIC_GROUP_GAP;
+    let cursorX = anchor.rowX - totalWidth / 2;
+    const y = firstY + rowIndex * BATTLE_MAIN_RESOURCE_STATIC_ROW_GAP;
+
+    row.forEach((resourceKey) => {
+      // Red anchors toward combat center (right); right-align slots within reserved space.
+      const groupStartX = unit.teamKey === 'red'
+        ? cursorX + (reservedGroupWidth - getStaticBattleResourceGroupWidth(unit, resourceKey))
+        : cursorX;
+      drawStaticBattleResourceGroup(unit, resourceKey, groupStartX, y);
+      cursorX += reservedGroupWidth + BATTLE_MAIN_RESOURCE_STATIC_GROUP_GAP;
+    });
   });
 }
 
@@ -1600,9 +1719,17 @@ function setCombatLogVisible(isVisible) {
 }
 
 function showReactionCastEffect(effect) {
+  const reactionSegments = [];
+  if ((effect.reaction.rpCost || 0) > 0) {
+    reactionSegments.push({ text: RESOURCE_ICONS.rp.repeat(effect.reaction.rpCost), color: getResourceIconColor('rp') });
+  }
+  if ((effect.reaction.lpCost || 0) > 0) {
+    reactionSegments.push({ text: RESOURCE_ICONS.lp.repeat(effect.reaction.lpCost), color: getResourceIconColor('lp') });
+  }
+  reactionSegments.push({ text: ` ${effect.reaction.name}`, color: COLORS.text });
   const callout = createCombatCallout({
     unit: effect.unit,
-    titleText: `${formatReactionCost(effect.reaction)} ${effect.reaction.name}`,
+    segments: reactionSegments,
     yOffset: CAST_CALLOUT_Y_OFFSET
   });
 
@@ -1627,7 +1754,10 @@ function showReactionCastEffect(effect) {
 function showActionCastEffect(effect) {
   const callout = createCombatCallout({
     unit: effect.unit,
-    titleText: `${RESOURCE_ICONS.ap} ${effect.action.name}`,
+    segments: [
+      { text: RESOURCE_ICONS.ap, color: getResourceIconColor('ap') },
+      { text: ` ${effect.action.name}`, color: COLORS.text }
+    ],
     yOffset: CAST_CALLOUT_Y_OFFSET
   });
 
@@ -1713,11 +1843,12 @@ function showRoundStartBanner(roundNumber) {
   });
 }
 
-function createCombatCallout({ unit, titleText, yOffset }) {
+function createCombatCallout({ unit, segments, yOffset }) {
   const nodes = [];
   const x = unit.shadow.x;
   const y = unit.rect.y - UNIT_SIZE / 2 - yOffset;
   const top = y - CAST_CALLOUT_HEIGHT / 2;
+  const textY = top + CAST_CALLOUT_PADDING + 1;
 
   const background = sceneRef.add.rectangle(
     x,
@@ -1728,16 +1859,25 @@ function createCombatCallout({ unit, titleText, yOffset }) {
   )
     .setStrokeStyle(2, cssHexToNumber(CAST_CALLOUT_BORDER_COLOR))
     .setDepth(DEPTH_COMBAT_CALLOUT);
+  nodes.push(background);
 
-  const title = sceneRef.add.text(x, top + CAST_CALLOUT_PADDING + 1, titleText, {
-    fontFamily: 'monospace',
-    fontSize: `${CAST_TITLE_FONT_SIZE}px`,
-    color: COLORS.text
-  })
-    .setOrigin(0.5, 0)
-    .setDepth(DEPTH_COMBAT_CALLOUT);
+  const segmentNodes = segments.map((seg) =>
+    sceneRef.add.text(0, textY, seg.text, {
+      fontFamily: 'monospace',
+      fontSize: `${CAST_TITLE_FONT_SIZE}px`,
+      color: seg.color
+    })
+      .setOrigin(0, 0)
+      .setDepth(DEPTH_COMBAT_CALLOUT)
+  );
 
-  nodes.push(background, title);
+  const totalWidth = segmentNodes.reduce((sum, node) => sum + node.width, 0);
+  let cursorX = x - totalWidth / 2;
+  segmentNodes.forEach((node) => {
+    node.setX(cursorX);
+    cursorX += node.width;
+    nodes.push(node);
+  });
 
   function destroy() {
     nodes.forEach((node) => node.destroy());
@@ -2061,7 +2201,7 @@ function markUnitKo(unit) {
   unit.label.setAlpha(KO_FADE_ALPHA);
   unit.shadow.setAlpha(KO_FADE_ALPHA);
   unit.label.setText(`${unit.name} KO`);
-  getBattleStateNodes(unit).forEach((node) => node.setAlpha(KO_FADE_ALPHA));
+  destroyBattleUnitHud(unit);
 
   sceneRef.time.delayedCall(KO_REMOVE_DELAY_MS, () => {
     [unit.rect, unit.label, unit.shadow, ...getBattleStateNodes(unit)].forEach((node) => {
