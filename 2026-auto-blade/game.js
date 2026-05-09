@@ -54,7 +54,7 @@ const CENTER_WIDTH_RATIO = 0.42;
 const RIGHT_PANEL_WIDTH_RATIO = 0.29;
 const BATTLE_WINDOW_HEIGHT_RATIO = 0.48;
 
-const UNIT_SIZE = 70;
+const UNIT_SIZE = 140;
 
 // Knight idle sprite
 const KNIGHT_IDLE_TEXTURE_KEY = 'knight-idle';
@@ -63,7 +63,7 @@ const KNIGHT_IDLE_FRAME_WIDTH = 16;
 const KNIGHT_IDLE_FRAME_HEIGHT = 16;
 const KNIGHT_IDLE_DEFAULT_FRAME = 0;
 const KNIGHT_IDLE_TWITCH_FRAME = 1;
-const KNIGHT_IDLE_SCALE = 4;
+const KNIGHT_IDLE_SCALE = 8;
 const KNIGHT_RANDOM_IDLE_TWITCH_ENABLED = false;
 const KNIGHT_RANDOM_IDLE_TWITCH_TEST_KEY = 'I';
 const KNIGHT_RANDOM_IDLE_TWITCH_DELAY_MS = ms(15000);
@@ -126,31 +126,60 @@ const SKY_STAR_TOP_PADDING = 18;
 const SKY_STAR_BOTTOM_PADDING = 22;
 const FORMATION_GRID_LINE_COLOR = '#23652d';
 const FORMATION_GRID_LINE_SIZE = 2;
-const FORMATION_GRASS_TOP_PADDING = 18;
-const FORMATION_GRASS_BOTTOM_PADDING = 22;
+const BATTLEFIELD_CENTER_X = GAME_WIDTH / 2;
+const RED_FORMATION_CENTER_X = GAME_WIDTH / 3;
+const BLUE_FORMATION_CENTER_X = GAME_WIDTH * 2 / 3;
+const FORMATION_CENTER_Y = GAME_HEIGHT * 0.75 - 2;
+const FORMATION_COLUMN_SPACING = 166.67;
+const FORMATION_ROW_SPACING = 170;
 const SHOW_BATTLE_GRID_LINES = false;
 const BATTLE_GRID_TOGGLE_KEY = 'G';
 const BATTLE_GRID_LINE_ALPHA_VISIBLE = 0.45;
 const BATTLE_GRID_LINE_ALPHA_HIDDEN = 0;
 const UNIT_VISUAL_Y_OFFSET = 0;
-const UNIT_SPRITE_FORWARD_X_OFFSET = 12;
+const UNIT_SPRITE_FORWARD_X_OFFSET = 24;
 const TEAM_UNIT_TINT_ENABLED = true;
 const RED_TEAM_UNIT_TINT = '#d84343';
 const BLUE_TEAM_UNIT_TINT = '#3f6fd9';
 const UNIT_SHADOW_COLOR = '#071309';
 const UNIT_SHADOW_ALPHA = 0.38;
-const UNIT_SHADOW_WIDTH = 40;
-const UNIT_SHADOW_HEIGHT = 12;
-const UNIT_SHADOW_Y_OFFSET = 32;
+const UNIT_SHADOW_WIDTH = 80;
+const UNIT_SHADOW_HEIGHT = 24;
+const UNIT_SHADOW_Y_OFFSET = 64;
 
-const BATTLE_GRID_WIDTH = 330;
-const BATTLE_GRID_SIDE_PADDING = 30;
+const BATTLE_GRID_WIDTH = FORMATION_ROW_SPACING * FORMATION_ROWS.length;
+const BATTLE_GRID_HEIGHT = FORMATION_COLUMN_SPACING * FORMATION_COLS.length;
 
 // Panels
 const INFO_PANEL_PADDING = 24;
 const INFO_COLUMN_GAP = 28;
 const INFO_TOOLTIP_HEIGHT = 82;
 const INFO_DIVIDER_COLOR = COLORS.panelBorder;
+
+const POPUP_BUTTON_Y = 18;
+const POPUP_BUTTON_HEIGHT = 30;
+const POPUP_BUTTON_PADDING = 12;
+const POPUP_BUTTON_GAP = 12;
+const POPUP_BUTTON_RED_X = 24;
+const POPUP_BUTTON_BLUE_X = 150;
+const POPUP_BUTTON_STATS_X = GAME_WIDTH - 282;
+const POPUP_BUTTON_LOG_X = GAME_WIDTH - 146;
+const POPUP_BUTTON_RED_WIDTH = 114;
+const POPUP_BUTTON_BLUE_WIDTH = 122;
+const POPUP_BUTTON_STATS_WIDTH = 78;
+const POPUP_BUTTON_LOG_WIDTH = 58;
+const POPUP_PANEL_MARGIN = 24;
+const POPUP_PANEL_TOP = 64;
+const POPUP_SIDE_PANEL_WIDTH = 420;
+const POPUP_SIDE_PANEL_HEIGHT = 560;
+const POPUP_LOG_PANEL_WIDTH = 560;
+const POPUP_LOG_PANEL_HEIGHT = 480;
+const POPUP_STATS_PANEL_WIDTH = 860;
+const POPUP_STATS_PANEL_HEIGHT = 820;
+const POPUP_PANEL_PADDING = 24;
+const POPUP_PANEL_BACKGROUND_ALPHA = 0.92;
+const POPUP_DEPTH = 200;
+const POPUP_BUTTON_DEPTH = 220;
 
 const SHOW_SIDE_TEAM_STATUS_CARDS = false;
 const SIDE_GRID_PADDING = 40;
@@ -186,11 +215,11 @@ const FONT_SIZE_BODY = 12;
 const FONT_SIZE_SMALL = 12;
 
 // HUD: CAST
-const CAST_TITLE_FONT_SIZE = 12;
+const CAST_TITLE_FONT_SIZE = 24;
 const CAST_CALLOUT_Y_OFFSET = 0;
-const CAST_CALLOUT_WIDTH = 80;
-const CAST_CALLOUT_HEIGHT = 20;
-const CAST_CALLOUT_PADDING = 1;
+const CAST_CALLOUT_WIDTH = 160;
+const CAST_CALLOUT_HEIGHT = 35;
+const CAST_CALLOUT_PADDING = 6;
 const CAST_CALLOUT_BORDER_COLOR = '#ffffff';
 const CAST_CALLOUT_BACKGROUND_COLOR = '#050506';
 
@@ -198,11 +227,11 @@ const CAST_CALLOUT_BACKGROUND_COLOR = '#050506';
 const SHOW_BATTLE_UNIT_HUD = true;
 
 // HUD: Main resources
-const BATTLE_MAIN_RESOURCE_ROW_Y_OFFSET = 40;
-const BATTLE_MAIN_RESOURCE_ICON_SPACING = 3;
+const BATTLE_MAIN_RESOURCE_ROW_Y_OFFSET = 78;
+const BATTLE_MAIN_RESOURCE_ICON_SPACING = 12;
 const BATTLE_MAIN_RESOURCE_GROUP_GAP = 0;
-const BATTLE_MAIN_RESOURCE_MAJOR_GAP = 12;
-const BATTLE_MAIN_RESOURCE_FONT_SIZE = 8;
+const BATTLE_MAIN_RESOURCE_MAJOR_GAP = 18;
+const BATTLE_MAIN_RESOURCE_FONT_SIZE = 14;
 const BATTLE_STATE_FULL_ALPHA = 1;
 
 const DEPTH_BACKGROUND = 0;
@@ -217,19 +246,35 @@ const BATTLE_RESOURCE_CENTER_DEPTH_BONUS = 30;
 // HUD: LP
 const BATTLE_LP_SHOW = true;
 const BATTLE_LP_X_OFFSET = 30;
-const BATTLE_LP_Y_OFFSET = 34;
-const BATTLE_LP_FONT_SIZE = 10;
+const BATTLE_LP_Y_OFFSET = 54;
+const BATTLE_LP_FONT_SIZE = 14;
 const BATTLE_LP_CORNER_X_INSET = 8;
 const BATTLE_LP_CORNER_Y_INSET = 8;
 
 // HUD: DAMAGE
 const DAMAGE_POPUP_Y_OFFSET = 80;
 const DAMAGE_NUMBER_X_OFFSET = 0;
-const DAMAGE_NUMBER_Y_OFFSET = 50;
-const DAMAGE_NUMBER_FONT_SIZE = 18;
+const DAMAGE_NUMBER_Y_OFFSET = 60;
+const DAMAGE_NUMBER_FONT_SIZE = 28;
 const DAMAGE_NUMBER_DURATION_MS = ms(1000);
 const DAMAGE_NUMBER_FLOAT_Y = 20;
 const DAMAGE_NUMBER_HOLD_MS = ms(1000);
+
+// Round banner
+const ROUND_START_BANNER_ENABLED = true;
+const ROUND_START_BANNER_TITLE_FONT_SIZE = 54;
+const ROUND_START_BANNER_SUBTITLE_FONT_SIZE = 22;
+const ROUND_START_BANNER_WIDTH = 560;
+const ROUND_START_BANNER_HEIGHT = 150;
+const ROUND_START_BANNER_Y = GAME_HEIGHT * 0.26;
+const ROUND_START_BANNER_HOLD_MS = ms(850);
+const ROUND_START_BANNER_FADE_MS = ms(260);
+const ROUND_START_BANNER_DEPTH = 180;
+const ROUND_START_BANNER_BACKGROUND_ALPHA = 0.78;
+const ROUND_START_BANNER_BACKGROUND_COLOR = '#071b35';
+const ROUND_START_BANNER_BORDER_COLOR = '#58a6ff';
+const ROUND_START_BANNER_TITLE_COLOR = '#d8ecff';
+const ROUND_START_BANNER_SUBTITLE_COLOR = '#9dccff';
 
 // Battle start
 const START_BATTLE_DELAY_MS = ms(250);
@@ -248,7 +293,7 @@ const LUNGE_DURATION_MS = ms(450);
 const FREEZE_DURATION_MS = ms(300);
 const RETURN_DURATION_MS = ms(450);
 
-const ATTACK_LUNGE_STOP_DISTANCE = 72;
+const ATTACK_LUNGE_STOP_DISTANCE = 132;
 
 // Result timing
 const ATTACKER_COUNTER_RESOURCE_DURATION_MS = ms(450);
@@ -376,6 +421,7 @@ const TOOLTIP_TEXT = [
 let sceneRef;
 let layout;
 let units;
+let logEntries = [];
 let logRows = [];
 let combatLogHeader;
 let combatLogToggleButton;
@@ -396,6 +442,9 @@ let combatZoomMode = true;
 let isBattleGridLineVisible = SHOW_BATTLE_GRID_LINES;
 let battleGridLineNodes = [];
 let isKnightRandomIdleTwitchEnabled = KNIGHT_RANDOM_IDLE_TWITCH_ENABLED;
+let popupButtons = {};
+let popupPanelNodes = [];
+let activePopupKey = null;
 
 const config = {
   type: Phaser.AUTO,
@@ -452,8 +501,8 @@ function create() {
 
   sceneRef.input.keyboard.on('keydown-ONE', () => setBattleSpeed(1));
   sceneRef.input.keyboard.on('keydown-TWO', () => setBattleSpeed(2));
-  sceneRef.input.keyboard.on('keydown-THREE', () => setBattleSpeed(3));
-  sceneRef.input.keyboard.on('keydown-FOUR', () => setBattleSpeed(4));
+  sceneRef.input.keyboard.on('keydown-THREE', () => setBattleSpeed(4));
+  sceneRef.input.keyboard.on('keydown-FOUR', () => setBattleSpeed(8));
   sceneRef.input.keyboard.on(`keydown-${COMBAT_ZOOM_KEY}`, toggleCombatZoomMode);
   sceneRef.input.keyboard.on(`keydown-${BATTLE_GRID_TOGGLE_KEY}`, toggleBattleGridLines);
   sceneRef.input.keyboard.on(`keydown-${KNIGHT_RANDOM_IDLE_TWITCH_TEST_KEY}`, toggleKnightRandomIdleTwitch);
@@ -531,25 +580,18 @@ function applyCombatZoomMode(animate = true) {
 }
 
 function createLayout() {
-  const leftW = GAME_WIDTH * LEFT_PANEL_WIDTH_RATIO;
-  const centerW = GAME_WIDTH * CENTER_WIDTH_RATIO;
-  const rightW = GAME_WIDTH * RIGHT_PANEL_WIDTH_RATIO;
-  const centerX = leftW;
-  const rightX = leftW + centerW;
-  const battleH = GAME_HEIGHT * BATTLE_WINDOW_HEIGHT_RATIO;
+  const battleH = GAME_HEIGHT;
   const grassY = battleH * BATTLE_HORIZON_RATIO;
   const grassH = battleH - grassY;
 
   layout = {
-    left: { x: 0, y: 0, w: leftW, h: GAME_HEIGHT },
-    center: { x: centerX, y: 0, w: centerW, h: GAME_HEIGHT },
-    right: { x: rightX, y: 0, w: rightW, h: GAME_HEIGHT },
-    battle: { x: centerX, y: 0, w: centerW, h: battleH },
-    info: { x: centerX, y: battleH, w: centerW, h: GAME_HEIGHT - battleH },
-    grass: { x: centerX, y: grassY, w: centerW, h: grassH }
+    left: { x: 0, y: 0, w: GAME_WIDTH / 2, h: GAME_HEIGHT },
+    center: { x: 0, y: 0, w: GAME_WIDTH, h: GAME_HEIGHT },
+    right: { x: GAME_WIDTH / 2, y: 0, w: GAME_WIDTH / 2, h: GAME_HEIGHT },
+    battle: { x: 0, y: 0, w: GAME_WIDTH, h: battleH },
+    info: { x: 0, y: 0, w: 0, h: 0 },
+    grass: { x: 0, y: grassY, w: GAME_WIDTH, h: grassH }
   };
-
-  drawPanel(layout.left, 'Red Team');
 
   sceneRef.add.rectangle(layout.battle.x, layout.battle.y, layout.battle.w, layout.grass.y, PHASER_COLORS.sky)
     .setOrigin(0)
@@ -564,13 +606,7 @@ function createLayout() {
     .setOrigin(0)
     .setStrokeStyle(2, PHASER_COLORS.panelBorder);
 
-  sceneRef.add.rectangle(layout.info.x, layout.info.y, layout.info.w, layout.info.h, PHASER_COLORS.infoPanel)
-    .setOrigin(0)
-    .setStrokeStyle(2, PHASER_COLORS.panelBorder);
-  createInfoPanel();
-
-  drawPanel(layout.right, 'Blue Team');
-  renderCombatLogHeader();
+  createPopupButtons();
 }
 
 function drawPanel(rect, title) {
@@ -579,6 +615,145 @@ function drawPanel(rect, title) {
     .setStrokeStyle(2, PHASER_COLORS.panelBorder);
   sceneRef.add.text(rect.x + rect.w / 2, 26, title, headerTextStyle())
     .setOrigin(0.5, 0);
+}
+
+function createPopupButtons() {
+  createPopupButton('redTeam', 'Red Team', POPUP_BUTTON_RED_X, POPUP_BUTTON_Y, POPUP_BUTTON_RED_WIDTH);
+  createPopupButton('blueTeam', 'Blue Team', POPUP_BUTTON_BLUE_X, POPUP_BUTTON_Y, POPUP_BUTTON_BLUE_WIDTH);
+  createPopupButton('stats', 'Stats', POPUP_BUTTON_STATS_X, POPUP_BUTTON_Y, POPUP_BUTTON_STATS_WIDTH);
+  createPopupButton('combatLog', 'Log', POPUP_BUTTON_LOG_X, POPUP_BUTTON_Y, POPUP_BUTTON_LOG_WIDTH);
+}
+
+function createPopupButton(key, label, x, y, width) {
+  const button = sceneRef.add.rectangle(
+    x,
+    y,
+    width,
+    POPUP_BUTTON_HEIGHT,
+    PHASER_COLORS.infoPanel
+  )
+    .setOrigin(0)
+    .setStrokeStyle(1, PHASER_COLORS.panelBorder)
+    .setInteractive({ useHandCursor: true })
+    .setDepth(POPUP_BUTTON_DEPTH);
+
+  const text = sceneRef.add.text(
+    x + POPUP_BUTTON_PADDING,
+    y + 8,
+    label,
+    combatLogToggleTextStyle()
+  )
+    .setInteractive({ useHandCursor: true })
+    .setDepth(POPUP_BUTTON_DEPTH);
+
+  button.on('pointerdown', () => togglePopup(key));
+  text.on('pointerdown', () => togglePopup(key));
+  popupButtons[key] = { button, text };
+}
+
+function togglePopup(key) {
+  if (activePopupKey === key) {
+    closePopups();
+    return;
+  }
+
+  openPopup(key);
+}
+
+function openPopup(key) {
+  closePopups();
+  activePopupKey = key;
+  renderPopupPanel(key);
+}
+
+function closePopups() {
+  activePopupKey = null;
+  popupPanelNodes.forEach((node) => node.destroy());
+  popupPanelNodes = [];
+  infoPanelNodes.forEach((node) => node.destroy());
+  infoPanelNodes = [];
+  logRows.forEach((row) => row.destroy());
+  logRows = [];
+}
+
+function getPopupRect(key) {
+  if (key === 'redTeam') {
+    return {
+      x: POPUP_PANEL_MARGIN,
+      y: POPUP_PANEL_TOP,
+      w: POPUP_SIDE_PANEL_WIDTH,
+      h: POPUP_SIDE_PANEL_HEIGHT
+    };
+  }
+
+  if (key === 'blueTeam') {
+    return {
+      x: GAME_WIDTH - POPUP_PANEL_MARGIN - POPUP_SIDE_PANEL_WIDTH,
+      y: POPUP_PANEL_TOP,
+      w: POPUP_SIDE_PANEL_WIDTH,
+      h: POPUP_SIDE_PANEL_HEIGHT
+    };
+  }
+
+  if (key === 'combatLog') {
+    return {
+      x: GAME_WIDTH - POPUP_PANEL_MARGIN - POPUP_LOG_PANEL_WIDTH,
+      y: POPUP_PANEL_TOP,
+      w: POPUP_LOG_PANEL_WIDTH,
+      h: POPUP_LOG_PANEL_HEIGHT
+    };
+  }
+
+  return {
+    x: (GAME_WIDTH - POPUP_STATS_PANEL_WIDTH) / 2,
+    y: POPUP_PANEL_TOP,
+    w: POPUP_STATS_PANEL_WIDTH,
+    h: POPUP_STATS_PANEL_HEIGHT
+  };
+}
+
+function renderPopupPanel(key) {
+  const rect = getPopupRect(key);
+  const title = {
+    redTeam: 'Red Team',
+    blueTeam: 'Blue Team',
+    combatLog: 'Combat Log',
+    stats: 'Stats'
+  }[key];
+
+  const background = sceneRef.add.rectangle(rect.x, rect.y, rect.w, rect.h, PHASER_COLORS.infoPanel)
+    .setOrigin(0)
+    .setAlpha(POPUP_PANEL_BACKGROUND_ALPHA)
+    .setStrokeStyle(2, PHASER_COLORS.panelBorder)
+    .setDepth(POPUP_DEPTH);
+  const titleNode = sceneRef.add.text(rect.x + POPUP_PANEL_PADDING, rect.y + 18, title, headerTextStyle())
+    .setDepth(POPUP_DEPTH + 1);
+  popupPanelNodes.push(background, titleNode);
+
+  if (key === 'stats') {
+    layout.info = {
+      x: rect.x + POPUP_PANEL_PADDING,
+      y: rect.y + 58,
+      w: rect.w - POPUP_PANEL_PADDING * 2,
+      h: rect.h - 58 - POPUP_PANEL_PADDING
+    };
+    createInfoPanel();
+    return;
+  }
+
+  if (key === 'combatLog') {
+    renderCombatLogRows();
+    return;
+  }
+
+  const placeholder = sceneRef.add.text(
+    rect.x + POPUP_PANEL_PADDING,
+    rect.y + 62,
+    'Team panel placeholder',
+    smallTextStyle()
+  )
+    .setDepth(POPUP_DEPTH + 1);
+  popupPanelNodes.push(placeholder);
 }
 
 function createUnits() {
@@ -804,7 +979,7 @@ function getBattleResourceDepth(unit, x, resourceKey) {
 }
 
 function getBattleCenterOverlapBonus(x) {
-  const battleCenterX = layout.battle.x + layout.battle.w / 2;
+  const battleCenterX = layout.battle.x + BATTLEFIELD_CENTER_X;
   const maxDistance = layout.battle.w / 2;
   const normalizedDistance = Math.min(1, Math.abs(x - battleCenterX) / maxDistance);
   return (1 - normalizedDistance) * BATTLE_RESOURCE_CENTER_DEPTH_BONUS;
@@ -964,14 +1139,12 @@ function getFormationPosition(teamKey, row, col) {
 }
 
 function getBattleGridRect(teamKey) {
-  const x = teamKey === 'red'
-    ? layout.battle.x + BATTLE_GRID_SIDE_PADDING
-    : layout.battle.x + layout.battle.w - BATTLE_GRID_SIDE_PADDING - BATTLE_GRID_WIDTH;
+  const centerX = teamKey === 'red' ? RED_FORMATION_CENTER_X : BLUE_FORMATION_CENTER_X;
   return {
-    x,
-    y: layout.grass.y + FORMATION_GRASS_TOP_PADDING,
+    x: layout.battle.x + centerX - BATTLE_GRID_WIDTH / 2,
+    y: FORMATION_CENTER_Y - BATTLE_GRID_HEIGHT / 2,
     w: BATTLE_GRID_WIDTH,
-    h: layout.grass.h - FORMATION_GRASS_TOP_PADDING - FORMATION_GRASS_BOTTOM_PADDING
+    h: BATTLE_GRID_HEIGHT
   };
 }
 
@@ -1088,10 +1261,17 @@ function formatCharacterStats(unit) {
 }
 
 function createInfoPanel() {
+  if (activePopupKey !== 'stats') {
+    return;
+  }
+
+  infoPanelNodes.forEach((node) => node.destroy());
+  infoPanelNodes = [];
+
   const tooltipY = layout.info.y + layout.info.h - INFO_TOOLTIP_HEIGHT;
   const dividerX = layout.info.x + layout.info.w / 2;
 
-  sceneRef.add.line(
+  const verticalDivider = sceneRef.add.line(
     0,
     0,
     dividerX,
@@ -1099,9 +1279,11 @@ function createInfoPanel() {
     dividerX,
     tooltipY - INFO_PANEL_PADDING / 2,
     cssHexToNumber(INFO_DIVIDER_COLOR)
-  ).setOrigin(0);
+  )
+    .setOrigin(0)
+    .setDepth(POPUP_DEPTH + 1);
 
-  sceneRef.add.line(
+  const horizontalDivider = sceneRef.add.line(
     0,
     0,
     layout.info.x + INFO_PANEL_PADDING,
@@ -1109,7 +1291,9 @@ function createInfoPanel() {
     layout.info.x + layout.info.w - INFO_PANEL_PADDING,
     tooltipY,
     cssHexToNumber(INFO_DIVIDER_COLOR)
-  ).setOrigin(0);
+  )
+    .setOrigin(0)
+    .setDepth(POPUP_DEPTH + 1);
 
   const tooltipText = sceneRef.add.text(
     layout.info.x + INFO_PANEL_PADDING,
@@ -1118,17 +1302,20 @@ function createInfoPanel() {
     smallTextStyle()
   );
   tooltipText.setWordWrapWidth(layout.info.w - INFO_PANEL_PADDING * 2);
+  tooltipText.setDepth(POPUP_DEPTH + 1);
+  infoPanelNodes.push(verticalDivider, horizontalDivider, tooltipText);
 
   refreshInfoPanel();
 }
 
 function refreshInfoPanel() {
-  if (!units) {
+  if (!units || activePopupKey !== 'stats') {
     return;
   }
 
-  infoPanelNodes.forEach((node) => node.destroy());
-  infoPanelNodes = [];
+  const staticNodes = infoPanelNodes.slice(0, 3);
+  infoPanelNodes.slice(3).forEach((node) => node.destroy());
+  infoPanelNodes = staticNodes;
 
   const tooltipY = layout.info.y + layout.info.h - INFO_TOOLTIP_HEIGHT;
   const columnY = layout.info.y + INFO_PANEL_PADDING;
@@ -1162,6 +1349,7 @@ function renderCharacterPanel(unit, x, y, width, height) {
       ...smallTextStyle(),
       alpha
     });
+    node.setDepth(POPUP_DEPTH + 1);
     node.setWordWrapWidth(width);
     infoPanelNodes.push(node);
     cursorY += lineHeight;
@@ -1173,6 +1361,7 @@ function renderCharacterPanel(unit, x, y, width, height) {
 
   function addResourceLine(label, resourceKey) {
     const labelNode = sceneRef.add.text(x, cursorY, `${label}:`, smallTextStyle());
+    labelNode.setDepth(POPUP_DEPTH + 1);
     infoPanelNodes.push(labelNode);
 
     const current = unit[resourceKey];
@@ -1183,6 +1372,7 @@ function renderCharacterPanel(unit, x, y, width, height) {
     for (let index = 0; index < max; index += 1) {
       const iconNode = sceneRef.add.text(x + 34 + index * 16, cursorY, icon, smallTextStyle());
       iconNode.setAlpha(index < current ? 1 : 0.10);
+      iconNode.setDepth(POPUP_DEPTH + 1);
       infoPanelNodes.push(iconNode);
     }
 
@@ -1192,6 +1382,8 @@ function renderCharacterPanel(unit, x, y, width, height) {
     const labelNode = sceneRef.add.text(x, cursorY, label.padEnd(12), smallTextStyle());
     const detailNode = sceneRef.add.text(x + skillDetailOffset, cursorY, detail, smallTextStyle());
     detailNode.setAlpha(0.40);
+    labelNode.setDepth(POPUP_DEPTH + 1);
+    detailNode.setDepth(POPUP_DEPTH + 1);
 
     labelNode.setWordWrapWidth(width);
     detailNode.setWordWrapWidth(width - skillDetailOffset);
@@ -1329,6 +1521,25 @@ function renderCombatLogHeader() {
   createCombatLogToggle();
 }
 
+function renderCombatLogRows() {
+  logRows.forEach((row) => row.destroy());
+  logRows = [];
+
+  if (activePopupKey !== 'combatLog') {
+    return;
+  }
+
+  const rect = getPopupRect('combatLog');
+  const logStartY = rect.y + 62;
+
+  logEntries.forEach((line, index) => {
+    const row = sceneRef.add.text(rect.x + POPUP_PANEL_PADDING, logStartY + index * LOG_LINE_HEIGHT, line, smallTextStyle())
+      .setDepth(POPUP_DEPTH + 1);
+    row.setWordWrapWidth(rect.w - POPUP_PANEL_PADDING * 2);
+    logRows.push(row);
+  });
+}
+
 function createCombatLogToggle() {
   const x = layout.right.x + COMBAT_LOG_TOGGLE_X_OFFSET;
   const y = layout.right.y + COMBAT_LOG_TOP_OFFSET + COMBAT_LOG_TOGGLE_Y_OFFSET;
@@ -1376,16 +1587,16 @@ function drawSkyStars() {
 }
 
 function toggleCombatLog() {
-  setCombatLogVisible(!isCombatLogVisible);
+  togglePopup('combatLog');
 }
 
 function setCombatLogVisible(isVisible) {
   isCombatLogVisible = isVisible;
-  combatLogHeader.setVisible(isCombatLogVisible);
-  logRows.forEach((row) => row.setVisible(isCombatLogVisible));
-  combatLogToggleLabel.setText(
-    isCombatLogVisible ? COMBAT_LOG_TOGGLE_VISIBLE_LABEL : COMBAT_LOG_TOGGLE_HIDDEN_LABEL
-  );
+  if (isVisible) {
+    openPopup('combatLog');
+  } else if (activePopupKey === 'combatLog') {
+    closePopups();
+  }
 }
 
 function showReactionCastEffect(effect) {
@@ -1441,6 +1652,64 @@ function showCounterResourceRowEffect(effect) {
 
   sceneRef.time.delayedCall(COUNTER_RESOURCE_PREVIEW_DURATION_MS + SECONDARY_RESOURCE_COMMIT_STAGGER_MS, () => {
     refreshBattleUnitHud(effect.unit);
+  });
+}
+
+function showRoundStartBanner(roundNumber) {
+  if (!ROUND_START_BANNER_ENABLED) {
+    return;
+  }
+
+  const x = layout.battle.x + layout.battle.w / 2;
+  const y = ROUND_START_BANNER_Y;
+  const background = sceneRef.add.rectangle(
+    x,
+    y,
+    ROUND_START_BANNER_WIDTH,
+    ROUND_START_BANNER_HEIGHT,
+    cssHexToNumber(ROUND_START_BANNER_BACKGROUND_COLOR)
+  )
+    .setAlpha(0)
+    .setStrokeStyle(2, cssHexToNumber(ROUND_START_BANNER_BORDER_COLOR))
+    .setDepth(ROUND_START_BANNER_DEPTH);
+  const title = sceneRef.add.text(x, y - 36, `ROUND ${roundNumber} START`, {
+    fontFamily: 'monospace',
+    fontSize: `${ROUND_START_BANNER_TITLE_FONT_SIZE}px`,
+    color: ROUND_START_BANNER_TITLE_COLOR
+  })
+    .setOrigin(0.5)
+    .setAlpha(0)
+    .setDepth(ROUND_START_BANNER_DEPTH + 1);
+  const subtitle = sceneRef.add.text(x, y + 34, 'AP and RP refilled', {
+    fontFamily: 'monospace',
+    fontSize: `${ROUND_START_BANNER_SUBTITLE_FONT_SIZE}px`,
+    color: ROUND_START_BANNER_SUBTITLE_COLOR
+  })
+    .setOrigin(0.5)
+    .setAlpha(0)
+    .setDepth(ROUND_START_BANNER_DEPTH + 1);
+  const nodes = [background, title, subtitle];
+
+  sceneRef.tweens.add({
+    targets: background,
+    alpha: ROUND_START_BANNER_BACKGROUND_ALPHA,
+    duration: ROUND_START_BANNER_FADE_MS,
+    ease: 'Quad.easeOut'
+  });
+  sceneRef.tweens.add({
+    targets: [title, subtitle],
+    alpha: 1,
+    duration: ROUND_START_BANNER_FADE_MS,
+    ease: 'Quad.easeOut'
+  });
+  sceneRef.time.delayedCall(ROUND_START_BANNER_FADE_MS + ROUND_START_BANNER_HOLD_MS, () => {
+    sceneRef.tweens.add({
+      targets: nodes,
+      alpha: 0,
+      duration: ROUND_START_BANNER_FADE_MS,
+      ease: 'Quad.easeIn',
+      onComplete: () => nodes.forEach((node) => node.destroy())
+    });
   });
 }
 
@@ -1823,7 +2092,7 @@ function startBattle() {
 }
 
 function setBattleSpeed(multiplier) {
-  const valid = [1, 2, 3, 4];
+  const valid = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 32, 64];
   battleSpeedMultiplier = valid.includes(multiplier) ? multiplier : battleSpeedMultiplier;
   sceneRef.time.timeScale = battleSpeedMultiplier;
   if (sceneRef.tweens && typeof sceneRef.tweens.timeScale !== 'undefined') {
@@ -1847,6 +2116,7 @@ function startRound() {
   });
 
   refreshInfoPanel();
+  showRoundStartBanner(round);
 
   if (round > 1) {
     appendLog(`Round ${round} starts.`);
@@ -2283,20 +2553,13 @@ function formatResourceGain(unitName, amount, resourceKey) {
 
 function appendLog(actionText, effectText) {
   const line = effectText ? `${actionText} ${effectText}` : actionText;
-  const logStartY = layout.right.y + COMBAT_LOG_TOP_OFFSET + 52;
+  logEntries.push(line);
 
-  const y = logStartY + logRows.length * LOG_LINE_HEIGHT;
-  const row = sceneRef.add.text(layout.right.x + COMBAT_LOG_LEFT_PADDING, y, line, smallTextStyle());
-  row.setWordWrapWidth(layout.right.w - COMBAT_LOG_LEFT_PADDING * 2);
-  row.setVisible(isCombatLogVisible);
-  logRows.push(row);
-
-  while (logRows.length > LOG_MAX_LINES) {
-    logRows.shift().destroy();
-    logRows.forEach((row, index) => {
-      row.setY(logStartY + index * LOG_LINE_HEIGHT);
-    });
+  while (logEntries.length > LOG_MAX_LINES) {
+    logEntries.shift();
   }
+
+  renderCombatLogRows();
 }
 
 function isBattleOver() {
