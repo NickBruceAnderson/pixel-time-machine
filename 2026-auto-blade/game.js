@@ -125,7 +125,6 @@ const SKY_STAR_MAX_SIZE = 2;
 const SKY_STAR_TOP_PADDING = 18;
 const SKY_STAR_BOTTOM_PADDING = 22;
 const FORMATION_GRID_LINE_COLOR = '#23652d';
-const FORMATION_GRID_LINE_ALPHA = 0.45;
 const FORMATION_GRID_LINE_SIZE = 2;
 const FORMATION_GRASS_TOP_PADDING = 18;
 const FORMATION_GRASS_BOTTOM_PADDING = 22;
@@ -183,14 +182,6 @@ const FONT_SIZE_HEADER = 24;
 const FONT_SIZE_BODY = 12;
 const FONT_SIZE_SMALL = 12;
 
-// Resource blocks
-const SP_BLOCK_SIZE = 16;
-const HP_BLOCK_SIZE = 16;
-const AP_BLOCK_SIZE = 12;
-const RP_BLOCK_SIZE = 12;
-const LP_BLOCK_SIZE = 12;
-const RESOURCE_BLOCK_SPACING = 1;
-
 // HUD: CAST
 const CAST_TITLE_FONT_SIZE = 12;
 const CAST_CALLOUT_Y_OFFSET = 0;
@@ -199,19 +190,6 @@ const CAST_CALLOUT_HEIGHT = 20;
 const CAST_CALLOUT_PADDING = 1;
 const CAST_CALLOUT_BORDER_COLOR = '#ffffff';
 const CAST_CALLOUT_BACKGROUND_COLOR = '#050506';
-
-// HUD: AP/RP/LP
-const CAST_CALLOUT_RESOURCE_X_OFFSET = 4;
-const CAST_CALLOUT_RESOURCE_Y_GAP = -10;
-const CAST_CALLOUT_RESOURCE_GAP = 2;
-
-const ACTION_CAST_ICON_SPACING = 6;
-const ACTION_CAST_SPENT_ALPHA = 0.10;
-
-const REACTION_CAST_ICON_SPACING = 22;
-const REACTION_CAST_SPENT_ALPHA = 0.10;
-
-const POPUP_RESOURCE_ROW_GAP = 1;
 
 // HUD: UNIT TOGGLE
 const SHOW_BATTLE_UNIT_HUD = true;
@@ -223,9 +201,6 @@ const BATTLE_MAIN_RESOURCE_GROUP_GAP = 0;
 const BATTLE_MAIN_RESOURCE_MAJOR_GAP = 12;
 const BATTLE_MAIN_RESOURCE_FONT_SIZE = 8;
 const BATTLE_STATE_FULL_ALPHA = 1;
-const BATTLE_STATE_EMPTY_ALPHA = 0.20;
-const BATTLE_STATE_HIT_DIM_DURATION_MS = ms(260);
-//const POPUP_RESOURCE_FONT_SIZE = 4;
 
 const DEPTH_BACKGROUND = 0;
 const DEPTH_GRID = 10;
@@ -264,12 +239,10 @@ const DAMAGE_NUMBER_HOLD_MS = ms(1000);
 const START_BATTLE_DELAY_MS = ms(250);
 
 // Action timing
-const ATTACK_TITLE_DURATION_MS = ms(350);
 const ATTACK_RESOURCE_PREVIEW_DURATION_MS = ms(850);
 const ATTACK_RESOURCE_COMMIT_DURATION_MS = ms(200);
 const POST_ATTACK_RESOURCE_PAUSE_MS = ms(150);
 
-const DEFENDER_TITLE_DURATION_MS = ATTACK_TITLE_DURATION_MS;
 const DEFENDER_RESOURCE_PREVIEW_DURATION_MS = ATTACK_RESOURCE_PREVIEW_DURATION_MS;
 const DEFENDER_RESOURCE_COMMIT_DURATION_MS = ATTACK_RESOURCE_COMMIT_DURATION_MS;
 const DEFENDER_LP_GAIN_STAGGER_MS = ms(250);
@@ -279,7 +252,6 @@ const LUNGE_DURATION_MS = ms(450);
 const FREEZE_DURATION_MS = ms(300);
 const RETURN_DURATION_MS = ms(450);
 
-const ATTACK_LUNGE_DISTANCE = 360;
 const ATTACK_LUNGE_STOP_DISTANCE = 72;
 
 // Result timing
@@ -288,14 +260,8 @@ const FINAL_STATS_DURATION_MS = ms(750);
 const CLEANUP_BUFFER_MS = ms(300);
 
 const FLOATING_EFFECT_DURATION_MS = ms(300);
-const RESOURCE_ROW_FADE_IN_DURATION_MS = ms(250);
 const COUNTER_RESOURCE_PREVIEW_DURATION_MS = ms(500);
-const COUNTER_RESOURCE_COMMIT_DURATION_MS = ms(250);
-const COUNTER_RESOURCE_FADE_DELAY_MS = ms(1000);
 const SECONDARY_RESOURCE_COMMIT_STAGGER_MS = ms(250);
-
-const RESOURCE_EFFECT_PREVIEW_AFTER_FADE_MS = ms(150);
-const RESOURCE_EFFECT_FADE_DELAY_MS = FINAL_STATS_DURATION_MS;
 
 const DAMAGE_BLINK_ALPHA = 0.4;
 const DAMAGE_BLINK_DURATION_MS = ms(160);
@@ -359,16 +325,13 @@ const COMBAT_ZOOM_PADDING = 0;
 const COMBAT_ZOOM_DURATION_MS = ms(250);
 
 const RESOURCE_EFFECT_COMMIT_DELAY_MS =
-  RESOURCE_ROW_FADE_IN_DURATION_MS + RESOURCE_EFFECT_PREVIEW_AFTER_FADE_MS;
+  ms(400);
 
 const ACTION_CAST_EFFECT_FADE_DELAY_MS =
   ACTION_CAST_COMMIT_DELAY_MS + ms(600);
 
 const REACTION_CAST_EFFECT_FADE_DELAY_MS =
   REACTION_CAST_COMMIT_DELAY_MS - REACTION_CAST_LABEL_DELAY_MS + ms(600);
-
-const REACTION_RESOURCE_GAIN_DELAY_MS =
-  REACTION_CAST_COMMIT_DELAY_MS;
 
 function buildGambitRows() {
   return [
@@ -1413,24 +1376,13 @@ function showReactionCastEffect(effect) {
   const callout = createCombatCallout({
     unit: effect.unit,
     titleText: `${formatReactionCost(effect.reaction)} ${effect.reaction.name}`,
-    resources: [
-      { key: 'ap', before: effect.beforeAp, after: effect.afterAp, max: effect.maxAp },
-      { key: 'rp', before: effect.beforeRp, after: effect.afterRp, max: effect.maxRp },
-      { key: 'lp', before: effect.beforeLp, after: effect.afterLp, max: effect.maxLp }
-    ],
     yOffset: CAST_CALLOUT_Y_OFFSET
   });
 
-  sceneRef.time.delayedCall(REACTION_CAST_RESOURCE_DELAY_MS - REACTION_CAST_LABEL_DELAY_MS, () => {
-    callout.showResources();
-  });
-
   sceneRef.time.delayedCall(REACTION_CAST_COMMIT_DELAY_MS - REACTION_CAST_LABEL_DELAY_MS, () => {
-    callout.commitResourceState('rp');
     refreshBattleUnitHud(effect.unit);
 
     sceneRef.time.delayedCall(DEFENDER_LP_GAIN_STAGGER_MS, () => {
-      callout.commitResourceState('lp');
       refreshBattleUnitHud(effect.unit);
     });
   });
@@ -1449,20 +1401,7 @@ function showActionCastEffect(effect) {
   const callout = createCombatCallout({
     unit: effect.unit,
     titleText: `${RESOURCE_ICONS.ap} ${effect.action.name}`,
-    resources: [
-      { key: 'ap', before: effect.before, after: effect.after, max: effect.max },
-      { key: 'rp', before: effect.beforeRp, after: effect.afterRp, max: effect.maxRp },
-      { key: 'lp', before: effect.beforeLp, after: effect.afterLp, max: effect.maxLp }
-    ],
     yOffset: CAST_CALLOUT_Y_OFFSET
-  });
-
-  sceneRef.time.delayedCall(ACTION_CAST_RESOURCE_DELAY_MS - ACTION_CAST_LABEL_DELAY_MS, () => {
-    callout.showResources();
-  });
-
-  sceneRef.time.delayedCall(ACTION_CAST_COMMIT_DELAY_MS - ACTION_CAST_LABEL_DELAY_MS, () => {
-    callout.commitResourceState();
   });
 
   sceneRef.time.delayedCall(ATTACK_LUNGE_START_DELAY_MS - ACTION_CAST_LABEL_DELAY_MS, () => {
@@ -1480,150 +1419,40 @@ function showActionCastEffect(effect) {
 }
 
 function showCounterResourceRowEffect(effect) {
-  const callout = createCombatCallout({
-    unit: effect.unit,
-    titleText: '',
-    resources: [
-      { key: 'ap', before: effect.beforeAp, after: effect.afterAp, max: effect.maxAp },
-      { key: 'rp', before: effect.beforeRp, after: effect.afterRp, max: effect.maxRp },
-      { key: 'lp', before: effect.beforeLp, after: effect.afterLp, max: effect.maxLp }
-    ],
-    yOffset: CAST_CALLOUT_Y_OFFSET,
-    showTitle: false
-  });
-
-  callout.showResources();
-
   sceneRef.time.delayedCall(COUNTER_RESOURCE_PREVIEW_DURATION_MS, () => {
-    callout.commitResourceState('hp');
-    callout.commitResourceState('sp');
     refreshBattleUnitHud(effect.unit);
   });
 
   sceneRef.time.delayedCall(COUNTER_RESOURCE_PREVIEW_DURATION_MS + SECONDARY_RESOURCE_COMMIT_STAGGER_MS, () => {
-    callout.commitResourceState('ap');
-    callout.commitResourceState('rp');
-    callout.commitResourceState('lp');
     refreshBattleUnitHud(effect.unit);
   });
-
-  sceneRef.time.delayedCall(
-    COUNTER_RESOURCE_PREVIEW_DURATION_MS + COUNTER_RESOURCE_COMMIT_DURATION_MS + COUNTER_RESOURCE_FADE_DELAY_MS,
-    () => {
-      sceneRef.tweens.add({
-        targets: callout.nodes,
-        alpha: 0,
-        duration: FLOATING_EFFECT_DURATION_MS,
-        onComplete: callout.destroy
-      });
-    }
-  );
 }
 
-function createCombatCallout({ unit, titleText, resources, yOffset, showTitle = true }) {
+function createCombatCallout({ unit, titleText, yOffset }) {
   const nodes = [];
-  const resourceNodes = [];
-  const showCastResources = !SHOW_BATTLE_UNIT_HUD;
   const x = unit.shadow.x;
   const y = unit.rect.y - UNIT_SIZE / 2 - yOffset;
   const top = y - CAST_CALLOUT_HEIGHT / 2;
-  const resourceY = y + CAST_CALLOUT_HEIGHT / 2 + CAST_CALLOUT_RESOURCE_Y_GAP;
 
-  const titleNodes = [];
-  if (showTitle) {
-    const background = sceneRef.add.rectangle(
-      x,
-      y,
-      CAST_CALLOUT_WIDTH,
-      CAST_CALLOUT_HEIGHT,
-      cssHexToNumber(CAST_CALLOUT_BACKGROUND_COLOR)
-    )
-      .setStrokeStyle(2, cssHexToNumber(CAST_CALLOUT_BORDER_COLOR))
-      .setDepth(DEPTH_COMBAT_CALLOUT);
+  const background = sceneRef.add.rectangle(
+    x,
+    y,
+    CAST_CALLOUT_WIDTH,
+    CAST_CALLOUT_HEIGHT,
+    cssHexToNumber(CAST_CALLOUT_BACKGROUND_COLOR)
+  )
+    .setStrokeStyle(2, cssHexToNumber(CAST_CALLOUT_BORDER_COLOR))
+    .setDepth(DEPTH_COMBAT_CALLOUT);
 
-    const title = sceneRef.add.text(x, top + CAST_CALLOUT_PADDING + 1, titleText, {
-      fontFamily: 'monospace',
-      fontSize: `${CAST_TITLE_FONT_SIZE}px`,
-      color: COLORS.text
-    })
-      .setOrigin(0.5, 0)
-      .setDepth(DEPTH_COMBAT_CALLOUT);
+  const title = sceneRef.add.text(x, top + CAST_CALLOUT_PADDING + 1, titleText, {
+    fontFamily: 'monospace',
+    fontSize: `${CAST_TITLE_FONT_SIZE}px`,
+    color: COLORS.text
+  })
+    .setOrigin(0.5, 0)
+    .setDepth(DEPTH_COMBAT_CALLOUT);
 
-    titleNodes.push(background, title);
-  }
-  nodes.push(...titleNodes);
-
-  function showResources() {
-    if (!showCastResources) {
-      return;
-    }
-
-    drawResourceRow(resources.filter((resource) => ['ap', 'rp', 'lp'].includes(resource.key)), resourceY);
-  }
-
-  function drawResourceRow(rowResources, yPosition) {
-    if (rowResources.length <= 0) {
-      return;
-    }
-
-    const iconEntries = [];
-    rowResources.forEach((resource) => {
-      for (let index = 0; index < resource.max; index += 1) {
-        iconEntries.push({ resource, index });
-      }
-    });
-
-    const totalWidth = Math.max(iconEntries.length - 1, 0) * ACTION_CAST_ICON_SPACING +
-      (rowResources.length - 1) * CAST_CALLOUT_RESOURCE_GAP;
-    let cursorX = x - totalWidth / 2 + CAST_CALLOUT_RESOURCE_X_OFFSET;
-    let previousKey = null;
-
-    iconEntries.forEach((entry) => {
-      if (previousKey && previousKey !== entry.resource.key) {
-        cursorX += CAST_CALLOUT_RESOURCE_GAP;
-      }
-
-      const iconNode = sceneRef.add.text(cursorX, yPosition, RESOURCE_ICONS[entry.resource.key], {
-        fontFamily: 'Arial',
-        fontSize: `${POPUP_RESOURCE_FONT_SIZE}px`,
-        color: COLORS.text
-      })
-        .setOrigin(0.5, 0)
-        .setDepth(DEPTH_COMBAT_CALLOUT);
-
-      const targetAlpha = entry.index < entry.resource.before ? 1 : ACTION_CAST_SPENT_ALPHA;
-
-      iconNode.setAlpha(0);
-      resourceNodes.push({ node: iconNode, entry });
-      nodes.push(iconNode);
-
-      sceneRef.tweens.add({
-        targets: iconNode,
-        alpha: targetAlpha,
-        duration: RESOURCE_ROW_FADE_IN_DURATION_MS
-      });
-      cursorX += ACTION_CAST_ICON_SPACING;
-      previousKey = entry.resource.key;
-    });
-  }
-
-  function commitResourceState(resourceKey = null) {
-    resourceNodes.forEach(({ node, entry }) => {
-      if (resourceKey && entry.resource.key !== resourceKey) {
-        return;
-      }
-
-      node.setAlpha(entry.index < entry.resource.after ? 1 : ACTION_CAST_SPENT_ALPHA);
-    });
-  }
-
-  function fadeTitleBox() {
-    sceneRef.tweens.add({
-      targets: nodes,
-      alpha: 0,
-      duration: FLOATING_EFFECT_DURATION_MS
-    });
-  }
+  nodes.push(background, title);
 
   function destroy() {
     nodes.forEach((node) => node.destroy());
@@ -1631,42 +1460,13 @@ function createCombatCallout({ unit, titleText, resources, yOffset, showTitle = 
 
   return {
     nodes,
-    showResources,
-    commitResourceState,
-    fadeTitleBox,
     destroy
   };
 }
 
 function showResourceChangeEffect(effect) {
-  const callout = createCombatCallout({
-    unit: effect.unit,
-    titleText: '',
-    resources: [
-      {
-        key: effect.resourceKey,
-        before: effect.before,
-        after: effect.after,
-        max: effect.max
-      }
-    ],
-    yOffset: effect.yOffset || DAMAGE_POPUP_Y_OFFSET,
-    showTitle: false
-  });
-
-  callout.showResources();
-
   sceneRef.time.delayedCall(RESOURCE_EFFECT_COMMIT_DELAY_MS, () => {
-    callout.commitResourceState();
-  });
-
-  sceneRef.time.delayedCall(RESOURCE_EFFECT_FADE_DELAY_MS, () => {
-    sceneRef.tweens.add({
-      targets: callout.nodes,
-      alpha: 0,
-      duration: FLOATING_EFFECT_DURATION_MS,
-      onComplete: callout.destroy
-    });
+    refreshBattleUnitHud(effect.unit);
   });
 }
 
@@ -1993,7 +1793,7 @@ function startBattle() {
   appendLog('Round 1 starts.');
   startRound();
 
-  sceneRef.time.delayedCall(ms(250), () => {
+  sceneRef.time.delayedCall(START_BATTLE_DELAY_MS, () => {
     takeNextAction();
 
     actionTimer = sceneRef.time.addEvent({
@@ -2121,13 +1921,9 @@ function takeNextAction() {
   const selectedAction = chooseAction(attacker, defender);
   const attackerApBeforeResolve = attacker.ap;
   if (attackerApBeforeResolve <= 0) {
-    console.debug(`DEBUG ${tag} ${attacker.name} blocked AP before=${attackerApBeforeResolve} action=${selectedAction.name}`);
     return takeNextAction();
   }
   const effect = resolveAction(attacker, defender, selectedAction);
-  console.debug(
-    `DEBUG ${tag} ${attacker.name} AP before=${attackerApBeforeResolve} after=${attacker.ap} action=${selectedAction.name}`
-  );
 
   const actionCostText = RESOURCE_ICONS.ap.repeat(selectedAction.apCost);
   appendLog(`${tag} ${attacker.name} uses ${actionCostText}${selectedAction.name}.`, effect.logText);
