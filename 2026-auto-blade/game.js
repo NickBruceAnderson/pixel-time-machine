@@ -46,7 +46,7 @@ const RESOURCE_ICONS = {
 
 const ms = (value) => Math.round(value);
 
-let battleSpeedMultiplier = 3;
+let battleSpeedMultiplier = 2;
 
 // Layout
 const LEFT_PANEL_WIDTH_RATIO = 0.29;
@@ -134,6 +134,9 @@ const BATTLE_GRID_LINE_ALPHA_VISIBLE = 0.45;
 const BATTLE_GRID_LINE_ALPHA_HIDDEN = 0;
 const UNIT_VISUAL_Y_OFFSET = 0;
 const UNIT_SPRITE_FORWARD_X_OFFSET = 12;
+const TEAM_UNIT_TINT_ENABLED = true;
+const RED_TEAM_UNIT_TINT = '#d84343';
+const BLUE_TEAM_UNIT_TINT = '#3f6fd9';
 const UNIT_SHADOW_COLOR = '#071309';
 const UNIT_SHADOW_ALPHA = 0.38;
 const UNIT_SHADOW_WIDTH = 40;
@@ -209,14 +212,7 @@ const DEPTH_UNIT = 30;
 const DEPTH_UNIT_HUD = 40;
 const DEPTH_DAMAGE_TEXT = 80;
 const DEPTH_COMBAT_CALLOUT = 100;
-const BATTLE_RESOURCE_CENTER_DEPTH_BONUS = 3;
-const BLUE_RESOURCE_DEPTH_BONUS = {
-  sp: 24,
-  hp: 20,
-  ap: 14,
-  rp: 10,
-  lp: 28
-};
+const BATTLE_RESOURCE_CENTER_DEPTH_BONUS = 30;
 
 // HUD: LP
 const BATTLE_LP_SHOW = true;
@@ -655,6 +651,9 @@ function createCharacter(name, characterClass, color, teamKey, row, col) {
     maxLp: classStats.maxLp,
     ip: classStats.ip,
     maxIp: classStats.maxIp,
+    slotX: x,
+    slotY: baseY,
+    slotSpriteX: spriteX,
     shadow,
     rect,
     label,
@@ -666,6 +665,7 @@ function createCharacter(name, characterClass, color, teamKey, row, col) {
     }
   };
 
+  applyTeamUnitTint(unit);
   refreshBattleUnitHud(unit);
   startKnightIdle(unit);
   return unit;
@@ -707,6 +707,21 @@ function setKnightIdle(unit) {
   unit.rect.setTexture(KNIGHT_IDLE_TEXTURE_KEY, KNIGHT_IDLE_DEFAULT_FRAME);
   unit.rect.setFrame(KNIGHT_IDLE_DEFAULT_FRAME);
   unit.rect.setFlipX(unit.teamKey === 'blue');
+  applyTeamUnitTint(unit);
+}
+
+function applyTeamUnitTint(unit) {
+  if (!unit || !unit.rect) {
+    return;
+  }
+
+  if (!TEAM_UNIT_TINT_ENABLED) {
+    unit.rect.clearTint();
+    return;
+  }
+
+  const tint = unit.teamKey === 'blue' ? BLUE_TEAM_UNIT_TINT : RED_TEAM_UNIT_TINT;
+  unit.rect.setTint(cssHexToNumber(tint));
 }
 
 function stopKnightRandomIdleTwitch(unit) {
@@ -749,6 +764,7 @@ function playKnightRandomIdleTwitch(unit) {
 
   unit.rect.setTexture(KNIGHT_IDLE_TEXTURE_KEY, KNIGHT_IDLE_TWITCH_FRAME);
   unit.rect.setFrame(KNIGHT_IDLE_TWITCH_FRAME);
+  applyTeamUnitTint(unit);
   unit.idleTwitchHoldEvent = sceneRef.time.delayedCall(KNIGHT_RANDOM_IDLE_TWITCH_HOLD_MS, () => {
     unit.idleTwitchHoldEvent = null;
     if (!canRunKnightRandomIdleTwitch(unit)) {
@@ -784,24 +800,14 @@ function addBattleHudIcon(unit, groupKey, x, y, resourceKey, fontSize) {
 }
 
 function getBattleResourceDepth(unit, x, resourceKey) {
-  return DEPTH_UNIT_HUD + getResourceOverlapBonus(unit, resourceKey, x);
-}
-
-function getResourceOverlapBonus(unit, resourceKey, x) {
-  const centerBonus = getBattleCenterOverlapBonus(x);
-
-  if (unit.teamKey !== 'blue') {
-    return centerBonus;
-  }
-
-  return centerBonus + (BLUE_RESOURCE_DEPTH_BONUS[resourceKey] || 0);
+  return DEPTH_UNIT_HUD + getBattleCenterOverlapBonus(x);
 }
 
 function getBattleCenterOverlapBonus(x) {
   const battleCenterX = layout.battle.x + layout.battle.w / 2;
   const maxDistance = layout.battle.w / 2;
   const normalizedDistance = Math.min(1, Math.abs(x - battleCenterX) / maxDistance);
-  return Math.round((1 - normalizedDistance) * BATTLE_RESOURCE_CENTER_DEPTH_BONUS);
+  return (1 - normalizedDistance) * BATTLE_RESOURCE_CENTER_DEPTH_BONUS;
 }
 
 function drawBattleHudIconRow(unit, groupKey, entries, startX, y, iconSpacing, groupGap, fontSize) {
@@ -817,6 +823,14 @@ function drawBattleHudIconRow(unit, groupKey, entries, startX, y, iconSpacing, g
       cursorX += groupGap;
     }
   });
+}
+
+function getBattleHudAnchor(unit) {
+  return {
+    rowX: unit.slotX ?? unit.shadow.x,
+    rowY: unit.slotY ?? unit.rect.y,
+    spriteX: unit.slotSpriteX ?? unit.rect.x
+  };
 }
 
 function createBattleMainResourceRow(unit) {
@@ -854,9 +868,10 @@ function createBattleMainResourceRow(unit) {
   const visibleGroupCount = groupWidths.filter((width) => width > 0).length;
   const totalWidth = groupWidths.reduce((sum, width) => sum + width, 0) +
     Math.max(0, visibleGroupCount - 1) * BATTLE_MAIN_RESOURCE_MAJOR_GAP;
+  const anchor = getBattleHudAnchor(unit);
 
-  let cursorX = unit.shadow.x - totalWidth / 2;
-  const y = unit.rect.y + BATTLE_MAIN_RESOURCE_ROW_Y_OFFSET;
+  let cursorX = anchor.rowX - totalWidth / 2;
+  const y = anchor.rowY + BATTLE_MAIN_RESOURCE_ROW_Y_OFFSET;
 
   rowGroups.forEach((entries, groupIndex) => {
     if (groupWidths[groupIndex] <= 0) {
@@ -882,11 +897,12 @@ function createBattleLpMarker(unit) {
     return;
   }
 
+  const anchor = getBattleHudAnchor(unit);
   const x = unit.teamKey === 'blue'
-    ? unit.rect.x - BATTLE_LP_X_OFFSET + BATTLE_LP_CORNER_X_INSET
-    : unit.rect.x + BATTLE_LP_X_OFFSET - BATTLE_LP_CORNER_X_INSET;
+    ? anchor.spriteX - BATTLE_LP_X_OFFSET + BATTLE_LP_CORNER_X_INSET
+    : anchor.spriteX + BATTLE_LP_X_OFFSET - BATTLE_LP_CORNER_X_INSET;
 
-  const y = unit.rect.y + BATTLE_LP_Y_OFFSET - BATTLE_LP_CORNER_Y_INSET;
+  const y = anchor.rowY + BATTLE_LP_Y_OFFSET - BATTLE_LP_CORNER_Y_INSET;
 
   addBattleHudIcon(
     unit,
@@ -1543,6 +1559,7 @@ function playKnightOneShotAnimation(unit, textureKey, animationKey, finalPoseHol
   unit.rect.stop();
   unit.rect.setTexture(textureKey, getKnightAnimationStartFrame(animationKey));
   unit.rect.setFlipX(unit.teamKey === 'blue');
+  applyTeamUnitTint(unit);
   unit.rect.play(animationKey);
 
   const finish = () => holdKnightFinalPose(unit, animationKey, runId, finalPoseHoldMs);
