@@ -67,65 +67,26 @@ const BATTLE_WINDOW_HEIGHT_RATIO = 0.48;
 
 const UNIT_SIZE = 140;
 
-// Knight idle sprite
-const KNIGHT_IDLE_TEXTURE_KEY = 'knight-idle';
-const KNIGHT_IDLE_ASSET_PATH = 'assets/knight/Knight-Idle.png';
-const KNIGHT_IDLE_FRAME_WIDTH = 16;
-const KNIGHT_IDLE_FRAME_HEIGHT = 16;
-const KNIGHT_IDLE_DEFAULT_FRAME = 0;
-const KNIGHT_IDLE_TWITCH_FRAME = 1;
-const KNIGHT_IDLE_SCALE = 8;
-
-// Squire idle sprite
-const SQUIRE_IDLE_TEXTURE_KEY = 'squire-idle';
-const SQUIRE_IDLE_ASSET_PATH = 'assets/squire/squire-idle.png';
-const SQUIRE_IDLE_FRAME_WIDTH = 16;
-const SQUIRE_IDLE_FRAME_HEIGHT = 16;
-const SQUIRE_IDLE_DEFAULT_FRAME = 0;
-const SQUIRE_IDLE_SCALE = 8;
-
 const KNIGHT_RANDOM_IDLE_TWITCH_ENABLED = false;
 const KNIGHT_RANDOM_IDLE_TWITCH_TEST_KEY = 'I';
 const KNIGHT_RANDOM_IDLE_TWITCH_DELAY_MS = ms(15000);
 const KNIGHT_RANDOM_IDLE_TWITCH_HOLD_MS = ms(1000);
-const KNIGHT_ATTACK_TEXTURE_KEY = 'knight-attack';
-const KNIGHT_ATTACK_ASSET_PATH = 'assets/knight/Knight-Attack.png';
-const KNIGHT_ATTACK_FRAME_WIDTH = 16;
-const KNIGHT_ATTACK_FRAME_HEIGHT = 16;
-const KNIGHT_ATTACK_START_FRAME = 0;
-const KNIGHT_ATTACK_END_FRAME = 5;
-const KNIGHT_ATTACK_FRAME_RATE = 12;
-const KNIGHT_ATTACK_ANIMATION_KEY = 'knight-attack';
 const KNIGHT_ATTACK_ACTION_KEYS = ['slash', 'thrust'];
+
+const _knightAnim = CHARACTER_CLASSES.knight.visual.animations;
 const KNIGHT_ATTACK_ANIMATION_DURATION_MS = ms(
-  (KNIGHT_ATTACK_END_FRAME - KNIGHT_ATTACK_START_FRAME + 1) /
-    KNIGHT_ATTACK_FRAME_RATE *
-    1000
+  (_knightAnim.attack.endFrame - _knightAnim.attack.startFrame + 1) /
+    _knightAnim.attack.frameRate * 1000
 );
-const KNIGHT_ATTACK_FINAL_POSE_HOLD_MS = ms(1000);
-const KNIGHT_BLOCK_PARRY_TEXTURE_KEY = 'knight-block-parry';
-const KNIGHT_BLOCK_PARRY_ASSET_PATH = 'assets/knight/Knight-Block-Parry.png';
-const KNIGHT_BLOCK_PARRY_FRAME_WIDTH = 16;
-const KNIGHT_BLOCK_PARRY_FRAME_HEIGHT = 16;
-const KNIGHT_BLOCK_START_FRAME = 0;
-const KNIGHT_BLOCK_END_FRAME = 2;
-const KNIGHT_BLOCK_FRAME_RATE = 10;
-const KNIGHT_BLOCK_ANIMATION_KEY = 'knight-block';
-const KNIGHT_BLOCK_FINAL_POSE_HOLD_MS = ms(1000);
+const KNIGHT_ATTACK_FINAL_POSE_HOLD_MS = ms(_knightAnim.attack.finalPoseHoldMs);
 const KNIGHT_BLOCK_SYNC_LEAD_FRAMES = 1;
 const KNIGHT_BLOCK_SYNC_LEAD_MS = ms(
-  KNIGHT_BLOCK_SYNC_LEAD_FRAMES / KNIGHT_BLOCK_FRAME_RATE * 1000
+  KNIGHT_BLOCK_SYNC_LEAD_FRAMES / _knightAnim.block.frameRate * 1000
 );
-const KNIGHT_PARRY_START_FRAME = 0;
-const KNIGHT_PARRY_END_FRAME = 11;
-const KNIGHT_PARRY_FRAME_RATE = 12;
-const KNIGHT_PARRY_ANIMATION_KEY = 'knight-parry';
-const KNIGHT_PARRY_FINAL_POSE_HOLD_MS = ms(1000);
-const KNIGHT_PARRY_FLOURISH_FRAME_COUNT = 7;
+const KNIGHT_PARRY_FLOURISH_FRAME_COUNT = _knightAnim.parry.flourishFrameCount;
 const KNIGHT_PARRY_SYNC_LEAD_MS = ms(
-  (KNIGHT_PARRY_END_FRAME - KNIGHT_PARRY_START_FRAME + 1 - KNIGHT_PARRY_FLOURISH_FRAME_COUNT) /
-    KNIGHT_PARRY_FRAME_RATE *
-    1000
+  (_knightAnim.parry.endFrame - _knightAnim.parry.startFrame + 1 - KNIGHT_PARRY_FLOURISH_FRAME_COUNT) /
+    _knightAnim.parry.frameRate * 1000
 );
 const SHOW_BATTLE_UNIT_NAME_LABELS = false;
 
@@ -728,29 +689,34 @@ const config = {
 
 new Phaser.Game(config);
 
+function preloadClassVisuals(scene) {
+  const loadedTextureKeys = new Set();
+  for (const classDef of Object.values(CHARACTER_CLASSES)) {
+    const v = classDef.visual;
+    scene.load.spritesheet(v.idle.textureKey, v.idle.assetPath, {
+      frameWidth: v.idle.frameWidth,
+      frameHeight: v.idle.frameHeight
+    });
+    for (const anim of Object.values(v.animations)) {
+      if (!loadedTextureKeys.has(anim.textureKey)) {
+        loadedTextureKeys.add(anim.textureKey);
+        scene.load.spritesheet(anim.textureKey, anim.assetPath, {
+          frameWidth: anim.frameWidth,
+          frameHeight: anim.frameHeight
+        });
+      }
+    }
+  }
+}
+
 function preload() {
-  this.load.spritesheet(KNIGHT_IDLE_TEXTURE_KEY, KNIGHT_IDLE_ASSET_PATH, {
-    frameWidth: KNIGHT_IDLE_FRAME_WIDTH,
-    frameHeight: KNIGHT_IDLE_FRAME_HEIGHT
-  });
-  this.load.spritesheet(SQUIRE_IDLE_TEXTURE_KEY, SQUIRE_IDLE_ASSET_PATH, {
-    frameWidth: SQUIRE_IDLE_FRAME_WIDTH,
-    frameHeight: SQUIRE_IDLE_FRAME_HEIGHT
-  });
-  this.load.spritesheet(KNIGHT_ATTACK_TEXTURE_KEY, KNIGHT_ATTACK_ASSET_PATH, {
-    frameWidth: KNIGHT_ATTACK_FRAME_WIDTH,
-    frameHeight: KNIGHT_ATTACK_FRAME_HEIGHT
-  });
-  this.load.spritesheet(KNIGHT_BLOCK_PARRY_TEXTURE_KEY, KNIGHT_BLOCK_PARRY_ASSET_PATH, {
-    frameWidth: KNIGHT_BLOCK_PARRY_FRAME_WIDTH,
-    frameHeight: KNIGHT_BLOCK_PARRY_FRAME_HEIGHT
-  });
+  preloadClassVisuals(this);
 }
 
 function create() {
   sceneRef = this;
   sceneRef.input.mouse.disableContextMenu();
-  createKnightAnimations();
+  createClassAnimations();
   createLayout();
   applyCombatZoomMode(false);
 
@@ -768,34 +734,25 @@ function create() {
   enterSetupPhase();
 }
 
-function createKnightAnimations() {
-  sceneRef.anims.create({
-    key: KNIGHT_ATTACK_ANIMATION_KEY,
-    frames: sceneRef.anims.generateFrameNumbers(KNIGHT_ATTACK_TEXTURE_KEY, {
-      start: KNIGHT_ATTACK_START_FRAME,
-      end: KNIGHT_ATTACK_END_FRAME
-    }),
-    frameRate: KNIGHT_ATTACK_FRAME_RATE,
-    repeat: 0
-  });
-  sceneRef.anims.create({
-    key: KNIGHT_BLOCK_ANIMATION_KEY,
-    frames: sceneRef.anims.generateFrameNumbers(KNIGHT_BLOCK_PARRY_TEXTURE_KEY, {
-      start: KNIGHT_BLOCK_START_FRAME,
-      end: KNIGHT_BLOCK_END_FRAME
-    }),
-    frameRate: KNIGHT_BLOCK_FRAME_RATE,
-    repeat: 0
-  });
-  sceneRef.anims.create({
-    key: KNIGHT_PARRY_ANIMATION_KEY,
-    frames: sceneRef.anims.generateFrameNumbers(KNIGHT_BLOCK_PARRY_TEXTURE_KEY, {
-      start: KNIGHT_PARRY_START_FRAME,
-      end: KNIGHT_PARRY_END_FRAME
-    }),
-    frameRate: KNIGHT_PARRY_FRAME_RATE,
-    repeat: 0
-  });
+function createClassAnimations() {
+  const createdKeys = new Set();
+  for (const classDef of Object.values(CHARACTER_CLASSES)) {
+    for (const anim of Object.values(classDef.visual.animations)) {
+      if (createdKeys.has(anim.animationKey)) {
+        continue;
+      }
+      createdKeys.add(anim.animationKey);
+      sceneRef.anims.create({
+        key: anim.animationKey,
+        frames: sceneRef.anims.generateFrameNumbers(anim.textureKey, {
+          start: anim.startFrame,
+          end: anim.endFrame
+        }),
+        frameRate: anim.frameRate,
+        repeat: 0
+      });
+    }
+  }
 }
 
 function toggleBattleGridLines() {
@@ -1472,18 +1429,15 @@ function renderSetupGrid(teamKey) {
 }
 
 function getUnitIdleTextureKey(unitType) {
-  if (unitType === 'squire') { return SQUIRE_IDLE_TEXTURE_KEY; }
-  return KNIGHT_IDLE_TEXTURE_KEY;
+  return CHARACTER_CLASSES[unitType].visual.idle.textureKey;
 }
 
 function getUnitIdleDefaultFrame(unitType) {
-  if (unitType === 'squire') { return SQUIRE_IDLE_DEFAULT_FRAME; }
-  return KNIGHT_IDLE_DEFAULT_FRAME;
+  return CHARACTER_CLASSES[unitType].visual.idle.defaultFrame;
 }
 
 function getUnitIdleScale(unitType) {
-  if (unitType === 'squire') { return SQUIRE_IDLE_SCALE; }
-  return KNIGHT_IDLE_SCALE;
+  return CHARACTER_CLASSES[unitType].visual.idle.scale;
 }
 
 function renderSetupUnitStatsPreview(unitType, x, y) {
@@ -1886,8 +1840,13 @@ function playKnightRandomIdleTwitch(unit) {
     return;
   }
 
-  unit.rect.setTexture(KNIGHT_IDLE_TEXTURE_KEY, KNIGHT_IDLE_TWITCH_FRAME);
-  unit.rect.setFrame(KNIGHT_IDLE_TWITCH_FRAME);
+  const idleVisual = CHARACTER_CLASSES[unit.class]?.visual?.idle;
+  if (idleVisual?.twitchFrame == null) {
+    return;
+  }
+
+  unit.rect.setTexture(idleVisual.textureKey, idleVisual.twitchFrame);
+  unit.rect.setFrame(idleVisual.twitchFrame);
   applyTeamUnitTint(unit);
   unit.idleTwitchHoldEvent = sceneRef.time.delayedCall(KNIGHT_RANDOM_IDLE_TWITCH_HOLD_MS, () => {
     unit.idleTwitchHoldEvent = null;
@@ -3088,16 +3047,12 @@ function playAnimationEffect(animationEffect) {
 }
 
 function playKnightAttack(unit) {
-  playKnightOneShotAnimation(
-    unit,
-    KNIGHT_ATTACK_TEXTURE_KEY,
-    KNIGHT_ATTACK_ANIMATION_KEY,
-    KNIGHT_ATTACK_FINAL_POSE_HOLD_MS
-  );
+  playClassOneShotAnimation(unit, 'attack');
 }
 
-function playKnightOneShotAnimation(unit, textureKey, animationKey, finalPoseHoldMs) {
-  if (unit.class !== 'knight') {
+function playClassOneShotAnimation(unit, animationType) {
+  const animConfig = CHARACTER_CLASSES[unit.class]?.visual?.animations?.[animationType];
+  if (!animConfig) {
     return;
   }
 
@@ -3108,20 +3063,29 @@ function playKnightOneShotAnimation(unit, textureKey, animationKey, finalPoseHol
   stopKnightRandomIdleTwitch(unit);
 
   unit.isPlayingKnightAnimation = true;
-  unit.knightAnimationKey = animationKey;
+  unit.knightAnimationKey = animConfig.animationKey;
   unit.knightAnimationRunId = (unit.knightAnimationRunId || 0) + 1;
   const runId = unit.knightAnimationRunId;
+  const finalPoseHoldMs = ms(animConfig.finalPoseHoldMs);
   unit.rect.stop();
-  unit.rect.setTexture(textureKey, getKnightAnimationStartFrame(animationKey));
+  unit.rect.setTexture(animConfig.textureKey, animConfig.startFrame);
   unit.rect.setFlipX(unit.teamKey === 'blue');
   applyTeamUnitTint(unit);
-  unit.rect.play(animationKey);
+  unit.rect.play(animConfig.animationKey);
 
-  const finish = () => holdKnightFinalPose(unit, animationKey, runId, finalPoseHoldMs);
+  const finish = () => holdKnightFinalPose(unit, animConfig.animationKey, runId, finalPoseHoldMs);
   unit.rect.once('animationcomplete', finish);
-  sceneRef.time.delayedCall(getKnightAnimationDurationMs(animationKey) + finalPoseHoldMs + ms(50), () => {
-    finishKnightOneShotAnimation(unit, animationKey, runId);
+  sceneRef.time.delayedCall(getClassAnimationDurationMs(unit, animationType) + finalPoseHoldMs + ms(50), () => {
+    finishKnightOneShotAnimation(unit, animConfig.animationKey, runId);
   });
+}
+
+function getClassAnimationDurationMs(unit, animationType) {
+  const animConfig = CHARACTER_CLASSES[unit.class]?.visual?.animations?.[animationType];
+  if (!animConfig) {
+    return 0;
+  }
+  return getFrameAnimationDurationMs(animConfig.startFrame, animConfig.endFrame, animConfig.frameRate);
 }
 
 function holdKnightFinalPose(unit, animationKey, runId, finalPoseHoldMs) {
@@ -3154,29 +3118,6 @@ function finishKnightOneShotAnimation(unit, animationKey, runId) {
   startKnightRandomIdleTwitch(unit);
 }
 
-function getKnightAnimationStartFrame(animationKey) {
-  if (animationKey === KNIGHT_ATTACK_ANIMATION_KEY) {
-    return KNIGHT_ATTACK_START_FRAME;
-  }
-
-  if (animationKey === KNIGHT_BLOCK_ANIMATION_KEY) {
-    return KNIGHT_BLOCK_START_FRAME;
-  }
-
-  return KNIGHT_PARRY_START_FRAME;
-}
-
-function getKnightAnimationDurationMs(animationKey) {
-  if (animationKey === KNIGHT_ATTACK_ANIMATION_KEY) {
-    return getFrameAnimationDurationMs(KNIGHT_ATTACK_START_FRAME, KNIGHT_ATTACK_END_FRAME, KNIGHT_ATTACK_FRAME_RATE);
-  }
-
-  if (animationKey === KNIGHT_BLOCK_ANIMATION_KEY) {
-    return getFrameAnimationDurationMs(KNIGHT_BLOCK_START_FRAME, KNIGHT_BLOCK_END_FRAME, KNIGHT_BLOCK_FRAME_RATE);
-  }
-
-  return getFrameAnimationDurationMs(KNIGHT_PARRY_START_FRAME, KNIGHT_PARRY_END_FRAME, KNIGHT_PARRY_FRAME_RATE);
-}
 
 function getFrameAnimationDurationMs(startFrame, endFrame, frameRate) {
   return ms((endFrame - startFrame + 1) / frameRate * 1000);
@@ -3299,21 +3240,11 @@ function getBattleStateNodes(unit) {
 }
 
 function playBlockAnimation(unit) {
-  playKnightOneShotAnimation(
-    unit,
-    KNIGHT_BLOCK_PARRY_TEXTURE_KEY,
-    KNIGHT_BLOCK_ANIMATION_KEY,
-    KNIGHT_BLOCK_FINAL_POSE_HOLD_MS
-  );
+  playClassOneShotAnimation(unit, 'block');
 }
 
 function playParryAnimation(unit) {
-  playKnightOneShotAnimation(
-    unit,
-    KNIGHT_BLOCK_PARRY_TEXTURE_KEY,
-    KNIGHT_PARRY_ANIMATION_KEY,
-    KNIGHT_PARRY_FINAL_POSE_HOLD_MS
-  );
+  playClassOneShotAnimation(unit, 'parry');
 }
 
 function playDamageBlink(unit) {
