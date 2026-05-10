@@ -1,5 +1,6 @@
-import { ACTIONS, REACTIONS } from './data/skills.js';
-import { CHARACTER_CLASSES } from './data/characters.js';
+import { ACTIONS, REACTIONS, LIMITS, TRAITS } from './data/skills.js';
+import { BASE_UNIT_STATS, PROMOTION_STAT_BONUSES, CHARACTER_CLASSES } from './data/characters.js';
+import { EQUIPMENT } from './data/equipment.js';
 
 const GAME_WIDTH = 1920;
 const GAME_HEIGHT = 1080;
@@ -44,9 +45,19 @@ const RESOURCE_ICONS = {
   ip: '🥾'
 };
 
+const RESOURCE_COLORS = {
+  hp: COLORS.hp,
+  sp: COLORS.sp,
+  ap: COLORS.ap,
+  rp: COLORS.rp,
+  lp: COLORS.lp,
+  ip: COLORS.emptyLp
+};
+
 const ms = (value) => Math.round(value);
 
 let battleSpeedMultiplier = 2;
+const BATTLE_SPEED_OPTIONS = [1, 2, 4, 8, 16, 32, 64];
 
 // Layout
 const LEFT_PANEL_WIDTH_RATIO = 0.29;
@@ -64,6 +75,15 @@ const KNIGHT_IDLE_FRAME_HEIGHT = 16;
 const KNIGHT_IDLE_DEFAULT_FRAME = 0;
 const KNIGHT_IDLE_TWITCH_FRAME = 1;
 const KNIGHT_IDLE_SCALE = 8;
+
+// Squire idle sprite
+const SQUIRE_IDLE_TEXTURE_KEY = 'squire-idle';
+const SQUIRE_IDLE_ASSET_PATH = 'assets/squire/squire-idle.png';
+const SQUIRE_IDLE_FRAME_WIDTH = 16;
+const SQUIRE_IDLE_FRAME_HEIGHT = 16;
+const SQUIRE_IDLE_DEFAULT_FRAME = 0;
+const SQUIRE_IDLE_SCALE = 8;
+
 const KNIGHT_RANDOM_IDLE_TWITCH_ENABLED = false;
 const KNIGHT_RANDOM_IDLE_TWITCH_TEST_KEY = 'I';
 const KNIGHT_RANDOM_IDLE_TWITCH_DELAY_MS = ms(15000);
@@ -151,38 +171,37 @@ const BATTLE_GRID_WIDTH = FORMATION_ROW_SPACING * FORMATION_ROWS.length;
 const BATTLE_GRID_HEIGHT = FORMATION_COLUMN_SPACING * FORMATION_COLS.length;
 
 // Panels
-const INFO_PANEL_PADDING = 24;
+const INFO_PANEL_PADDING = 6;
 const INFO_COLUMN_GAP = 28;
-const INFO_TOOLTIP_HEIGHT = 82;
-const INFO_DIVIDER_COLOR = COLORS.panelBorder;
+const SIDE_GRID_PADDING = 40;
 
-const POPUP_BUTTON_Y = 18;
-const POPUP_BUTTON_HEIGHT = 30;
-const POPUP_BUTTON_PADDING = 12;
-const POPUP_BUTTON_GAP = 12;
-const POPUP_BUTTON_RED_X = 24;
-const POPUP_BUTTON_BLUE_X = 150;
-const POPUP_BUTTON_STATS_X = GAME_WIDTH - 282;
-const POPUP_BUTTON_LOG_X = GAME_WIDTH - 146;
-const POPUP_BUTTON_RED_WIDTH = 114;
-const POPUP_BUTTON_BLUE_WIDTH = 122;
-const POPUP_BUTTON_STATS_WIDTH = 78;
-const POPUP_BUTTON_LOG_WIDTH = 58;
+const UTILITY_BUTTON_X = 24;
+const UTILITY_BUTTON_Y = GAME_HEIGHT - 104;
+const UTILITY_BUTTON_WIDTH = 112;
+const UTILITY_BUTTON_HEIGHT = 30;
+const UTILITY_BUTTON_GAP = 8;
+const UTILITY_BUTTON_PADDING = 12;
+const UTILITY_BUTTON_DEPTH = 220;
+const SPEED_MENU_WIDTH = 72;
+const SPEED_MENU_OPTION_HEIGHT = 28;
+const SPEED_MENU_GAP = 0;
+const SPEED_MENU_DEPTH = UTILITY_BUTTON_DEPTH + 10;
 const POPUP_PANEL_MARGIN = 24;
 const POPUP_PANEL_TOP = 64;
 const POPUP_SIDE_PANEL_WIDTH = 420;
 const POPUP_SIDE_PANEL_HEIGHT = 560;
 const POPUP_LOG_PANEL_WIDTH = 560;
 const POPUP_LOG_PANEL_HEIGHT = 480;
-const POPUP_STATS_PANEL_WIDTH = 860;
+const POPUP_STATS_PANEL_WIDTH = 350;
 const POPUP_STATS_PANEL_HEIGHT = 820;
 const POPUP_PANEL_PADDING = 24;
+const POPUP_STATS_PANEL_PADDING = 4;
+const POPUP_STATS_PANEL_BOTTOM_OFFSET = POPUP_PANEL_MARGIN;
 const POPUP_PANEL_BACKGROUND_ALPHA = 0.92;
 const POPUP_DEPTH = 200;
-const POPUP_BUTTON_DEPTH = 220;
+const POPUP_DETAIL_TEXT_ALPHA = 0.80;
 
 const SHOW_SIDE_TEAM_STATUS_CARDS = false;
-const SIDE_GRID_PADDING = 40;
 const SIDE_GRID_TOP = 82;
 const SIDE_CARD_WIDTH = 132;
 const SIDE_CARD_HEIGHT = 136;
@@ -293,6 +312,79 @@ const ROUND_START_BANNER_BORDER_COLOR = '#58a6ff';
 const ROUND_START_BANNER_TITLE_COLOR = '#d8ecff';
 const ROUND_START_BANNER_SUBTITLE_COLOR = '#9dccff';
 
+// Initiative order
+const INITIATIVE_ORDER_NUMBER_SHOW = true;
+const INITIATIVE_ORDER_FONT_SIZE = 18;
+const INITIATIVE_ORDER_CENTER_X_OFFSET = 5;
+const INITIATIVE_ORDER_Y_OFFSET = 65;
+const INITIATIVE_ORDER_COLOR = '#ffffff';
+const INITIATIVE_ORDER_STROKE_COLOR = COLORS.background;
+const INITIATIVE_ORDER_STROKE_THICKNESS = 4;
+const INITIATIVE_ORDER_DEPTH = DEPTH_DAMAGE_TEXT;
+const INITIATIVE_ORDER_ACTIVE_ALPHA = 1;
+const INITIATIVE_ORDER_ACTED_ALPHA = 0.20;
+const INITIATIVE_ORDER_INELIGIBLE_ALPHA = 0.10;
+
+// Command progression
+const STARTING_COMMAND_LEVEL = 6;
+const STARTING_COMMAND_XP = 0;
+const COMMAND_XP_TO_LEVEL = 10;
+const STARTING_ENEMY_COMMAND_LEVEL = 6;
+const STARTING_ENEMY_COMMAND_XP = 0;
+const BATTLE_OVER_BANNER_HOLD_MS = ms(1400);
+const BATTLE_OVER_RETURN_TO_SETUP_DELAY_MS = BATTLE_OVER_BANNER_HOLD_MS + ROUND_START_BANNER_FADE_MS;
+
+// Setup phase
+const SETUP_MIN_UNITS_TO_START = 1;
+const SETUP_AI_DEFAULT_COMMAND_SPEND = 6;
+const SETUP_UI_DEPTH = 150;
+const SETUP_PANEL_X = 24;
+const SETUP_PANEL_Y = 18;
+const SETUP_PANEL_WIDTH = GAME_WIDTH - 48;
+const SETUP_PANEL_HEIGHT = 168;
+const SETUP_PANEL_ALPHA = 0.88;
+const SETUP_BUTTON_HEIGHT = 34;
+const SETUP_KNIGHT_CARD_WIDTH = 190;
+const SETUP_KNIGHT_CARD_HEIGHT = 154;
+const SETUP_START_BUTTON_WIDTH = 150;
+const SETUP_COMMAND_ICON = '🚩';
+const SETUP_TITLE_Y_OFFSET = 18;
+const SETUP_PROGRESS_X_OFFSET = 24;
+const SETUP_ENEMY_PROGRESS_X_OFFSET = SETUP_PANEL_WIDTH - 24;
+const SETUP_PROGRESS_LEVEL_Y_OFFSET = 62;
+const SETUP_PROGRESS_FLAGS_Y_OFFSET = 86;
+const SETUP_PROGRESS_CXP_Y_OFFSET = 112;
+const SETUP_START_BUTTON_X_OFFSET = (SETUP_PANEL_WIDTH - SETUP_START_BUTTON_WIDTH) / 2;
+const SETUP_START_BUTTON_Y_OFFSET = 76;
+const SETUP_COMMAND_FLAG_FULL_ALPHA = 1;
+const SETUP_COMMAND_FLAG_SPENT_ALPHA = 0.18;
+const SETUP_COMMAND_FLAG_SPACING = 18;
+const SETUP_COMMAND_FLAG_FONT_SIZE = 16;
+const SETUP_UNITS_PANEL_X = 24;
+const SETUP_UNITS_PANEL_Y = SETUP_PANEL_Y + SETUP_PANEL_HEIGHT + 12;
+const SETUP_UNIT_TYPES = ['squire', 'knight'];
+const SETUP_UNIT_CARD_GAP = 14;
+const SETUP_UNITS_TITLE_X_OFFSET = 18;
+const SETUP_UNITS_TITLE_Y_OFFSET = 16;
+const SETUP_UNITS_CARD_X_OFFSET = 18;
+const SETUP_UNITS_CARD_Y_OFFSET = 48;
+const SETUP_UNITS_PANEL_WIDTH = SETUP_UNITS_CARD_X_OFFSET * 2 + SETUP_KNIGHT_CARD_WIDTH * SETUP_UNIT_TYPES.length + SETUP_UNIT_CARD_GAP * (SETUP_UNIT_TYPES.length - 1);
+const SETUP_UNITS_PANEL_HEIGHT = 210;
+const SETUP_KNIGHT_CARD_TITLE_X_OFFSET = 14;
+const SETUP_KNIGHT_CARD_TITLE_Y_OFFSET = 10;
+const SETUP_KNIGHT_CARD_COST_Y_OFFSET = 42;
+const SETUP_KNIGHT_PREVIEW_X_OFFSET = 14;
+const SETUP_KNIGHT_PREVIEW_Y_OFFSET = 66;
+const SETUP_KNIGHT_PREVIEW_LABEL_WIDTH = 32;
+const SETUP_KNIGHT_PREVIEW_ROW_GAP = 14;
+const SETUP_CELL_ALPHA_PLAYER = 0.18;
+const SETUP_CELL_ALPHA_AI = 0.08;
+const SETUP_CELL_ALPHA_OCCUPIED = 0.28;
+const SETUP_CELL_STROKE_PLAYER = '#58a6ff';
+const SETUP_CELL_STROKE_AI = '#5f6674';
+const SETUP_PREVIEW_ALPHA_PLAYER = 1;
+const SETUP_PREVIEW_ALPHA_AI = 0.72;
+
 // Battle start
 const START_BATTLE_DELAY_MS = ms(250);
 
@@ -395,49 +487,194 @@ function buildGambitRows() {
   return [
     {
       label: 'G1: Parry',
-      detail: `[player has ${RESOURCE_ICONS.rp}] [player has ${RESOURCE_ICONS.lp}]`
+      detail: [
+        { text: '[player has ' },
+        resourceTextSegment('rp'),
+        { text: '] [player has ' },
+        resourceTextSegment('lp'),
+        { text: ']' }
+      ]
     },
   {
     label: 'G2: Block',
-    detail: `[player has ${RESOURCE_ICONS.rp}]`
+    detail: [
+      { text: '[player has ' },
+      resourceTextSegment('rp'),
+      { text: ']' }
+    ]
   },
   {
     label: 'G3: Thrust',
-    detail: `[enemy has 0 ${RESOURCE_ICONS.sp}]`
+    detail: [
+      { text: '[enemy has 0 ' },
+      resourceTextSegment('sp'),
+      { text: ']' }
+    ]
   },
   {
     label: 'G4: Slash',
-    detail: `[enemy has 2+${RESOURCE_ICONS.sp}]`
+    detail: [
+      { text: '[enemy has 2+' },
+      resourceTextSegment('sp'),
+      { text: ']' }
+    ]
   }
 ];
 }
 
-function buildEquipmentRows() {
-  return [
-    {
-      label: 'RH: Broadsword',
-      detail: '(Grants Thrust)'
-    },
-    {
-      label: 'LH: Buckler',
-      detail: '(Grants Parry)'
-    },
-    {
-      label: 'AR: Plate Mail',
-      detail: '(+2🛡️ -1🥾)'
-    }
-  ];
+function cloneStats(stats) {
+  return { ...stats };
 }
 
-const TOOLTIP_TEXT = [
-  'Hover Tooltip:',
-  'If you hover over anything above, it will explain it here.',
-  'We do not need to build this yet.'
-];
+function applyStatBonuses(stats, bonuses = {}) {
+  Object.entries(bonuses).forEach(([key, value]) => {
+    stats[key] = (stats[key] || 0) + value;
+  });
+}
+
+function cloneAbility(ability) {
+  return { ...ability };
+}
+
+function applyAbilityBonuses(ability, bonuses = {}) {
+  Object.entries(bonuses).forEach(([key, value]) => {
+    ability[key] = (ability[key] || 0) + value;
+  });
+}
+
+function getClassDefinition(characterClass) {
+  return CHARACTER_CLASSES[characterClass] || CHARACTER_CLASSES.knight;
+}
+
+function getClassEquipmentItems(classDefinition) {
+  return Object.values(classDefinition.equipment || {})
+    .filter(Boolean)
+    .map((equipmentKey) => {
+      const item = EQUIPMENT[equipmentKey];
+      if (!item) {
+        console.warn(`Unknown equipment: ${equipmentKey}`);
+      }
+      return item;
+    })
+    .filter(Boolean);
+}
+
+function calculateClassStats(characterClass) {
+  const classDefinition = getClassDefinition(characterClass);
+  const stats = cloneStats(BASE_UNIT_STATS);
+
+  if (classDefinition.promoted) {
+    applyStatBonuses(stats, PROMOTION_STAT_BONUSES.promoted);
+  }
+
+  applyStatBonuses(stats, classDefinition.statBonuses);
+  (classDefinition.traits || []).forEach((traitKey) => {
+    const trait = TRAITS[traitKey];
+    if (!trait) {
+      console.warn(`Unknown trait: ${traitKey}`);
+      return;
+    }
+
+    applyStatBonuses(stats, trait.statBonuses);
+  });
+  getClassEquipmentItems(classDefinition).forEach((item) => {
+    applyStatBonuses(stats, item.statBonuses);
+  });
+
+  stats.lp = BASE_UNIT_STATS.lp;
+  return stats;
+}
+
+function calculateClassActions(characterClass) {
+  const classDefinition = getClassDefinition(characterClass);
+  const actions = {};
+
+  (classDefinition.actions || []).forEach((actionKey) => {
+    const action = ACTIONS[actionKey];
+    if (!action) {
+      console.warn(`Unknown action: ${actionKey}`);
+      return;
+    }
+
+    actions[actionKey] = cloneAbility(action);
+  });
+  getClassEquipmentItems(classDefinition).forEach((item) => {
+    Object.entries(item.actionBonuses || {}).forEach(([actionKey, bonuses]) => {
+      if (actions[actionKey]) {
+        applyAbilityBonuses(actions[actionKey], bonuses);
+      }
+    });
+  });
+  return actions;
+}
+
+function calculateClassReactions(characterClass) {
+  const classDefinition = getClassDefinition(characterClass);
+  const reactions = {};
+
+  (classDefinition.reactions || []).forEach((reactionKey) => {
+    const reaction = REACTIONS[reactionKey];
+    if (!reaction) {
+      console.warn(`Unknown reaction: ${reactionKey}`);
+      return;
+    }
+
+    reactions[reactionKey] = cloneAbility(reaction);
+  });
+  getClassEquipmentItems(classDefinition).forEach((item) => {
+    Object.entries(item.reactionBonuses || {}).forEach(([reactionKey, bonuses]) => {
+      if (reactions[reactionKey]) {
+        applyAbilityBonuses(reactions[reactionKey], bonuses);
+      }
+    });
+  });
+  return reactions;
+}
+
+function calculateClassLimits(characterClass) {
+  const classDefinition = getClassDefinition(characterClass);
+  const limits = {};
+
+  (classDefinition.limits || []).forEach((limitKey) => {
+    const limit = LIMITS[limitKey];
+    if (!limit) {
+      console.warn(`Unknown limit: ${limitKey}`);
+      return;
+    }
+
+    limits[limitKey] = cloneAbility(limit);
+  });
+  getClassEquipmentItems(classDefinition).forEach((item) => {
+    Object.entries(item.limitBonuses || {}).forEach(([limitKey, bonuses]) => {
+      if (limits[limitKey]) {
+        applyAbilityBonuses(limits[limitKey], bonuses);
+      }
+    });
+  });
+  return limits;
+}
+
+function hasTrait(unit, traitKey) {
+  return (unit.traits || []).includes(traitKey);
+}
+
+function getUnitCommandCost(unitType) {
+  return getClassDefinition(unitType).cpCost || 0;
+}
 
 let sceneRef;
 let layout;
 let units;
+let gamePhase = 'setup';
+let redFormation = [];
+let blueFormation = [];
+let selectedSetupUnitType = 'knight';
+let setupNodes = [];
+let commandLevel = STARTING_COMMAND_LEVEL;
+let commandXp = STARTING_COMMAND_XP;
+let enemyCommandLevel = STARTING_ENEMY_COMMAND_LEVEL;
+let enemyCommandXp = STARTING_ENEMY_COMMAND_XP;
+let battleRewardsGranted = false;
 let logEntries = [];
 let logRows = [];
 let combatLogHeader;
@@ -448,13 +685,19 @@ let round = 0;
 let turn = 1;
 let action = 1;
 let turnQueue = [];
+let roundInitiativeOrder = [];
+let currentTurnActedUnits = new Set();
 let battleEnded = false;
 let actionTimer;
 let speedLabel;
+let speedButton;
+let speedMenuNodes = [];
 let infoPanelNodes = [];
 let statusPanelNodes = [];
 let currentAttacker = null;
 let currentDefender = null;
+let selectedStatsUnits = { red: null, blue: null };
+let statsPanelNodes = { red: [], blue: [] };
 let combatZoomMode = true;
 let isBattleGridLineVisible = SHOW_BATTLE_GRID_LINES;
 let battleGridLineNodes = [];
@@ -490,6 +733,10 @@ function preload() {
     frameWidth: KNIGHT_IDLE_FRAME_WIDTH,
     frameHeight: KNIGHT_IDLE_FRAME_HEIGHT
   });
+  this.load.spritesheet(SQUIRE_IDLE_TEXTURE_KEY, SQUIRE_IDLE_ASSET_PATH, {
+    frameWidth: SQUIRE_IDLE_FRAME_WIDTH,
+    frameHeight: SQUIRE_IDLE_FRAME_HEIGHT
+  });
   this.load.spritesheet(KNIGHT_ATTACK_TEXTURE_KEY, KNIGHT_ATTACK_ASSET_PATH, {
     frameWidth: KNIGHT_ATTACK_FRAME_WIDTH,
     frameHeight: KNIGHT_ATTACK_FRAME_HEIGHT
@@ -502,18 +749,11 @@ function preload() {
 
 function create() {
   sceneRef = this;
+  sceneRef.input.mouse.disableContextMenu();
   createKnightAnimations();
   createLayout();
   applyCombatZoomMode(false);
 
-  speedLabel = sceneRef.add.text(
-    layout.left.x + SIDE_GRID_PADDING,
-    layout.left.h - 60,
-    `Speed: ${battleSpeedMultiplier}x`,
-    smallTextStyle()
-  );
-
-  createUnits();
   setBattleSpeed(battleSpeedMultiplier);
 
   sceneRef.input.keyboard.on('keydown-ONE', () => setBattleSpeed(1));
@@ -523,8 +763,9 @@ function create() {
   sceneRef.input.keyboard.on(`keydown-${COMBAT_ZOOM_KEY}`, toggleCombatZoomMode);
   sceneRef.input.keyboard.on(`keydown-${BATTLE_GRID_TOGGLE_KEY}`, toggleBattleGridLines);
   sceneRef.input.keyboard.on(`keydown-${KNIGHT_RANDOM_IDLE_TWITCH_TEST_KEY}`, toggleKnightRandomIdleTwitch);
+  sceneRef.input.on('pointerdown', handleGlobalPointerDown);
 
-  startBattle();
+  enterSetupPhase();
 }
 
 function createKnightAnimations() {
@@ -635,37 +876,46 @@ function drawPanel(rect, title) {
 }
 
 function createPopupButtons() {
-  createPopupButton('redTeam', 'Red Team', POPUP_BUTTON_RED_X, POPUP_BUTTON_Y, POPUP_BUTTON_RED_WIDTH);
-  createPopupButton('blueTeam', 'Blue Team', POPUP_BUTTON_BLUE_X, POPUP_BUTTON_Y, POPUP_BUTTON_BLUE_WIDTH);
-  createPopupButton('stats', 'Stats', POPUP_BUTTON_STATS_X, POPUP_BUTTON_Y, POPUP_BUTTON_STATS_WIDTH);
-  createPopupButton('combatLog', 'Log', POPUP_BUTTON_LOG_X, POPUP_BUTTON_Y, POPUP_BUTTON_LOG_WIDTH);
+  createUtilityButton('Log', UTILITY_BUTTON_X, UTILITY_BUTTON_Y, toggleCombatLog);
+  createSpeedButton();
 }
 
-function createPopupButton(key, label, x, y, width) {
+function createUtilityButton(label, x, y, onClick) {
   const button = sceneRef.add.rectangle(
     x,
     y,
-    width,
-    POPUP_BUTTON_HEIGHT,
+    UTILITY_BUTTON_WIDTH,
+    UTILITY_BUTTON_HEIGHT,
     PHASER_COLORS.infoPanel
   )
     .setOrigin(0)
     .setStrokeStyle(1, PHASER_COLORS.panelBorder)
     .setInteractive({ useHandCursor: true })
-    .setDepth(POPUP_BUTTON_DEPTH);
+    .setDepth(UTILITY_BUTTON_DEPTH);
 
   const text = sceneRef.add.text(
-    x + POPUP_BUTTON_PADDING,
+    x + UTILITY_BUTTON_PADDING,
     y + 8,
     label,
     combatLogToggleTextStyle()
   )
     .setInteractive({ useHandCursor: true })
-    .setDepth(POPUP_BUTTON_DEPTH);
+    .setDepth(UTILITY_BUTTON_DEPTH);
 
-  button.on('pointerdown', () => togglePopup(key));
-  text.on('pointerdown', () => togglePopup(key));
-  popupButtons[key] = { button, text };
+  button.on('pointerdown', onClick);
+  text.on('pointerdown', onClick);
+  return { button, text };
+}
+
+function createSpeedButton() {
+  const y = UTILITY_BUTTON_Y + UTILITY_BUTTON_HEIGHT + UTILITY_BUTTON_GAP;
+  const nodes = createUtilityButton(`Speed: ${battleSpeedMultiplier}x`, UTILITY_BUTTON_X, y, cycleBattleSpeed);
+  speedButton = nodes.button;
+  speedLabel = nodes.text;
+  [nodes.button, nodes.text].forEach((node) => {
+    node.on('pointerover', showSpeedMenu);
+    node.on('pointerout', scheduleSpeedMenuHide);
+  });
 }
 
 function togglePopup(key) {
@@ -693,25 +943,86 @@ function closePopups() {
   logRows = [];
 }
 
+function handleGlobalPointerDown(pointer) {
+  if (!pointer.rightButtonDown()) {
+    return;
+  }
+
+  if (activePopupKey) {
+    closePopups();
+    return;
+  }
+
+  if (selectedStatsUnits.red || selectedStatsUnits.blue) {
+    clearAllStatsPanels();
+    return;
+  }
+
+  if (speedMenuNodes.length > 0) {
+    hideSpeedMenu();
+  }
+}
+
+function cycleBattleSpeed() {
+  const currentIndex = BATTLE_SPEED_OPTIONS.indexOf(battleSpeedMultiplier);
+  const nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % BATTLE_SPEED_OPTIONS.length;
+  setBattleSpeed(BATTLE_SPEED_OPTIONS[nextIndex]);
+}
+
+function showSpeedMenu() {
+  if (speedMenuNodes.length > 0) {
+    return;
+  }
+
+  const x = UTILITY_BUTTON_X;
+  const speedButtonY = UTILITY_BUTTON_Y + UTILITY_BUTTON_HEIGHT + UTILITY_BUTTON_GAP;
+  const menuHeight = BATTLE_SPEED_OPTIONS.length * SPEED_MENU_OPTION_HEIGHT +
+    Math.max(0, BATTLE_SPEED_OPTIONS.length - 1) * SPEED_MENU_GAP;
+  const y = speedButtonY - menuHeight;
+  BATTLE_SPEED_OPTIONS.forEach((speed, index) => {
+    const optionY = y + index * (SPEED_MENU_OPTION_HEIGHT + SPEED_MENU_GAP);
+    const button = sceneRef.add.rectangle(x, optionY, UTILITY_BUTTON_WIDTH, SPEED_MENU_OPTION_HEIGHT, PHASER_COLORS.infoPanel)
+      .setOrigin(0)
+      .setStrokeStyle(1, PHASER_COLORS.panelBorder)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(SPEED_MENU_DEPTH);
+    const text = sceneRef.add.text(x + UTILITY_BUTTON_PADDING, optionY + 7, `${speed}x`, combatLogToggleTextStyle())
+      .setInteractive({ useHandCursor: true })
+      .setDepth(SPEED_MENU_DEPTH + 1);
+
+    [button, text].forEach((node) => {
+      node.on('pointerdown', () => {
+        setBattleSpeed(speed);
+        hideSpeedMenu();
+      });
+      node.on('pointerover', showSpeedMenu);
+      node.on('pointerout', scheduleSpeedMenuHide);
+    });
+    speedMenuNodes.push(button, text);
+  });
+}
+
+function scheduleSpeedMenuHide() {
+  sceneRef.time.delayedCall(120, () => {
+    const pointer = sceneRef.input.activePointer;
+    const nodes = [speedButton, ...speedMenuNodes].filter(isLiveBattlefieldNode);
+    const isOverUtility = nodes.some((node) => node.getBounds().contains(pointer.worldX, pointer.worldY));
+    if (!isOverUtility) {
+      hideSpeedMenu();
+    }
+  });
+}
+
+function hideSpeedMenu() {
+  speedMenuNodes.forEach((node) => {
+    if (isLiveBattlefieldNode(node)) {
+      node.destroy();
+    }
+  });
+  speedMenuNodes = [];
+}
+
 function getPopupRect(key) {
-  if (key === 'redTeam') {
-    return {
-      x: POPUP_PANEL_MARGIN,
-      y: POPUP_PANEL_TOP,
-      w: POPUP_SIDE_PANEL_WIDTH,
-      h: POPUP_SIDE_PANEL_HEIGHT
-    };
-  }
-
-  if (key === 'blueTeam') {
-    return {
-      x: GAME_WIDTH - POPUP_PANEL_MARGIN - POPUP_SIDE_PANEL_WIDTH,
-      y: POPUP_PANEL_TOP,
-      w: POPUP_SIDE_PANEL_WIDTH,
-      h: POPUP_SIDE_PANEL_HEIGHT
-    };
-  }
-
   if (key === 'combatLog') {
     return {
       x: GAME_WIDTH - POPUP_PANEL_MARGIN - POPUP_LOG_PANEL_WIDTH,
@@ -722,18 +1033,85 @@ function getPopupRect(key) {
   }
 
   return {
-    x: (GAME_WIDTH - POPUP_STATS_PANEL_WIDTH) / 2,
-    y: POPUP_PANEL_TOP,
+    x: POPUP_PANEL_MARGIN,
+    y: GAME_HEIGHT - POPUP_STATS_PANEL_BOTTOM_OFFSET - POPUP_STATS_PANEL_HEIGHT,
     w: POPUP_STATS_PANEL_WIDTH,
     h: POPUP_STATS_PANEL_HEIGHT
   };
 }
 
+function getStatsPanelRect(teamKey) {
+  const y = GAME_HEIGHT - POPUP_STATS_PANEL_BOTTOM_OFFSET - POPUP_STATS_PANEL_HEIGHT;
+  if (teamKey === 'blue') {
+    return {
+      x: GAME_WIDTH - POPUP_PANEL_MARGIN - POPUP_STATS_PANEL_WIDTH,
+      y,
+      w: POPUP_STATS_PANEL_WIDTH,
+      h: POPUP_STATS_PANEL_HEIGHT
+    };
+  }
+  return {
+    x: POPUP_PANEL_MARGIN,
+    y,
+    w: POPUP_STATS_PANEL_WIDTH,
+    h: POPUP_STATS_PANEL_HEIGHT
+  };
+}
+
+function clearStatsPanel(teamKey) {
+  statsPanelNodes[teamKey].forEach((node) => {
+    if (isLiveBattlefieldNode(node)) {
+      node.destroy();
+    }
+  });
+  statsPanelNodes[teamKey] = [];
+}
+
+function clearAllStatsPanels() {
+  clearStatsPanel('red');
+  clearStatsPanel('blue');
+  selectedStatsUnits.red = null;
+  selectedStatsUnits.blue = null;
+}
+
+function renderStatsPanel(teamKey) {
+  clearStatsPanel(teamKey);
+  const unit = selectedStatsUnits[teamKey];
+  if (!unit) {
+    return;
+  }
+  const rect = getStatsPanelRect(teamKey);
+  const bg = sceneRef.add.rectangle(rect.x, rect.y, rect.w, rect.h, PHASER_COLORS.infoPanel)
+    .setOrigin(0)
+    .setAlpha(POPUP_PANEL_BACKGROUND_ALPHA)
+    .setStrokeStyle(2, PHASER_COLORS.panelBorder)
+    .setDepth(POPUP_DEPTH);
+  const titleNode = sceneRef.add.text(rect.x + POPUP_PANEL_PADDING, rect.y + 18, 'Stats', headerTextStyle())
+    .setDepth(POPUP_DEPTH + 1);
+  statsPanelNodes[teamKey].push(bg, titleNode);
+
+  const contentX = rect.x + POPUP_STATS_PANEL_PADDING;
+  const contentY = rect.y + 58;
+  const contentW = rect.w - POPUP_STATS_PANEL_PADDING * 2;
+  const contentH = rect.h - 58 - POPUP_STATS_PANEL_PADDING;
+
+  const savedNodes = infoPanelNodes;
+  infoPanelNodes = statsPanelNodes[teamKey];
+  renderCharacterPanel(unit, contentX, contentY, contentW, contentH);
+  infoPanelNodes = savedNodes;
+}
+
+function openStatsPanel(unit) {
+  if (!unit) {
+    return;
+  }
+  selectedStatsUnits[unit.teamKey] = unit;
+  renderStatsPanel(unit.teamKey);
+}
+
 function renderPopupPanel(key) {
   const rect = getPopupRect(key);
   const title = {
-    redTeam: 'Red Team',
-    blueTeam: 'Blue Team',
     combatLog: 'Combat Log',
     stats: 'Stats'
   }[key];
@@ -749,10 +1127,10 @@ function renderPopupPanel(key) {
 
   if (key === 'stats') {
     layout.info = {
-      x: rect.x + POPUP_PANEL_PADDING,
+      x: rect.x + POPUP_STATS_PANEL_PADDING,
       y: rect.y + 58,
-      w: rect.w - POPUP_PANEL_PADDING * 2,
-      h: rect.h - 58 - POPUP_PANEL_PADDING
+      w: rect.w - POPUP_STATS_PANEL_PADDING * 2,
+      h: rect.h - 58 - POPUP_STATS_PANEL_PADDING
     };
     createInfoPanel();
     return;
@@ -760,36 +1138,565 @@ function renderPopupPanel(key) {
 
   if (key === 'combatLog') {
     renderCombatLogRows();
+  }
+}
+
+function enterSetupPhase() {
+  gamePhase = 'setup';
+  redFormation = [];
+  blueFormation = [];
+  selectedSetupUnitType = 'knight';
+  regenerateBlueAiFormation();
+  renderSetupUi();
+}
+
+function createPlacement(team, row, col, isPlayerControlled, unitType = 'knight') {
+  return {
+    team,
+    unitType,
+    row,
+    col,
+    cost: getUnitCommandCost(unitType),
+    isPlayerControlled
+  };
+}
+
+function getAllFormationCells() {
+  return FORMATION_ROWS.flatMap((row) => FORMATION_COLS.map((col) => ({ row, col })));
+}
+
+function regenerateBlueAiFormation() {
+  const cells = getAllFormationCells();
+  for (let index = cells.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [cells[index], cells[randomIndex]] = [cells[randomIndex], cells[index]];
+  }
+  const aiUnitCount = Math.floor(SETUP_AI_DEFAULT_COMMAND_SPEND / getUnitCommandCost('knight'));
+  blueFormation = cells
+    .slice(0, aiUnitCount)
+    .map((cell) => createPlacement('blue', cell.row, cell.col, false));
+}
+
+function getSetupPlacements(teamKey) {
+  return teamKey === 'red' ? redFormation : blueFormation;
+}
+
+function getSetupPlacementAt(teamKey, row, col) {
+  return getSetupPlacements(teamKey).find((placement) => placement.row === row && placement.col === col) || null;
+}
+
+function getSetupCommandUsed(teamKey) {
+  return getSetupPlacements(teamKey).reduce((sum, placement) => sum + placement.cost, 0);
+}
+
+function getRedCommandMax() {
+  return commandLevel;
+}
+
+function getBlueCommandMax() {
+  return enemyCommandLevel;
+}
+
+function getSetupCommandMax(teamKey) {
+  return teamKey === 'red' ? getRedCommandMax() : getBlueCommandMax();
+}
+
+function isSetupReady() {
+  return redFormation.length >= SETUP_MIN_UNITS_TO_START &&
+    blueFormation.length >= SETUP_MIN_UNITS_TO_START &&
+    getSetupCommandUsed('red') <= getRedCommandMax() &&
+    getSetupCommandUsed('blue') <= getBlueCommandMax();
+}
+
+function clearSetupUi() {
+  setupNodes.forEach((node) => {
+    if (node && node.scene) {
+      node.destroy();
+    }
+  });
+  setupNodes = [];
+}
+
+function addSetupNode(node) {
+  setupNodes.push(node);
+  return node;
+}
+
+function renderSetupUi() {
+  clearSetupUi();
+  renderSetupGrid('red');
+  renderSetupGrid('blue');
+  renderSetupPanel();
+  renderUnitsPanel();
+}
+
+function renderSetupPanel() {
+  const panel = addSetupNode(sceneRef.add.rectangle(
+    SETUP_PANEL_X,
+    SETUP_PANEL_Y,
+    SETUP_PANEL_WIDTH,
+    SETUP_PANEL_HEIGHT,
+    PHASER_COLORS.infoPanel
+  )
+    .setOrigin(0)
+    .setAlpha(SETUP_PANEL_ALPHA)
+    .setStrokeStyle(2, PHASER_COLORS.panelBorder)
+    .setDepth(SETUP_UI_DEPTH));
+
+  const title = addSetupNode(sceneRef.add.text(
+    SETUP_PANEL_X + SETUP_PANEL_WIDTH / 2,
+    SETUP_PANEL_Y + SETUP_TITLE_Y_OFFSET,
+    'Preparations: Spend command points 🚩, ready your army, and start battle.',
+    headerTextStyle()
+  )
+    .setOrigin(0.5, 0)
+    .setDepth(SETUP_UI_DEPTH + 1));
+  addSetupNode(sceneRef.add.text(
+    SETUP_PANEL_X + SETUP_PROGRESS_X_OFFSET,
+    SETUP_PANEL_Y + SETUP_PROGRESS_LEVEL_Y_OFFSET,
+    `Command Level ${commandLevel}`,
+    smallTextStyle()
+  )
+    .setDepth(SETUP_UI_DEPTH + 1));
+  renderCommandFlagRow(
+    SETUP_PANEL_X + SETUP_PROGRESS_X_OFFSET,
+    SETUP_PANEL_Y + SETUP_PROGRESS_FLAGS_Y_OFFSET,
+    getRedCommandMax(),
+    getSetupCommandUsed('red'),
+    SETUP_UI_DEPTH + 1,
+    'left'
+  );
+  addSetupNode(sceneRef.add.text(
+    SETUP_PANEL_X + SETUP_PROGRESS_X_OFFSET,
+    SETUP_PANEL_Y + SETUP_PROGRESS_CXP_Y_OFFSET,
+    `${COMMAND_XP_TO_LEVEL - commandXp} CXP to next level...`,
+    smallTextStyle()
+  )
+    .setDepth(SETUP_UI_DEPTH + 1));
+
+  addSetupNode(sceneRef.add.text(
+    SETUP_PANEL_X + SETUP_ENEMY_PROGRESS_X_OFFSET,
+    SETUP_PANEL_Y + SETUP_PROGRESS_LEVEL_Y_OFFSET,
+    `Enemy Command Level ${enemyCommandLevel}`,
+    smallTextStyle()
+  )
+    .setOrigin(1, 0)
+    .setDepth(SETUP_UI_DEPTH + 1));
+  renderCommandFlagRow(
+    SETUP_PANEL_X + SETUP_ENEMY_PROGRESS_X_OFFSET,
+    SETUP_PANEL_Y + SETUP_PROGRESS_FLAGS_Y_OFFSET,
+    getBlueCommandMax(),
+    getSetupCommandUsed('blue'),
+    SETUP_UI_DEPTH + 1,
+    'right'
+  );
+  addSetupNode(sceneRef.add.text(
+    SETUP_PANEL_X + SETUP_ENEMY_PROGRESS_X_OFFSET,
+    SETUP_PANEL_Y + SETUP_PROGRESS_CXP_Y_OFFSET,
+    `${COMMAND_XP_TO_LEVEL - enemyCommandXp} CXP to next level...`,
+    smallTextStyle()
+  )
+    .setOrigin(1, 0)
+    .setDepth(SETUP_UI_DEPTH + 1));
+
+  createSetupButton(
+    'Start Battle',
+    SETUP_PANEL_X + SETUP_START_BUTTON_X_OFFSET,
+    SETUP_PANEL_Y + SETUP_START_BUTTON_Y_OFFSET,
+    SETUP_START_BUTTON_WIDTH,
+    startBattle,
+    isSetupReady()
+  );
+}
+
+function createSetupButton(label, x, y, width, onClick, isActive = true, fillAlpha = null) {
+  const fill = isActive ? PHASER_COLORS.sp : PHASER_COLORS.panel;
+  const button = addSetupNode(sceneRef.add.rectangle(x, y, width, SETUP_BUTTON_HEIGHT, fill)
+    .setOrigin(0)
+    .setAlpha(fillAlpha ?? (isActive ? 0.85 : 0.45))
+    .setStrokeStyle(1, PHASER_COLORS.panelBorder)
+    .setInteractive({ useHandCursor: true })
+    .setDepth(SETUP_UI_DEPTH + 1));
+  const text = addSetupNode(sceneRef.add.text(x + 12, y + 9, label, combatLogToggleTextStyle())
+    .setInteractive({ useHandCursor: true })
+    .setAlpha(isActive ? 1 : 0.55)
+    .setDepth(SETUP_UI_DEPTH + 2));
+
+  button.on('pointerdown', onClick);
+  text.on('pointerdown', onClick);
+}
+
+function renderCommandFlagRow(x, y, maxCommand, usedCommand, depth, align) {
+  const startX = align === 'right'
+    ? x - (maxCommand - 1) * SETUP_COMMAND_FLAG_SPACING
+    : x;
+
+  for (let index = 0; index < maxCommand; index += 1) {
+    addSetupNode(sceneRef.add.text(
+      startX + index * SETUP_COMMAND_FLAG_SPACING,
+      y,
+      SETUP_COMMAND_ICON,
+      {
+        fontFamily: 'monospace',
+        fontSize: `${SETUP_COMMAND_FLAG_FONT_SIZE}px`,
+        color: COLORS.text
+      }
+    )
+      .setAlpha(index < usedCommand ? SETUP_COMMAND_FLAG_SPENT_ALPHA : SETUP_COMMAND_FLAG_FULL_ALPHA)
+      .setOrigin(align === 'right' ? 1 : 0, 0)
+      .setDepth(depth));
+  }
+}
+
+function renderUnitsPanel() {
+  const panel = addSetupNode(sceneRef.add.rectangle(
+    SETUP_UNITS_PANEL_X,
+    SETUP_UNITS_PANEL_Y,
+    SETUP_UNITS_PANEL_WIDTH,
+    SETUP_UNITS_PANEL_HEIGHT,
+    PHASER_COLORS.infoPanel
+  )
+    .setOrigin(0)
+    .setAlpha(SETUP_PANEL_ALPHA)
+    .setStrokeStyle(2, PHASER_COLORS.panelBorder)
+    .setDepth(SETUP_UI_DEPTH));
+  addSetupNode(sceneRef.add.text(
+    SETUP_UNITS_PANEL_X + SETUP_UNITS_TITLE_X_OFFSET,
+    SETUP_UNITS_PANEL_Y + SETUP_UNITS_TITLE_Y_OFFSET,
+    'Units',
+    headerTextStyle()
+  )
+    .setDepth(SETUP_UI_DEPTH + 1));
+  SETUP_UNIT_TYPES.forEach((unitType, index) => {
+    const cardX = SETUP_UNITS_PANEL_X + SETUP_UNITS_CARD_X_OFFSET + index * (SETUP_KNIGHT_CARD_WIDTH + SETUP_UNIT_CARD_GAP);
+    renderSetupUnitCard(unitType, cardX, SETUP_UNITS_PANEL_Y + SETUP_UNITS_CARD_Y_OFFSET);
+  });
+}
+
+function renderSetupKnightCard(x, y) {
+  const card = addSetupNode(sceneRef.add.rectangle(x, y, SETUP_KNIGHT_CARD_WIDTH, SETUP_KNIGHT_CARD_HEIGHT, PHASER_COLORS.panel)
+    .setOrigin(0)
+    .setStrokeStyle(2, PHASER_COLORS.sp)
+    .setInteractive({ useHandCursor: true })
+    .setDepth(SETUP_UI_DEPTH + 1));
+  const label = addSetupNode(sceneRef.add.text(
+    x + SETUP_KNIGHT_CARD_TITLE_X_OFFSET,
+    y + SETUP_KNIGHT_CARD_TITLE_Y_OFFSET,
+    'Knight',
+    headerTextStyle()
+  )
+    .setDepth(SETUP_UI_DEPTH + 2));
+  const cost = addSetupNode(sceneRef.add.text(
+    x + SETUP_KNIGHT_CARD_TITLE_X_OFFSET,
+    y + SETUP_KNIGHT_CARD_COST_Y_OFFSET,
+    `Cost: ${getUnitCommandCost('knight')} ${SETUP_COMMAND_ICON}`,
+    smallTextStyle()
+  )
+    .setDepth(SETUP_UI_DEPTH + 2));
+  renderSetupKnightStatsPreview(x + SETUP_KNIGHT_PREVIEW_X_OFFSET, y + SETUP_KNIGHT_PREVIEW_Y_OFFSET);
+
+  card.on('pointerdown', () => {
+    selectedSetupUnitType = 'knight';
+    renderSetupUi();
+  });
+}
+
+function renderSetupKnightStatsPreview(x, y) {
+  const knight = calculateClassStats('knight');
+  const pairs = [
+    [
+      ['HP', 'hp', knight.maxHp],
+      ['SP', 'sp', knight.maxSp]
+    ],
+    [
+      ['AP', 'ap', knight.maxAp],
+      ['RP', 'rp', knight.maxRp]
+    ],
+    [
+      ['LP', 'lp', knight.lp],
+      ['IP', 'ip', knight.maxIp]
+    ]
+  ];
+
+  const rightColumnX = x + 82;
+
+  function addPreviewResource(groupX, rowY, label, resourceKey, amount) {
+    addSetupNode(sceneRef.add.text(groupX, rowY, `${label}:`, smallTextStyle())
+      .setDepth(SETUP_UI_DEPTH + 2));
+
+    addSetupNode(sceneRef.add.text(
+      groupX + SETUP_KNIGHT_PREVIEW_LABEL_WIDTH,
+      rowY,
+      amount > 0 ? RESOURCE_ICONS[resourceKey].repeat(amount) : '0',
+      {
+        ...smallTextStyle(),
+        color: getResourceIconColor(resourceKey)
+      }
+    )
+      .setDepth(SETUP_UI_DEPTH + 2));
+  }
+
+  pairs.forEach(([left, right], index) => {
+    const rowY = y + index * SETUP_KNIGHT_PREVIEW_ROW_GAP;
+
+    addPreviewResource(x, rowY, left[0], left[1], left[2]);
+    addPreviewResource(rightColumnX, rowY, right[0], right[1], right[2]);
+  });
+}
+
+function renderSetupGrid(teamKey) {
+  const rect = getBattleGridRect(teamKey);
+  const cellW = rect.w / FORMATION_ROWS.length;
+  const cellH = rect.h / FORMATION_COLS.length;
+  const rowOrder = teamKey === 'red' ? FORMATION_ROW_ORDER_RED : FORMATION_ROW_ORDER_BLUE;
+  const isEditableGrid = true;
+
+  FORMATION_ROWS.forEach((row) => {
+    FORMATION_COLS.forEach((col) => {
+      const rowIndex = rowOrder.indexOf(row);
+      const x = rect.x + rowIndex * cellW + cellW / 2;
+      const y = rect.y + col * cellH + cellH / 2;
+      const placement = getSetupPlacementAt(teamKey, row, col);
+      const cell = addSetupNode(sceneRef.add.rectangle(x, y, cellW - 10, cellH - 10, PHASER_COLORS.infoPanel)
+        .setAlpha(placement ? SETUP_CELL_ALPHA_OCCUPIED : (isEditableGrid ? SETUP_CELL_ALPHA_PLAYER : SETUP_CELL_ALPHA_AI))
+        .setStrokeStyle(2, cssHexToNumber(isEditableGrid ? SETUP_CELL_STROKE_PLAYER : SETUP_CELL_STROKE_AI))
+        .setInteractive({ useHandCursor: isEditableGrid })
+        .setDepth(SETUP_UI_DEPTH - 3));
+      cell.on('pointerdown', (pointer) => handleSetupPointerDown(teamKey, row, col, pointer));
+
+      if (placement) {
+        renderSetupPlacementPreview(placement);
+      }
+    });
+  });
+}
+
+function getUnitIdleTextureKey(unitType) {
+  if (unitType === 'squire') { return SQUIRE_IDLE_TEXTURE_KEY; }
+  return KNIGHT_IDLE_TEXTURE_KEY;
+}
+
+function getUnitIdleDefaultFrame(unitType) {
+  if (unitType === 'squire') { return SQUIRE_IDLE_DEFAULT_FRAME; }
+  return KNIGHT_IDLE_DEFAULT_FRAME;
+}
+
+function getUnitIdleScale(unitType) {
+  if (unitType === 'squire') { return SQUIRE_IDLE_SCALE; }
+  return KNIGHT_IDLE_SCALE;
+}
+
+function renderSetupUnitStatsPreview(unitType, x, y) {
+  const stats = calculateClassStats(unitType);
+  const pairs = [
+    [['HP', 'hp', stats.maxHp], ['SP', 'sp', stats.maxSp]],
+    [['AP', 'ap', stats.maxAp], ['RP', 'rp', stats.maxRp]],
+    [['LP', 'lp', stats.lp], ['IP', 'ip', stats.maxIp]]
+  ];
+  const rightColumnX = x + 82;
+
+  function addPreviewResource(groupX, rowY, label, resourceKey, amount) {
+    addSetupNode(sceneRef.add.text(groupX, rowY, `${label}:`, smallTextStyle()).setDepth(SETUP_UI_DEPTH + 2));
+    addSetupNode(sceneRef.add.text(
+      groupX + SETUP_KNIGHT_PREVIEW_LABEL_WIDTH,
+      rowY,
+      amount > 0 ? RESOURCE_ICONS[resourceKey].repeat(amount) : '0',
+      { ...smallTextStyle(), color: getResourceIconColor(resourceKey) }
+    ).setDepth(SETUP_UI_DEPTH + 2));
+  }
+
+  pairs.forEach(([left, right], index) => {
+    const rowY = y + index * SETUP_KNIGHT_PREVIEW_ROW_GAP;
+    addPreviewResource(x, rowY, left[0], left[1], left[2]);
+    addPreviewResource(rightColumnX, rowY, right[0], right[1], right[2]);
+  });
+}
+
+function renderSetupUnitCard(unitType, x, y) {
+  const classDefinition = getClassDefinition(unitType);
+  const isSelected = selectedSetupUnitType === unitType;
+  const borderColor = isSelected ? PHASER_COLORS.sp : PHASER_COLORS.panelBorder;
+  const borderWidth = isSelected ? 3 : 2;
+  const card = addSetupNode(sceneRef.add.rectangle(x, y, SETUP_KNIGHT_CARD_WIDTH, SETUP_KNIGHT_CARD_HEIGHT, PHASER_COLORS.panel)
+    .setOrigin(0)
+    .setStrokeStyle(borderWidth, borderColor)
+    .setInteractive({ useHandCursor: true })
+    .setDepth(SETUP_UI_DEPTH + 1));
+  addSetupNode(sceneRef.add.text(
+    x + SETUP_KNIGHT_CARD_TITLE_X_OFFSET,
+    y + SETUP_KNIGHT_CARD_TITLE_Y_OFFSET,
+    classDefinition.name,
+    headerTextStyle()
+  ).setDepth(SETUP_UI_DEPTH + 2));
+  addSetupNode(sceneRef.add.text(
+    x + SETUP_KNIGHT_CARD_TITLE_X_OFFSET,
+    y + SETUP_KNIGHT_CARD_COST_Y_OFFSET,
+    `Cost: ${getUnitCommandCost(unitType)} ${SETUP_COMMAND_ICON}`,
+    smallTextStyle()
+  ).setDepth(SETUP_UI_DEPTH + 2));
+  renderSetupUnitStatsPreview(unitType, x + SETUP_KNIGHT_PREVIEW_X_OFFSET, y + SETUP_KNIGHT_PREVIEW_Y_OFFSET);
+  card.on('pointerdown', () => {
+    selectedSetupUnitType = unitType;
+    renderSetupUi();
+  });
+}
+
+function renderSetupPlacementPreview(placement) {
+  const { x, baseY } = getFormationPosition(placement.team, placement.row, placement.col);
+  const spriteX = x + (placement.team === 'red' ? UNIT_SPRITE_FORWARD_X_OFFSET : -UNIT_SPRITE_FORWARD_X_OFFSET);
+  const shadow = addSetupNode(sceneRef.add.ellipse(
+    x,
+    baseY + UNIT_SHADOW_Y_OFFSET,
+    UNIT_SHADOW_WIDTH,
+    UNIT_SHADOW_HEIGHT,
+    cssHexToNumber(UNIT_SHADOW_COLOR)
+  )
+    .setAlpha(UNIT_SHADOW_ALPHA)
+    .setDepth(SETUP_UI_DEPTH - 2));
+  const sprite = addSetupNode(sceneRef.add.sprite(spriteX, baseY, getUnitIdleTextureKey(placement.unitType), getUnitIdleDefaultFrame(placement.unitType))
+    .setScale(getUnitIdleScale(placement.unitType))
+    .setFlipX(placement.team === 'blue')
+    .setAlpha(placement.isPlayerControlled ? SETUP_PREVIEW_ALPHA_PLAYER : SETUP_PREVIEW_ALPHA_AI)
+    .setInteractive({ useHandCursor: true })
+    .setDepth(SETUP_UI_DEPTH - 1));
+  sprite.setTint(cssHexToNumber(placement.team === 'blue' ? BLUE_TEAM_UNIT_TINT : RED_TEAM_UNIT_TINT));
+  sprite.on('pointerdown', (pointer) => handleSetupPointerDown(placement.team, placement.row, placement.col, pointer));
+}
+
+function handleSetupPointerDown(teamKey, row, col, pointer) {
+  if (pointer.rightButtonDown()) {
+    if (activePopupKey) {
+      return;
+    }
+
+    if (selectedStatsUnits.red || selectedStatsUnits.blue) {
+      clearAllStatsPanels();
+      return;
+    }
+
+    if (speedMenuNodes.length > 0) {
+      return;
+    }
+
+    handleSetupCellRightClick(teamKey, row, col);
     return;
   }
 
-  const placeholder = sceneRef.add.text(
-    rect.x + POPUP_PANEL_PADDING,
-    rect.y + 62,
-    'Team panel placeholder',
-    smallTextStyle()
-  )
-    .setDepth(POPUP_DEPTH + 1);
-  popupPanelNodes.push(placeholder);
+  if (pointer.leftButtonDown()) {
+    handleSetupCellLeftClick(teamKey, row, col);
+  }
+}
+
+function handleSetupCellLeftClick(teamKey, row, col) {
+  if (gamePhase !== 'setup') {
+    return;
+  }
+
+  const placement = getSetupPlacementAt(teamKey, row, col);
+  if (placement) {
+    openSetupPlacementStats(placement);
+    return;
+  }
+
+  placeSetupKnight(teamKey, row, col);
+}
+
+function handleSetupCellRightClick(teamKey, row, col) {
+  if (gamePhase !== 'setup') {
+    return;
+  }
+
+  removeSetupPlacement(teamKey, row, col);
+}
+
+function placeSetupKnight(teamKey, row, col) {
+  const formation = teamKey === 'red' ? redFormation : blueFormation;
+  if (getSetupCommandUsed(teamKey) + getUnitCommandCost(selectedSetupUnitType) > getSetupCommandMax(teamKey) ||
+      getSetupPlacementAt(teamKey, row, col)) {
+    return;
+  }
+
+  formation.push(createPlacement(teamKey, row, col, teamKey === 'red', selectedSetupUnitType));
+  renderSetupUi();
+}
+
+function removeSetupPlacement(teamKey, row, col) {
+  const formation = teamKey === 'red' ? redFormation : blueFormation;
+  const existingIndex = formation.findIndex((placement) => (
+    placement.team === teamKey &&
+    placement.row === row &&
+    placement.col === col
+  ));
+  if (existingIndex >= 0) {
+    formation.splice(existingIndex, 1);
+    clearAllStatsPanels();
+    renderSetupUi();
+  }
+}
+
+function openSetupPlacementStats(placement) {
+  openStatsPanel(createSetupStatsUnit(placement));
+}
+
+function createSetupStatsUnit(placement) {
+  const classDefinition = getClassDefinition(placement.unitType);
+  const classStats = calculateClassStats(placement.unitType);
+  const displayName = placement.team === 'red' ? 'Red' : 'Blue';
+
+  return {
+    name: displayName,
+    class: placement.unitType,
+    className: classDefinition.name,
+    cpCost: classDefinition.cpCost,
+    promoted: classDefinition.promoted,
+    traits: [...(classDefinition.traits || [])],
+    equipment: { ...(classDefinition.equipment || {}) },
+    actions: calculateClassActions(placement.unitType),
+    reactions: calculateClassReactions(placement.unitType),
+    limits: calculateClassLimits(placement.unitType),
+    teamKey: placement.team,
+    row: placement.row,
+    col: placement.col,
+    hp: classStats.hp,
+    maxHp: classStats.maxHp,
+    sp: classStats.sp,
+    maxSp: classStats.maxSp,
+    ap: classStats.ap,
+    maxAp: classStats.maxAp,
+    rp: classStats.rp,
+    maxRp: classStats.maxRp,
+    lp: classStats.lp,
+    maxLp: classStats.maxLp,
+    ip: classStats.ip,
+    maxIp: classStats.maxIp
+  };
 }
 
 function createUnits() {
-  units = [
-    createCharacter('R1', 'knight', PHASER_COLORS.redKnight, 'red', 'front', 0),
-    createCharacter('R2', 'knight', PHASER_COLORS.redKnight, 'red', 'front', 1),
-    createCharacter('R3', 'knight', PHASER_COLORS.redKnight, 'red', 'middle', 1),
-    createCharacter('R4', 'knight', PHASER_COLORS.redKnight, 'red', 'back', 1),
-    createCharacter('B1', 'knight', PHASER_COLORS.blueKnight, 'blue', 'front', 0),
-    createCharacter('B2', 'knight', PHASER_COLORS.blueKnight, 'blue', 'front', 1),
-    createCharacter('B3', 'knight', PHASER_COLORS.blueKnight, 'blue', 'middle', 1),
-    createCharacter('B4', 'knight', PHASER_COLORS.blueKnight, 'blue', 'back', 1)
-  ];
+  const counters = { red: 0, blue: 0 };
+  units = [...redFormation, ...blueFormation].map((placement) => {
+    counters[placement.team] += 1;
+    const prefix = placement.team === 'red' ? 'R' : 'B';
+    const color = placement.team === 'red' ? PHASER_COLORS.redKnight : PHASER_COLORS.blueKnight;
+    const unit = createCharacter(
+      `${prefix}${counters[placement.team]}`,
+      placement.unitType,
+      color,
+      placement.team,
+      placement.row,
+      placement.col
+    );
+    unit.isPlayerControlled = placement.isPlayerControlled;
+    unit.cost = placement.cost;
+    return unit;
+  });
   setActiveCombatants(firstLivingUnit('red'), firstLivingUnit('blue'));
   refreshInfoPanel();
 }
 
 function createCharacter(name, characterClass, color, teamKey, row, col) {
-  const classStats = CHARACTER_CLASSES[characterClass];
+  const classDefinition = getClassDefinition(characterClass);
+  const classStats = calculateClassStats(characterClass);
   const { x, baseY } = getFormationPosition(teamKey, row, col);
   const spriteX = x + (teamKey === 'red'
     ? UNIT_SPRITE_FORWARD_X_OFFSET
@@ -808,13 +1715,14 @@ function createCharacter(name, characterClass, color, teamKey, row, col) {
   const rect = sceneRef.add.sprite(
     spriteX,
     baseY,
-    KNIGHT_IDLE_TEXTURE_KEY,
-    KNIGHT_IDLE_DEFAULT_FRAME
+    getUnitIdleTextureKey(characterClass),
+    getUnitIdleDefaultFrame(characterClass)
   )
-    .setScale(KNIGHT_IDLE_SCALE)
+    .setScale(getUnitIdleScale(characterClass))
     .setFlipX(teamKey === 'blue');
   rect.setDepth(DEPTH_UNIT);
-  
+  rect.setInteractive({ useHandCursor: true });
+
   const label = sceneRef.add.text(spriteX, baseY, name, {
     fontFamily: 'monospace',
     fontSize: '20px',
@@ -827,6 +1735,14 @@ function createCharacter(name, characterClass, color, teamKey, row, col) {
   const unit = {
     name,
     class: characterClass,
+    className: classDefinition.name,
+    cpCost: classDefinition.cpCost,
+    promoted: classDefinition.promoted,
+    traits: [...(classDefinition.traits || [])],
+    equipment: { ...(classDefinition.equipment || {}) },
+    actions: calculateClassActions(characterClass),
+    reactions: calculateClassReactions(characterClass),
+    limits: calculateClassLimits(characterClass),
     color,
     teamKey,
     row,
@@ -846,6 +1762,8 @@ function createCharacter(name, characterClass, color, teamKey, row, col) {
     slotX: x,
     slotY: baseY,
     slotSpriteX: spriteX,
+    initiativeOrderNumber: null,
+    initiativeOrderNode: null,
     shadow,
     rect,
     label,
@@ -858,9 +1776,22 @@ function createCharacter(name, characterClass, color, teamKey, row, col) {
   };
 
   applyTeamUnitTint(unit);
+  rect.on('pointerdown', (pointer) => {
+    if (!pointer.rightButtonDown()) {
+      openUnitStats(unit);
+    }
+  });
   refreshBattleUnitHud(unit);
   startKnightIdle(unit);
   return unit;
+}
+
+function openUnitStats(unit) {
+  if (!unit || gamePhase !== 'battle') {
+    return;
+  }
+
+  openStatsPanel(unit);
 }
 
 function startKnightIdle(unit) {
@@ -896,8 +1827,9 @@ function canRunKnightRandomIdleTwitch(unit) {
 
 function setKnightIdle(unit) {
   unit.rect.stop();
-  unit.rect.setTexture(KNIGHT_IDLE_TEXTURE_KEY, KNIGHT_IDLE_DEFAULT_FRAME);
-  unit.rect.setFrame(KNIGHT_IDLE_DEFAULT_FRAME);
+  const idleFrame = getUnitIdleDefaultFrame(unit.class);
+  unit.rect.setTexture(getUnitIdleTextureKey(unit.class), idleFrame);
+  unit.rect.setFrame(idleFrame);
   unit.rect.setFlipX(unit.teamKey === 'blue');
   applyTeamUnitTint(unit);
 }
@@ -992,7 +1924,96 @@ function addBattleHudIcon(unit, groupKey, x, y, resourceKey, fontSize, alpha = B
 }
 
 function getResourceIconColor(resourceKey) {
-  return COLORS[resourceKey] || COLORS.text;
+  return RESOURCE_COLORS[resourceKey] || COLORS.text;
+}
+
+function resourceTextSegment(resourceKey, count = 1) {
+  return {
+    text: RESOURCE_ICONS[resourceKey].repeat(count),
+    color: getResourceIconColor(resourceKey)
+  };
+}
+
+function addInlineTextSegments(segments, x, y, depth, alpha = 1) {
+  let cursorX = x;
+  return segments.map((segment) => {
+    const node = sceneRef.add.text(cursorX, y, segment.text, {
+      ...smallTextStyle(),
+      color: segment.color || COLORS.text
+    })
+      .setAlpha(alpha)
+      .setDepth(depth);
+    cursorX += node.width;
+    return node;
+  });
+}
+
+function buildStatBonusSegments(statBonuses = {}) {
+  const resourceKeys = ['hp', 'sp', 'ap', 'rp', 'lp', 'ip'];
+  const segments = [{ text: '(' }];
+  let hasBonus = false;
+
+  resourceKeys.forEach((resourceKey) => {
+    const amount = statBonuses[resourceKey] || 0;
+    if (amount <= 0) {
+      return;
+    }
+
+    if (hasBonus) {
+      segments.push({ text: ' ' });
+    }
+
+    segments.push({ text: '+' });
+    segments.push(resourceTextSegment(resourceKey, amount));
+    hasBonus = true;
+  });
+
+  segments.push({ text: ')' });
+  return hasBonus ? segments : [{ text: '' }];
+}
+
+function shortTextOrFallback(data, fallbackSegments) {
+  if (data?.shortText) {
+    return [{ text: data.shortText }];
+  }
+
+  return fallbackSegments;
+}
+
+function buildEquipmentBonusSegments(item) {
+  if (item.statBonuses) {
+    return buildStatBonusSegments(item.statBonuses);
+  }
+
+  const parts = [];
+
+  Object.entries(item.actionBonuses || {}).forEach(([actionKey, bonuses]) => {
+    Object.entries(bonuses).forEach(([bonusKey, amount]) => {
+      parts.push([
+        { text: `${ACTIONS[actionKey]?.name || actionKey} +` },
+        resourceTextSegment(bonusKey === 'hpDamage' ? 'hp' : 'sp', amount)
+      ]);
+    });
+  });
+
+  Object.entries(item.reactionBonuses || {}).forEach(([reactionKey, bonuses]) => {
+    Object.entries(bonuses).forEach(([, amount]) => {
+      parts.push([
+        { text: `${REACTIONS[reactionKey]?.name || reactionKey} +` },
+        resourceTextSegment('sp', amount)
+      ]);
+    });
+  });
+
+  return parts.flatMap((part, index) => (
+    index > 0 ? [{ text: ', ' }, ...part] : part
+  ));
+}
+
+function getEquipmentSlotLabel(slot) {
+  return {
+    armor: 'AR'
+  }[slot] || 'EQ';
 }
 
 function getBattleResourceDepth(unit, x, resourceKey) {
@@ -1387,43 +2408,6 @@ function createInfoPanel() {
   infoPanelNodes.forEach((node) => node.destroy());
   infoPanelNodes = [];
 
-  const tooltipY = layout.info.y + layout.info.h - INFO_TOOLTIP_HEIGHT;
-  const dividerX = layout.info.x + layout.info.w / 2;
-
-  const verticalDivider = sceneRef.add.line(
-    0,
-    0,
-    dividerX,
-    layout.info.y + INFO_PANEL_PADDING,
-    dividerX,
-    tooltipY - INFO_PANEL_PADDING / 2,
-    cssHexToNumber(INFO_DIVIDER_COLOR)
-  )
-    .setOrigin(0)
-    .setDepth(POPUP_DEPTH + 1);
-
-  const horizontalDivider = sceneRef.add.line(
-    0,
-    0,
-    layout.info.x + INFO_PANEL_PADDING,
-    tooltipY,
-    layout.info.x + layout.info.w - INFO_PANEL_PADDING,
-    tooltipY,
-    cssHexToNumber(INFO_DIVIDER_COLOR)
-  )
-    .setOrigin(0)
-    .setDepth(POPUP_DEPTH + 1);
-
-  const tooltipText = sceneRef.add.text(
-    layout.info.x + INFO_PANEL_PADDING,
-    tooltipY + 14,
-    TOOLTIP_TEXT,
-    smallTextStyle()
-  );
-  tooltipText.setWordWrapWidth(layout.info.w - INFO_PANEL_PADDING * 2);
-  tooltipText.setDepth(POPUP_DEPTH + 1);
-  infoPanelNodes.push(verticalDivider, horizontalDivider, tooltipText);
-
   refreshInfoPanel();
 }
 
@@ -1432,30 +2416,29 @@ function refreshInfoPanel() {
     return;
   }
 
-  const staticNodes = infoPanelNodes.slice(0, 3);
-  infoPanelNodes.slice(3).forEach((node) => node.destroy());
-  infoPanelNodes = staticNodes;
+  infoPanelNodes.forEach((node) => node.destroy());
+  infoPanelNodes = [];
 
-  const tooltipY = layout.info.y + layout.info.h - INFO_TOOLTIP_HEIGHT;
   const columnY = layout.info.y + INFO_PANEL_PADDING;
-  const columnHeight = tooltipY - columnY - INFO_PANEL_PADDING;
-  const columnWidth = (layout.info.w - INFO_PANEL_PADDING * 2 - INFO_COLUMN_GAP) / 2;
+  const columnHeight = layout.info.h - INFO_PANEL_PADDING;
+  const columnWidth = layout.info.w - INFO_PANEL_PADDING * 2;
   const leftX = layout.info.x + INFO_PANEL_PADDING;
-  const rightX = leftX + columnWidth + INFO_COLUMN_GAP;
 
-  renderActiveCombatPanel(currentAttacker, currentDefender, leftX, rightX, columnY, columnWidth, columnHeight);
+  renderActiveCombatPanel(currentAttacker, null, leftX, leftX, columnY, columnWidth, columnHeight);
   renderTeamStatusPanels();
 }
 
 function renderActiveCombatPanel(attacker, defender, leftX, rightX, y, columnWidth, columnHeight) {
-  if (!attacker || !defender) {
+  if (!attacker) {
     const node = sceneRef.add.text(leftX, y, 'Waiting for combatants...', smallTextStyle());
     infoPanelNodes.push(node);
     return;
   }
 
   renderCharacterPanel(attacker, leftX, y, columnWidth, columnHeight);
-  renderCharacterPanel(defender, rightX, y, columnWidth, columnHeight);
+  if (defender) {
+    renderCharacterPanel(defender, rightX, y, columnWidth, columnHeight);
+  }
 }
 
 function renderCharacterPanel(unit, x, y, width, height) {
@@ -1489,7 +2472,10 @@ function renderCharacterPanel(unit, x, y, width, height) {
     const icon = RESOURCE_ICONS[resourceKey];
 
     for (let index = 0; index < max; index += 1) {
-      const iconNode = sceneRef.add.text(x + 34 + index * 16, cursorY, icon, smallTextStyle());
+      const iconNode = sceneRef.add.text(x + 34 + index * 16, cursorY, icon, {
+        ...smallTextStyle(),
+        color: getResourceIconColor(resourceKey)
+      });
       iconNode.setAlpha(index < current ? 1 : 0.10);
       iconNode.setDepth(POPUP_DEPTH + 1);
       infoPanelNodes.push(iconNode);
@@ -1497,6 +2483,47 @@ function renderCharacterPanel(unit, x, y, width, height) {
 
     cursorY += lineHeight;
   }
+
+  function addResourcePairLine(leftLabel, leftKey, rightLabel, rightKey) {
+    const rightColumnX = x + width / 2;
+
+    function addResourceGroup(groupX, label, resourceKey) {
+      const labelNode = sceneRef.add.text(groupX, cursorY, `${label}:`, smallTextStyle());
+      labelNode.setDepth(POPUP_DEPTH + 1);
+      infoPanelNodes.push(labelNode);
+
+      const current = unit[resourceKey];
+      const maxKey = `max${resourceKey.charAt(0).toUpperCase()}${resourceKey.slice(1)}`;
+      const max = unit[maxKey];
+      const icon = RESOURCE_ICONS[resourceKey];
+
+      if (max <= 0) {
+        const noneNode = sceneRef.add.text(groupX + 34, cursorY, '0', {
+          ...smallTextStyle(),
+          color: getResourceIconColor(resourceKey)
+        });
+        noneNode.setAlpha(0.35);
+        noneNode.setDepth(POPUP_DEPTH + 1);
+        infoPanelNodes.push(noneNode);
+        return;
+      }
+
+      for (let index = 0; index < max; index += 1) {
+        const iconNode = sceneRef.add.text(groupX + 34 + index * 16, cursorY, icon, {
+          ...smallTextStyle(),
+          color: getResourceIconColor(resourceKey)
+        });
+        iconNode.setAlpha(index < current ? 1 : 0.10);
+        iconNode.setDepth(POPUP_DEPTH + 1);
+        infoPanelNodes.push(iconNode);
+      }
+    }
+
+    addResourceGroup(x, leftLabel, leftKey);
+    addResourceGroup(rightColumnX, rightLabel, rightKey);
+    cursorY += lineHeight;
+  }
+
   function addSplitLine(label, detail) {
     const labelNode = sceneRef.add.text(x, cursorY, label.padEnd(12), smallTextStyle());
     const detailNode = sceneRef.add.text(x + skillDetailOffset, cursorY, detail, smallTextStyle());
@@ -1510,48 +2537,108 @@ function renderCharacterPanel(unit, x, y, width, height) {
     infoPanelNodes.push(labelNode, detailNode);
     cursorY += lineHeight;
   }
+  function addRichSplitLine(label, segments) {
+    const labelNode = sceneRef.add.text(x, cursorY, label.padEnd(12), smallTextStyle());
+    labelNode.setDepth(POPUP_DEPTH + 1);
+    labelNode.setWordWrapWidth(width);
 
-  const slash = ACTIONS.slash;
-  const thrust = ACTIONS.thrust;
-  const block = REACTIONS.block;
-  const parry = REACTIONS.parry;
+    const detailNodes = addInlineTextSegments(segments, x + skillDetailOffset, cursorY, POPUP_DEPTH + 1, POPUP_DETAIL_TEXT_ALPHA);
+    infoPanelNodes.push(labelNode, ...detailNodes);
+    cursorY += lineHeight;
+  }
 
-  addPanelLine(`${unit.name} Knight`);
-  addResourceLine('HP', 'hp');
-  addResourceLine('SP', 'sp');
-  addResourceLine('AP', 'ap');
-  addResourceLine('RP', 'rp');
-  addResourceLine('LP', 'lp');
-  addResourceLine('IP', 'ip');
+  const className = unit.className || getClassDefinition(unit.class).name;
 
+  addPanelLine(`${unit.name} ${className}`);
+  const unitCpCost = unit.cpCost || getUnitCommandCost(unit.class);
+  addPanelLine(`CP:  ${SETUP_COMMAND_ICON.repeat(unitCpCost)}`);
+  addResourcePairLine('HP', 'hp', 'SP', 'sp');
+  addResourcePairLine('AP', 'ap', 'RP', 'rp');
+  addResourcePairLine('LP', 'lp', 'IP', 'ip');
   addBlankLine();
+
+  addPanelLine('Equipment:');
+  Object.values(unit.equipment || getClassDefinition(unit.class).equipment || {}).filter(Boolean).forEach((equipmentKey) => {
+    const item = EQUIPMENT[equipmentKey];
+    if (!item) {
+      return;
+    }
+
+    addRichSplitLine(
+      `${item.slotLabel || getEquipmentSlotLabel(item.slot)}: ${item.name}`,
+      shortTextOrFallback(item, buildEquipmentBonusSegments(item))
+    );
+  });
+  const unitTraits = unit.traits || getClassDefinition(unit.class).traits || [];
+  if (unitTraits.length > 0) {
+    addBlankLine();
+    addPanelLine('Traits:');
+    unitTraits.forEach((traitKey, index) => {
+      const trait = TRAITS[traitKey];
+      if (!trait) {
+        return;
+      }
+
+      const fallback = trait.statBonuses
+        ? buildStatBonusSegments(trait.statBonuses)
+        : [
+          { text: 'Full Block: +' },
+          resourceTextSegment('lp', trait.fullBlockLpGain || 0)
+        ];
+
+      addRichSplitLine(
+        `T${index + 1}: ${trait.name}`,
+        shortTextOrFallback(trait, fallback)
+      );
+    });
+  }
+  addBlankLine();
+
   addPanelLine('Skills:');
-  addSplitLine(
-    'A1: Slash',
-    `(Cost: ${slash.apCost}${RESOURCE_ICONS.ap} | Damage: ${slash.spDamage}${RESOURCE_ICONS.sp} or ${slash.hpDamage}${RESOURCE_ICONS.hp})`
-  );
-  addSplitLine(
-    'A2: Thrust',
-    `(Cost: ${thrust.apCost}${RESOURCE_ICONS.ap} | Damage: ${thrust.spDamage}${RESOURCE_ICONS.sp} or ${thrust.hpDamage}${RESOURCE_ICONS.hp})`
-  );
-  addSplitLine(
-    'R1: Block',
-    `(Cost: ${block.rpCost}${RESOURCE_ICONS.rp} | Blocks: ${block.blockAmount}${RESOURCE_ICONS.sp} or ${block.blockAmount}${RESOURCE_ICONS.hp})`
-  );
-  addSplitLine(
-    'R2: Parry',
-    `(Cost: ${parry.rpCost}${RESOURCE_ICONS.rp}${parry.lpCost}${RESOURCE_ICONS.lp} | Blocks: ${parry.blockAmount}${RESOURCE_ICONS.sp} or ${parry.blockAmount}${RESOURCE_ICONS.hp})`
-  );
-  addBlankLine();
-  addPanelLine('Gambits:');
-  buildGambitRows().forEach((row) => {
-    addSplitLine(row.label, row.detail);
+  Object.values(unit.actions || {}).forEach((actionData, index) => {
+    addRichSplitLine(`A${index + 1}: ${actionData.name}`, [
+      resourceTextSegment('ap', actionData.apCost),
+      { text: ' -> ' },
+      resourceTextSegment('sp', actionData.spDamage),
+      { text: ' or ' },
+      resourceTextSegment('hp', actionData.hpDamage)
+    ]);
   });
 
   addBlankLine();
-  addPanelLine('Equipment:');
-  buildEquipmentRows().forEach((row) => {
-    addSplitLine(row.label, row.detail);
+  addPanelLine('Reactions:');
+  Object.values(unit.reactions || {}).forEach((reactionData, index) => {
+    const fallback = reactionData.isPlaceholder
+      ? [{ text: 'Block for Ally' }]
+      : [
+        resourceTextSegment('rp', reactionData.rpCost),
+        { text: ' -> Blocks ' },
+        resourceTextSegment('sp', reactionData.blockAmount),
+        { text: ' or ' },
+        resourceTextSegment('hp', reactionData.blockAmount)
+      ];
+
+    addRichSplitLine(`R${index + 1}: ${reactionData.name}`, fallback);
+  });
+
+  const unitLimits = Object.values(unit.limits || {});
+  if (unitLimits.length > 0) {
+    addBlankLine();
+    addPanelLine('Limit:');
+    unitLimits.forEach((limitData, index) => {
+      addRichSplitLine(`L${index + 1}: ${limitData.name}`, [
+        resourceTextSegment('lp', limitData.lpCost),
+        { text: ' -> ' },
+        resourceTextSegment('sp', limitData.counterSpDamage),
+        { text: ' + Blocks' }
+      ]);
+    });
+  }
+
+  addBlankLine();
+  addPanelLine('Gambits:');
+  buildGambitRows().forEach((row) => {
+    addRichSplitLine(row.label, row.detail);
   });
 }
 
@@ -1615,19 +2702,39 @@ function renderCompactUnitCard(unit, x, y, width, height) {
     .setStrokeStyle(1, PHASER_COLORS.panelBorder);
   const name = sceneRef.add.text(x + 8, y + 8, `${unit.name} Knight`, smallTextStyle());
   const lines = [
-    sceneRef.add.text(x + 8, y + 29, `HP: ${formatResourceCurrent(unit, 'hp')}`, smallTextStyle()),
-    sceneRef.add.text(x + 8, y + 48, `SP: ${formatResourceCurrent(unit, 'sp')}`, smallTextStyle()),
-    sceneRef.add.text(x + 8, y + 67, `AP: ${formatResourceCurrent(unit, 'ap')}`, smallTextStyle()),
-    sceneRef.add.text(x + 8, y + 86, `RP: ${formatResourceCurrent(unit, 'rp')}`, smallTextStyle()),
-    sceneRef.add.text(x + 8, y + 105, `LP: ${formatResourceCurrent(unit, 'lp')}`, smallTextStyle()),
-    sceneRef.add.text(x + 8, y + 124, `IP: ${formatResourceCurrent(unit, 'ip')}`, smallTextStyle())
-  ];
+    renderCompactResourceLine(unit, x + 8, y + 29, 'HP', 'hp', alpha),
+    renderCompactResourceLine(unit, x + 8, y + 48, 'SP', 'sp', alpha),
+    renderCompactResourceLine(unit, x + 8, y + 67, 'AP', 'ap', alpha),
+    renderCompactResourceLine(unit, x + 8, y + 86, 'RP', 'rp', alpha),
+    renderCompactResourceLine(unit, x + 8, y + 105, 'LP', 'lp', alpha),
+    renderCompactResourceLine(unit, x + 8, y + 124, 'IP', 'ip', alpha)
+  ].flat();
 
+  name.setAlpha(alpha);
   [name, ...lines].forEach((node) => {
-    node.setAlpha(alpha);
     node.setWordWrapWidth(width - 16);
   });
   statusPanelNodes.push(card, name, ...lines);
+}
+
+function renderCompactResourceLine(unit, x, y, label, resourceKey, alpha) {
+  const labelNode = sceneRef.add.text(x, y, `${label}:`, smallTextStyle())
+    .setAlpha(alpha);
+  const current = unit[resourceKey];
+  const maxKey = `max${resourceKey.charAt(0).toUpperCase()}${resourceKey.slice(1)}`;
+  const max = unit[maxKey];
+  const iconNodes = [];
+
+  for (let index = 0; index < max; index += 1) {
+    const iconNode = sceneRef.add.text(x + 34 + index * 16, y, RESOURCE_ICONS[resourceKey], {
+      ...smallTextStyle(),
+      color: getResourceIconColor(resourceKey)
+    });
+    iconNode.setAlpha(index < current ? alpha : Math.min(alpha, 0.10));
+    iconNodes.push(iconNode);
+  }
+
+  return [labelNode, ...iconNodes];
 }
 
 function renderCombatLogHeader() {
@@ -1810,7 +2917,7 @@ function showRoundStartBanner(roundNumber) {
     .setOrigin(0.5)
     .setAlpha(0)
     .setDepth(ROUND_START_BANNER_DEPTH + 1);
-  const subtitle = sceneRef.add.text(x, y + 34, 'AP and RP refilled', {
+  const subtitle = sceneRef.add.text(x, y + 34, 'Initiative rolled. AP and RP refilled.', {
     fontFamily: 'monospace',
     fontSize: `${ROUND_START_BANNER_SUBTITLE_FONT_SIZE}px`,
     color: ROUND_START_BANNER_SUBTITLE_COLOR
@@ -1841,6 +2948,41 @@ function showRoundStartBanner(roundNumber) {
       onComplete: () => nodes.forEach((node) => node.destroy())
     });
   });
+}
+
+function showBattleOverBanner(winningTeamKey, cxpGained) {
+  const x = layout.battle.x + layout.battle.w / 2;
+  const y = ROUND_START_BANNER_Y;
+  const titleText = winningTeamKey === 'red' ? 'RED TEAM WINS' : 'BLUE TEAM WINS';
+  const subtitleText = cxpGained > 0
+    ? `+${cxpGained} CXP | Command Level ${commandLevel}`
+    : 'No CXP gained';
+  const background = sceneRef.add.rectangle(
+    x,
+    y,
+    ROUND_START_BANNER_WIDTH,
+    ROUND_START_BANNER_HEIGHT,
+    cssHexToNumber(ROUND_START_BANNER_BACKGROUND_COLOR)
+  )
+    .setAlpha(ROUND_START_BANNER_BACKGROUND_ALPHA)
+    .setStrokeStyle(2, cssHexToNumber(ROUND_START_BANNER_BORDER_COLOR))
+    .setDepth(ROUND_START_BANNER_DEPTH);
+  const title = sceneRef.add.text(x, y - 36, titleText, {
+    fontFamily: 'monospace',
+    fontSize: `${ROUND_START_BANNER_TITLE_FONT_SIZE}px`,
+    color: ROUND_START_BANNER_TITLE_COLOR
+  })
+    .setOrigin(0.5)
+    .setDepth(ROUND_START_BANNER_DEPTH + 1);
+  const subtitle = sceneRef.add.text(x, y + 34, subtitleText, {
+    fontFamily: 'monospace',
+    fontSize: `${ROUND_START_BANNER_SUBTITLE_FONT_SIZE}px`,
+    color: ROUND_START_BANNER_SUBTITLE_COLOR
+  })
+    .setOrigin(0.5)
+    .setDepth(ROUND_START_BANNER_DEPTH + 1);
+
+  return [background, title, subtitle];
 }
 
 function createCombatCallout({ unit, segments, yOffset }) {
@@ -1955,6 +3097,10 @@ function playKnightAttack(unit) {
 }
 
 function playKnightOneShotAnimation(unit, textureKey, animationKey, finalPoseHoldMs) {
+  if (unit.class !== 'knight') {
+    return;
+  }
+
   if (!hasBattlefieldVisuals(unit) || unit.hp <= 0) {
     return;
   }
@@ -2201,6 +3347,7 @@ function markUnitKo(unit) {
   unit.label.setAlpha(KO_FADE_ALPHA);
   unit.shadow.setAlpha(KO_FADE_ALPHA);
   unit.label.setText(`${unit.name} KO`);
+  clearInitiativeOrderNumber(unit);
   destroyBattleUnitHud(unit);
 
   sceneRef.time.delayedCall(KO_REMOVE_DELAY_MS, () => {
@@ -2216,7 +3363,22 @@ function markUnitKo(unit) {
 }
 
 function startBattle() {
-  appendLog('Round 1 starts.');
+  if (gamePhase !== 'setup' || !isSetupReady()) {
+    return;
+  }
+
+  clearSetupUi();
+  clearAllStatsPanels();
+  gamePhase = 'battle';
+  round = 0;
+  turn = 1;
+  action = 1;
+  turnQueue = [];
+  roundInitiativeOrder = [];
+  currentTurnActedUnits = new Set();
+  battleEnded = false;
+  battleRewardsGranted = false;
+  createUnits();
   startRound();
 
   sceneRef.time.delayedCall(START_BATTLE_DELAY_MS, () => {
@@ -2232,8 +3394,7 @@ function startBattle() {
 }
 
 function setBattleSpeed(multiplier) {
-  const valid = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 32, 64];
-  battleSpeedMultiplier = valid.includes(multiplier) ? multiplier : battleSpeedMultiplier;
+  battleSpeedMultiplier = BATTLE_SPEED_OPTIONS.includes(multiplier) ? multiplier : battleSpeedMultiplier;
   sceneRef.time.timeScale = battleSpeedMultiplier;
   if (sceneRef.tweens && typeof sceneRef.tweens.timeScale !== 'undefined') {
     sceneRef.tweens.timeScale = battleSpeedMultiplier;
@@ -2248,6 +3409,7 @@ function startRound() {
   turn = 0;
   action = 1;
   turnQueue = [];
+  resetTurnInitiativeProgress();
 
   livingUnits().forEach((unit) => {
     unit.ap = unit.maxAp;
@@ -2255,68 +3417,179 @@ function startRound() {
     refreshBattleUnitHud(unit);
   });
 
+  rollRoundInitiativeOrder();
   refreshInfoPanel();
   showRoundStartBanner(round);
+  appendLog(`Round ${round} starts. Initiative rolled.`);
+}
 
-  if (round > 1) {
-    appendLog(`Round ${round} starts.`);
+function rollRoundInitiativeOrder() {
+  clearInitiativeOrderNumbers();
+  const living = livingUnits().sort((a, b) => b.ip - a.ip);
+  const order = [];
+  let index = 0;
+
+  while (index < living.length) {
+    let nextIndex = index + 1;
+    while (nextIndex < living.length && living[nextIndex].ip === living[index].ip) {
+      nextIndex += 1;
+    }
+
+    const tier = living.slice(index, nextIndex);
+    for (let tierIndex = tier.length - 1; tierIndex > 0; tierIndex -= 1) {
+      const randomIndex = Math.floor(Math.random() * (tierIndex + 1));
+      [tier[tierIndex], tier[randomIndex]] = [tier[randomIndex], tier[tierIndex]];
+    }
+
+    order.push(...tier);
+    index = nextIndex;
   }
+
+  roundInitiativeOrder = order;
+  roundInitiativeOrder.forEach((unit, orderIndex) => {
+    unit.initiativeOrderNumber = orderIndex + 1;
+  });
+  refreshInitiativeOrderNumbers();
+}
+
+function getInitiativeOrderX(unit) {
+  if (unit.teamKey === 'red') {
+    return unit.slotX + INITIATIVE_ORDER_CENTER_X_OFFSET;
+  }
+
+  if (unit.teamKey === 'blue') {
+    return unit.slotX - INITIATIVE_ORDER_CENTER_X_OFFSET;
+  }
+
+  return unit.slotX;
+}
+
+function refreshInitiativeOrderNumbers() {
+  if (!INITIATIVE_ORDER_NUMBER_SHOW) {
+    return;
+  }
+
+  roundInitiativeOrder.forEach((unit) => {
+    clearInitiativeOrderNumber(unit);
+    if (!hasBattlefieldVisuals(unit) || unit.hp <= 0 || !unit.initiativeOrderNumber) {
+      return;
+    }
+
+    unit.initiativeOrderNode = sceneRef.add.text(
+      getInitiativeOrderX(unit),
+      unit.slotY + INITIATIVE_ORDER_Y_OFFSET,
+      String(unit.initiativeOrderNumber),
+      {
+        fontFamily: 'monospace',
+        fontSize: `${INITIATIVE_ORDER_FONT_SIZE}px`,
+        color: INITIATIVE_ORDER_COLOR,
+        stroke: INITIATIVE_ORDER_STROKE_COLOR,
+        strokeThickness: INITIATIVE_ORDER_STROKE_THICKNESS
+      }
+    )
+      .setOrigin(0.5)
+      .setDepth(INITIATIVE_ORDER_DEPTH);
+  });
+  refreshInitiativeOrderNumberAlphas();
+}
+
+function clearInitiativeOrderNumber(unit) {
+  if (!unit) {
+    return;
+  }
+
+  if (isLiveBattlefieldNode(unit.initiativeOrderNode)) {
+    unit.initiativeOrderNode.destroy();
+  }
+
+  unit.initiativeOrderNode = null;
+}
+
+function clearInitiativeOrderNumbers() {
+  if (!units) {
+    return;
+  }
+
+  units.forEach((unit) => {
+    clearInitiativeOrderNumber(unit);
+    unit.initiativeOrderNumber = null;
+  });
+}
+
+function getTurnEligibleUnitsInRoundOrder() {
+  return roundInitiativeOrder.filter((unit) => unit.hp > 0 && unit.ap > 0);
+}
+
+function refreshInitiativeOrderNumberAlphas() {
+  roundInitiativeOrder.forEach((unit) => {
+    if (!isLiveBattlefieldNode(unit.initiativeOrderNode)) {
+      return;
+    }
+
+    if (unit.hp <= 0) {
+      unit.initiativeOrderNode.setVisible(false);
+      return;
+    }
+
+    unit.initiativeOrderNode.setVisible(true);
+    if (currentTurnActedUnits.has(unit)) {
+      unit.initiativeOrderNode.setAlpha(INITIATIVE_ORDER_ACTED_ALPHA);
+      return;
+    }
+
+    unit.initiativeOrderNode.setAlpha(unit.ap > 0
+      ? INITIATIVE_ORDER_ACTIVE_ALPHA
+      : INITIATIVE_ORDER_INELIGIBLE_ALPHA);
+  });
+}
+
+function markUnitActedThisTurn(unit) {
+  currentTurnActedUnits.add(unit);
+  refreshInitiativeOrderNumberAlphas();
+}
+
+function resetTurnInitiativeProgress() {
+  currentTurnActedUnits.clear();
+  refreshInitiativeOrderNumberAlphas();
 }
 
 function chooseAction(attacker, defender) {
+  const actions = attacker.actions || calculateClassActions(attacker.class);
   if (defender.sp <= 0) {
-    return ACTIONS.thrust;
+    return actions.thrust || actions.slash;
   }
 
-  return ACTIONS.slash;
+  return actions.slash || Object.values(actions)[0];
 }
 
 function chooseReaction(defender, attacker, selectedAction) {
-  const block = REACTIONS.block;
-  const parry = REACTIONS.parry;
+  const block = defender.reactions?.block;
+  const parry = defender.limits?.parry;
 
   if (selectedAction.attackType !== 'melee') {
     return null;
   }
 
-  if (defender.rp >= parry.rpCost && defender.lp >= parry.lpCost) {
+  if (parry && defender.rp >= (parry.rpCost || 0) && defender.lp >= (parry.lpCost || 0)) {
     return parry;
   }
 
-  if (defender.rp >= block.rpCost) {
+  if (block && defender.rp >= (block.rpCost || 0)) {
     return block;
   }
 
   return null;
 }
 
-function buildTurnQueue(living) {
-  const eligible = living.filter((unit) => unit.ap > 0);
-  eligible.sort((a, b) => b.ip - a.ip);
-
-  const queue = [];
-  let i = 0;
-  while (i < eligible.length) {
-    let j = i + 1;
-    while (j < eligible.length && eligible[j].ip === eligible[i].ip) {
-      j += 1;
-    }
-    const tier = eligible.slice(i, j);
-    for (let k = tier.length - 1; k > 0; k -= 1) {
-      const m = Math.floor(Math.random() * (k + 1));
-      [tier[k], tier[m]] = [tier[m], tier[k]];
-    }
-    queue.push(...tier);
-    i = j;
-  }
-
-  turnQueue = queue;
+function buildTurnQueue() {
+  resetTurnInitiativeProgress();
+  turnQueue = getTurnEligibleUnitsInRoundOrder();
   turn += 1;
   action = 1;
 }
 
 function takeNextAction() {
-  if (battleEnded) {
+  if (gamePhase !== 'battle' || battleEnded) {
     return;
   }
 
@@ -2330,7 +3603,7 @@ function takeNextAction() {
       startRound();
       return;
     }
-    buildTurnQueue(living);
+    buildTurnQueue();
   }
 
   const attacker = turnQueue.shift();
@@ -2350,6 +3623,7 @@ function takeNextAction() {
   if (attackerApBeforeResolve <= 0) {
     return takeNextAction();
   }
+  markUnitActedThisTurn(attacker);
   const effect = resolveAction(attacker, defender, selectedAction);
 
   const actionCostText = RESOURCE_ICONS.ap.repeat(selectedAction.apCost);
@@ -2548,9 +3822,12 @@ function resolveAction(attacker, defender, selectedAction) {
         delayMs: COUNTER_RESULT_DELAY_MS
       };
 
-      if (reaction.lpGainOnFullBlock > 0) {
+      const fullBlockLpGain = reaction.key === 'block' && hasTrait(defender, 'guardian')
+        ? TRAITS.guardian.fullBlockLpGain
+        : 0;
+      if (fullBlockLpGain > 0) {
         const oldLp = defender.lp;
-        defender.lp = Math.min(defender.maxLp, defender.lp + reaction.lpGainOnFullBlock);
+        defender.lp = Math.min(defender.maxLp, defender.lp + fullBlockLpGain);
         const lpGained = defender.lp - oldLp;
 
         if (lpGained > 0) {
@@ -2707,6 +3984,11 @@ function isBattleOver() {
 }
 
 function endBattle(losingTeamKey) {
+  if (gamePhase === 'battleOver') {
+    return;
+  }
+
+  gamePhase = 'battleOver';
   battleEnded = true;
   if (actionTimer) {
     actionTimer.remove(false);
@@ -2714,9 +3996,93 @@ function endBattle(losingTeamKey) {
   units.filter((unit) => unit.teamKey === losingTeamKey && unit.hp <= 0).forEach((unit) => {
     markUnitKo(unit);
   });
+  const winningTeamKey = losingTeamKey === 'red' ? 'blue' : 'red';
+  const cxpGained = battleRewardsGranted ? 0 : grantBattleRewards(winningTeamKey);
+  battleRewardsGranted = true;
   refreshInfoPanel();
-  const winner = losingTeamKey === 'red' ? 'Blue' : 'Red';
+  const bannerNodes = showBattleOverBanner(winningTeamKey, cxpGained);
+  const winner = winningTeamKey === 'red' ? 'Red' : 'Blue';
   appendLog(`Battle ends. ${winner} wins.`);
+  scheduleReturnToSetup(bannerNodes);
+}
+
+function scheduleReturnToSetup(bannerNodes) {
+  sceneRef.time.delayedCall(BATTLE_OVER_RETURN_TO_SETUP_DELAY_MS - ROUND_START_BANNER_FADE_MS, () => {
+    sceneRef.tweens.add({
+      targets: bannerNodes.filter(isLiveBattlefieldNode),
+      alpha: 0,
+      duration: ROUND_START_BANNER_FADE_MS,
+      ease: 'Quad.easeIn',
+      onComplete: () => {
+        bannerNodes.forEach((node) => {
+          if (isLiveBattlefieldNode(node)) {
+            node.destroy();
+          }
+        });
+        resetBattlefieldForSetup();
+        enterSetupPhase();
+      }
+    });
+  });
+}
+
+function resetBattlefieldForSetup() {
+  if (actionTimer) {
+    actionTimer.remove(false);
+    actionTimer = null;
+  }
+
+  closePopups();
+  clearInitiativeOrderNumbers();
+  if (units) {
+    units.forEach((unit) => {
+      destroyBattleUnitHud(unit);
+      [unit.rect, unit.label, unit.shadow, unit.initiativeOrderNode].forEach((node) => {
+        if (isLiveBattlefieldNode(node)) {
+          node.destroy();
+        }
+      });
+      unit.isBattlefieldRemoved = true;
+    });
+  }
+
+  units = [];
+  currentAttacker = null;
+  currentDefender = null;
+  clearAllStatsPanels();
+  turnQueue = [];
+  roundInitiativeOrder = [];
+  currentTurnActedUnits = new Set();
+  battleEnded = false;
+}
+
+function getTeamCommandValue(teamKey) {
+  if (units && gamePhase !== 'setup') {
+    return units
+      .filter((unit) => unit.teamKey === teamKey)
+      .reduce((sum, unit) => sum + (unit.cost || getUnitCommandCost(unit.class)), 0);
+  }
+
+  return getSetupPlacements(teamKey).reduce((sum, placement) => sum + placement.cost, 0);
+}
+
+function addCommandXp(amount) {
+  commandXp += amount;
+
+  while (commandXp >= COMMAND_XP_TO_LEVEL) {
+    commandXp -= COMMAND_XP_TO_LEVEL;
+    commandLevel += 1;
+  }
+}
+
+function grantBattleRewards(winningTeamKey) {
+  if (winningTeamKey !== 'red') {
+    return 0;
+  }
+
+  const cxpGained = getTeamCommandValue('blue');
+  addCommandXp(cxpGained);
+  return cxpGained;
 }
 
 function livingUnits() {
