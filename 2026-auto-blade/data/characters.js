@@ -113,5 +113,32 @@ export const CHARACTER_CLASSES = {
         }
       }
     }
+  },
+  archer: {
+    key: 'archer',
+    name: 'Archer',
+    cpCost: 1,
+    promoted: false,
+    statBonuses: {},
+    traits: [],
+    equipment: {
+      rightHand: null,
+      leftHand: null,
+      armor: null
+    },
+    actions: ['arrowShot'],
+    reactions: [],
+    limits: [],
+    visual: {
+      idle: {
+        textureKey: 'archer-idle',
+        assetPath: 'assets/archer/archer-idle.png',
+        frameWidth: 16,
+        frameHeight: 16,
+        defaultFrame: 0,
+        scale: 8
+      },
+      animations: {}
+    }
   }
 };

@@ -147,6 +147,17 @@ const SPEED_MENU_WIDTH = 72;
 const SPEED_MENU_OPTION_HEIGHT = 28;
 const SPEED_MENU_GAP = 0;
 const SPEED_MENU_DEPTH = UTILITY_BUTTON_DEPTH + 10;
+
+// Hamburger utility menu (anchored to setup panel top-left)
+const UTILITY_MENU_BUTTON_X = 34;        // SETUP_PANEL_X + 10
+const UTILITY_MENU_BUTTON_Y = 28;        // SETUP_PANEL_Y + 10
+const UTILITY_MENU_BUTTON_SIZE = 34;
+const UTILITY_MENU_DROPDOWN_X = UTILITY_MENU_BUTTON_X;
+const UTILITY_MENU_DROPDOWN_Y = UTILITY_MENU_BUTTON_Y + UTILITY_MENU_BUTTON_SIZE + 6;
+const UTILITY_MENU_DROPDOWN_WIDTH = 128;
+const UTILITY_MENU_ITEM_HEIGHT = 32;
+const UTILITY_MENU_GAP = 4;
+const UTILITY_MENU_LABEL = '☰';
 const POPUP_PANEL_MARGIN = 24;
 const POPUP_PANEL_TOP = 64;
 const POPUP_SIDE_PANEL_WIDTH = 420;
@@ -193,6 +204,24 @@ const LOG_LINE_HEIGHT = 20;
 const FONT_SIZE_HEADER = 24;
 const FONT_SIZE_BODY = 12;
 const FONT_SIZE_SMALL = 12;
+
+// Resource rows (setup cards and stats popup)
+const RESOURCE_ROW_LABEL_FONT_SIZE = 14;
+const RESOURCE_ROW_ICON_FONT_SIZE = 13;
+const RESOURCE_ROW_LABEL_WIDTH = 34;
+const RESOURCE_ROW_ICON_SPACING = 14;
+const RESOURCE_ROW_PAIR_GAP = 82;
+const RESOURCE_ROW_GAP = 22;
+const RESOURCE_ROW_EMPTY_ALPHA = 0.10;
+
+// Stats popup CP row
+const STATS_CP_FLAG_FONT_SIZE = 18;
+const STATS_CP_FLAG_SPACING = 18;
+const STATS_CP_ICON_X_OFFSET = 34;
+
+// Setup card cost row
+const SETUP_UNIT_CARD_COST_ICON_FONT_SIZE = 18;
+const SETUP_UNIT_CARD_COST_ICON_X_OFFSET = 82;
 
 // HUD: CAST
 const CAST_TITLE_FONT_SIZE = 24;
@@ -323,7 +352,7 @@ const SETUP_COMMAND_FLAG_SPACING = 18;
 const SETUP_COMMAND_FLAG_FONT_SIZE = 16;
 const SETUP_UNITS_PANEL_X = 24;
 const SETUP_UNITS_PANEL_Y = SETUP_PANEL_Y + SETUP_PANEL_HEIGHT + 12;
-const SETUP_UNIT_TYPES = ['squire', 'knight'];
+const SETUP_UNIT_TYPES = ['squire', 'knight', 'archer'];
 const SETUP_UNIT_CARD_GAP = 14;
 const SETUP_UNITS_TITLE_X_OFFSET = 18;
 const SETUP_UNITS_TITLE_Y_OFFSET = 16;
@@ -653,6 +682,8 @@ let actionTimer;
 let speedLabel;
 let speedButton;
 let speedMenuNodes = [];
+let isUtilityMenuOpen = false;
+let utilityMenuNodes = [];
 let infoPanelNodes = [];
 let statusPanelNodes = [];
 let currentAttacker = null;
@@ -833,8 +864,30 @@ function drawPanel(rect, title) {
 }
 
 function createPopupButtons() {
-  createUtilityButton('Log', UTILITY_BUTTON_X, UTILITY_BUTTON_Y, toggleCombatLog);
-  createSpeedButton();
+  const button = sceneRef.add.rectangle(
+    UTILITY_MENU_BUTTON_X,
+    UTILITY_MENU_BUTTON_Y,
+    UTILITY_MENU_BUTTON_SIZE,
+    UTILITY_MENU_BUTTON_SIZE,
+    PHASER_COLORS.infoPanel
+  )
+    .setOrigin(0)
+    .setStrokeStyle(1, PHASER_COLORS.panelBorder)
+    .setInteractive({ useHandCursor: true })
+    .setDepth(UTILITY_BUTTON_DEPTH);
+
+  const label = sceneRef.add.text(
+    UTILITY_MENU_BUTTON_X + UTILITY_MENU_BUTTON_SIZE / 2,
+    UTILITY_MENU_BUTTON_Y + UTILITY_MENU_BUTTON_SIZE / 2,
+    UTILITY_MENU_LABEL,
+    combatLogToggleTextStyle()
+  )
+    .setOrigin(0.5)
+    .setInteractive({ useHandCursor: true })
+    .setDepth(UTILITY_BUTTON_DEPTH + 1);
+
+  button.on('pointerdown', toggleUtilityMenu);
+  label.on('pointerdown', toggleUtilityMenu);
 }
 
 function createUtilityButton(label, x, y, onClick) {
@@ -918,6 +971,10 @@ function handleGlobalPointerDown(pointer) {
   if (speedMenuNodes.length > 0) {
     hideSpeedMenu();
   }
+
+  if (isUtilityMenuOpen) {
+    hideUtilityMenu();
+  }
 }
 
 function cycleBattleSpeed() {
@@ -979,6 +1036,75 @@ function hideSpeedMenu() {
   speedMenuNodes = [];
 }
 
+function toggleUtilityMenu() {
+  if (isUtilityMenuOpen) {
+    hideUtilityMenu();
+  } else {
+    showUtilityMenu();
+  }
+}
+
+function showUtilityMenu() {
+  if (isUtilityMenuOpen) {
+    return;
+  }
+  isUtilityMenuOpen = true;
+
+  const items = [
+    { label: 'Log', onClick: toggleCombatLog, isSpeed: false },
+    { label: `Speed: ${battleSpeedMultiplier}x`, onClick: cycleBattleSpeed, isSpeed: true }
+  ];
+
+  items.forEach((item, index) => {
+    const itemY = UTILITY_MENU_DROPDOWN_Y + index * (UTILITY_MENU_ITEM_HEIGHT + UTILITY_MENU_GAP);
+    const btn = sceneRef.add.rectangle(
+      UTILITY_MENU_DROPDOWN_X,
+      itemY,
+      UTILITY_MENU_DROPDOWN_WIDTH,
+      UTILITY_MENU_ITEM_HEIGHT,
+      PHASER_COLORS.infoPanel
+    )
+      .setOrigin(0)
+      .setStrokeStyle(1, PHASER_COLORS.panelBorder)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(UTILITY_BUTTON_DEPTH);
+
+    const txt = sceneRef.add.text(
+      UTILITY_MENU_DROPDOWN_X + UTILITY_BUTTON_PADDING,
+      itemY + UTILITY_MENU_ITEM_HEIGHT / 2,
+      item.label,
+      combatLogToggleTextStyle()
+    )
+      .setOrigin(0, 0.5)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(UTILITY_BUTTON_DEPTH + 1);
+
+    btn.on('pointerdown', item.onClick);
+    txt.on('pointerdown', item.onClick);
+
+    if (item.isSpeed) {
+      speedLabel = txt;
+    }
+
+    utilityMenuNodes.push(btn, txt);
+  });
+}
+
+function hideUtilityMenu() {
+  isUtilityMenuOpen = false;
+  speedLabel = null;
+  destroyUtilityMenuNodes();
+}
+
+function destroyUtilityMenuNodes() {
+  utilityMenuNodes.forEach((node) => {
+    if (isLiveBattlefieldNode(node)) {
+      node.destroy();
+    }
+  });
+  utilityMenuNodes = [];
+}
+
 function getPopupRect(key) {
   if (key === 'combatLog') {
     return {
@@ -1031,6 +1157,12 @@ function clearAllStatsPanels() {
   selectedStatsUnits.blue = null;
 }
 
+function getUnitDisplayName(unit) {
+  const teamLabel = unit.teamKey.charAt(0).toUpperCase() + unit.teamKey.slice(1);
+  const className = unit.className || getClassDefinition(unit.class).name;
+  return `${teamLabel} ${className}`;
+}
+
 function renderStatsPanel(teamKey) {
   clearStatsPanel(teamKey);
   const unit = selectedStatsUnits[teamKey];
@@ -1043,7 +1175,7 @@ function renderStatsPanel(teamKey) {
     .setAlpha(POPUP_PANEL_BACKGROUND_ALPHA)
     .setStrokeStyle(2, PHASER_COLORS.panelBorder)
     .setDepth(POPUP_DEPTH);
-  const titleNode = sceneRef.add.text(rect.x + POPUP_PANEL_PADDING, rect.y + 18, 'Stats', headerTextStyle())
+  const titleNode = sceneRef.add.text(rect.x + POPUP_PANEL_PADDING, rect.y + 18, getUnitDisplayName(unit), headerTextStyle())
     .setDepth(POPUP_DEPTH + 1);
   statsPanelNodes[teamKey].push(bg, titleNode);
 
@@ -1370,6 +1502,35 @@ function getUnitIdleScale(unitType) {
   return CHARACTER_CLASSES[unitType].visual.idle.scale;
 }
 
+function drawResourceRow(x, y, label, resourceKey, current, max, depth, addNode) {
+  const labelNode = sceneRef.add.text(x, y, `${label}:`, {
+    fontFamily: 'monospace',
+    fontSize: `${RESOURCE_ROW_LABEL_FONT_SIZE}px`,
+    color: COLORS.text
+  }).setOrigin(0, 0.5).setDepth(depth);
+  addNode(labelNode);
+
+  const iconX = x + RESOURCE_ROW_LABEL_WIDTH;
+  if (max <= 0) {
+    const noneNode = sceneRef.add.text(iconX, y, '0', {
+      fontFamily: 'monospace',
+      fontSize: `${RESOURCE_ROW_ICON_FONT_SIZE}px`,
+      color: getResourceIconColor(resourceKey)
+    }).setOrigin(0, 0.5).setAlpha(RESOURCE_ROW_EMPTY_ALPHA).setDepth(depth);
+    addNode(noneNode);
+    return;
+  }
+
+  for (let i = 0; i < max; i++) {
+    const iconNode = sceneRef.add.text(iconX + i * RESOURCE_ROW_ICON_SPACING, y, RESOURCE_ICONS[resourceKey], {
+      fontFamily: 'monospace',
+      fontSize: `${RESOURCE_ROW_ICON_FONT_SIZE}px`,
+      color: getResourceIconColor(resourceKey)
+    }).setOrigin(0, 0.5).setAlpha(i < current ? 1 : RESOURCE_ROW_EMPTY_ALPHA).setDepth(depth);
+    addNode(iconNode);
+  }
+}
+
 function renderSetupUnitStatsPreview(unitType, x, y) {
   const stats = calculateClassStats(unitType);
   const pairs = [
@@ -1377,22 +1538,13 @@ function renderSetupUnitStatsPreview(unitType, x, y) {
     [['AP', 'ap', stats.maxAp], ['RP', 'rp', stats.maxRp]],
     [['LP', 'lp', stats.lp], ['IP', 'ip', stats.maxIp]]
   ];
-  const rightColumnX = x + 82;
-
-  function addPreviewResource(groupX, rowY, label, resourceKey, amount) {
-    addSetupNode(sceneRef.add.text(groupX, rowY, `${label}:`, smallTextStyle()).setDepth(SETUP_UI_DEPTH + 2));
-    addSetupNode(sceneRef.add.text(
-      groupX + SETUP_KNIGHT_PREVIEW_LABEL_WIDTH,
-      rowY,
-      amount > 0 ? RESOURCE_ICONS[resourceKey].repeat(amount) : '0',
-      { ...smallTextStyle(), color: getResourceIconColor(resourceKey) }
-    ).setDepth(SETUP_UI_DEPTH + 2));
-  }
+  const rightColumnX = x + RESOURCE_ROW_PAIR_GAP;
+  const depth = SETUP_UI_DEPTH + 2;
 
   pairs.forEach(([left, right], index) => {
-    const rowY = y + index * SETUP_KNIGHT_PREVIEW_ROW_GAP;
-    addPreviewResource(x, rowY, left[0], left[1], left[2]);
-    addPreviewResource(rightColumnX, rowY, right[0], right[1], right[2]);
+    const rowY = y + index * RESOURCE_ROW_GAP;
+    drawResourceRow(x, rowY, left[0], left[1], left[2], left[2], depth, addSetupNode);
+    drawResourceRow(rightColumnX, rowY, right[0], right[1], right[2], right[2], depth, addSetupNode);
   });
 }
 
@@ -1412,12 +1564,19 @@ function renderSetupUnitCard(unitType, x, y) {
     classDefinition.name,
     headerTextStyle()
   ).setDepth(SETUP_UI_DEPTH + 2));
+  const costY = y + SETUP_KNIGHT_CARD_COST_Y_OFFSET;
   addSetupNode(sceneRef.add.text(
     x + SETUP_KNIGHT_CARD_TITLE_X_OFFSET,
-    y + SETUP_KNIGHT_CARD_COST_Y_OFFSET,
-    `Cost: ${getUnitCommandCost(unitType)} ${SETUP_COMMAND_ICON}`,
+    costY,
+    `Cost: ${getUnitCommandCost(unitType)}`,
     smallTextStyle()
-  ).setDepth(SETUP_UI_DEPTH + 2));
+  ).setOrigin(0, 0.5).setDepth(SETUP_UI_DEPTH + 2));
+  addSetupNode(sceneRef.add.text(
+    x + SETUP_UNIT_CARD_COST_ICON_X_OFFSET,
+    costY,
+    SETUP_COMMAND_ICON,
+    { fontFamily: 'monospace', fontSize: `${SETUP_UNIT_CARD_COST_ICON_FONT_SIZE}px`, color: COLORS.text }
+  ).setOrigin(0, 0.5).setDepth(SETUP_UI_DEPTH + 2));
   renderSetupUnitStatsPreview(unitType, x + SETUP_KNIGHT_PREVIEW_X_OFFSET, y + SETUP_KNIGHT_PREVIEW_Y_OFFSET);
   card.on('pointerdown', () => {
     selectedSetupUnitType = unitType;
@@ -2238,17 +2397,18 @@ function livingEnemyUnits(unit) {
   return livingTeamUnits(enemyTeam);
 }
 
-function getTargetableEnemyRow(attacker) {
+function getTargetableEnemyRow(attacker, rowOrder) {
   const enemies = livingEnemyUnits(attacker);
-  return FORMATION_ROWS.find((row) => enemies.some((enemy) => enemy.row === row)) || null;
+  return rowOrder.find((row) => enemies.some((enemy) => enemy.row === row)) || null;
 }
 
-function chooseTarget(attacker) {
+function chooseTarget(attacker, selectedAction) {
   const enemies = livingEnemyUnits(attacker);
   if (enemies.length === 0) {
     return null;
   }
-  const targetableRow = getTargetableEnemyRow(attacker);
+  const rowOrder = selectedAction?.targetRows || ['front', 'middle', 'back'];
+  const targetableRow = getTargetableEnemyRow(attacker, rowOrder);
   return enemies
     .filter((enemy) => enemy.row === targetableRow)
     .sort((a, b) => a.col - b.col || a.name.localeCompare(b.name))[0];
@@ -2374,42 +2534,17 @@ function renderCharacterPanel(unit, x, y, width, height) {
   }
 
   function addResourcePairLine(leftLabel, leftKey, rightLabel, rightKey) {
-    const rightColumnX = x + width / 2;
+    const rightColumnX = x + RESOURCE_ROW_PAIR_GAP;
+    const depth = POPUP_DEPTH + 1;
+    const addNode = (node) => { infoPanelNodes.push(node); };
 
-    function addResourceGroup(groupX, label, resourceKey) {
-      const labelNode = sceneRef.add.text(groupX, cursorY, `${label}:`, smallTextStyle());
-      labelNode.setDepth(POPUP_DEPTH + 1);
-      infoPanelNodes.push(labelNode);
-
-      const current = unit[resourceKey];
-      const maxKey = `max${resourceKey.charAt(0).toUpperCase()}${resourceKey.slice(1)}`;
-      const max = unit[maxKey];
-      const icon = RESOURCE_ICONS[resourceKey];
-
-      if (max <= 0) {
-        const noneNode = sceneRef.add.text(groupX + 34, cursorY, '0', {
-          ...smallTextStyle(),
-          color: getResourceIconColor(resourceKey)
-        });
-        noneNode.setAlpha(0.35);
-        noneNode.setDepth(POPUP_DEPTH + 1);
-        infoPanelNodes.push(noneNode);
-        return;
-      }
-
-      for (let index = 0; index < max; index += 1) {
-        const iconNode = sceneRef.add.text(groupX + 34 + index * 16, cursorY, icon, {
-          ...smallTextStyle(),
-          color: getResourceIconColor(resourceKey)
-        });
-        iconNode.setAlpha(index < current ? 1 : 0.10);
-        iconNode.setDepth(POPUP_DEPTH + 1);
-        infoPanelNodes.push(iconNode);
-      }
+    function getMax(key) {
+      const maxKey = `max${key.charAt(0).toUpperCase()}${key.slice(1)}`;
+      return unit[maxKey];
     }
 
-    addResourceGroup(x, leftLabel, leftKey);
-    addResourceGroup(rightColumnX, rightLabel, rightKey);
+    drawResourceRow(x, cursorY, leftLabel, leftKey, unit[leftKey], getMax(leftKey), depth, addNode);
+    drawResourceRow(rightColumnX, cursorY, rightLabel, rightKey, unit[rightKey], getMax(rightKey), depth, addNode);
     cursorY += lineHeight;
   }
 
@@ -2440,7 +2575,24 @@ function renderCharacterPanel(unit, x, y, width, height) {
 
   addPanelLine(`${unit.name} ${className}`);
   const unitCpCost = unit.cpCost || getUnitCommandCost(unit.class);
-  addPanelLine(`CP:  ${SETUP_COMMAND_ICON.repeat(unitCpCost)}`);
+
+  function addCommandPointLine(count) {
+    const labelNode = sceneRef.add.text(x, cursorY, 'CP:', smallTextStyle())
+      .setOrigin(0, 0.5).setDepth(POPUP_DEPTH + 1);
+    infoPanelNodes.push(labelNode);
+    for (let i = 0; i < count; i++) {
+      const flagNode = sceneRef.add.text(
+        x + STATS_CP_ICON_X_OFFSET + i * STATS_CP_FLAG_SPACING,
+        cursorY,
+        SETUP_COMMAND_ICON,
+        { fontFamily: 'monospace', fontSize: `${STATS_CP_FLAG_FONT_SIZE}px`, color: COLORS.text }
+      ).setOrigin(0, 0.5).setDepth(POPUP_DEPTH + 1);
+      infoPanelNodes.push(flagNode);
+    }
+    cursorY += lineHeight;
+  }
+
+  addCommandPointLine(unitCpCost);
   addResourcePairLine('HP', 'hp', 'SP', 'sp');
   addResourcePairLine('AP', 'ap', 'RP', 'rp');
   addResourcePairLine('LP', 'lp', 'IP', 'ip');
@@ -3414,12 +3566,8 @@ function resetTurnInitiativeProgress() {
   refreshInitiativeOrderNumberAlphas();
 }
 
-function chooseAction(attacker, defender) {
+function chooseAction(attacker) {
   const actions = attacker.actions || calculateClassActions(attacker.class);
-  if (defender.sp <= 0) {
-    return actions.thrust || actions.slash;
-  }
-
   return actions.slash || Object.values(actions)[0];
 }
 
@@ -3473,13 +3621,13 @@ function takeNextAction() {
     return takeNextAction();
   }
 
-  const defender = chooseTarget(attacker);
+  const selectedAction = chooseAction(attacker);
+  const defender = chooseTarget(attacker, selectedAction);
   if (!defender) {
     return;
   }
   setActiveCombatants(attacker, defender);
   const tag = `[R${round}T${turn}A${action}]`;
-  const selectedAction = chooseAction(attacker, defender);
   const attackerApBeforeResolve = attacker.ap;
   if (attackerApBeforeResolve <= 0) {
     return takeNextAction();

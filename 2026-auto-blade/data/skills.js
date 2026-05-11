@@ -19,6 +19,18 @@ export const ACTIONS = {
     hpDamage: 1,
     shortText: '⬤ → 🛡️ or ❤️',
     tooltip: 'Thrust costs 1 AP. It deals stance damage first. If stance is broken, it deals HP damage.'
+  },
+
+  arrowShot: {
+    key: 'arrowShot',
+    name: 'Arrow Shot',
+    attackType: 'ranged',
+    targetRows: ['back', 'middle', 'front'],
+    apCost: 1,
+    spDamage: 1,
+    hpDamage: 1,
+    shortText: '⬤ → 🏹 Back row first',
+    tooltip: 'Arrow Shot costs 1 AP. Ranged. Targets back row first, then middle, then front. Does not trigger block or parry.'
   }
 };
 
