@@ -71,7 +71,7 @@ const KNIGHT_RANDOM_IDLE_TWITCH_ENABLED = false;
 const KNIGHT_RANDOM_IDLE_TWITCH_TEST_KEY = 'I';
 const KNIGHT_RANDOM_IDLE_TWITCH_DELAY_MS = ms(15000);
 const KNIGHT_RANDOM_IDLE_TWITCH_HOLD_MS = ms(1000);
-const KNIGHT_ATTACK_ACTION_KEYS = ['slash', 'thrust'];
+const KNIGHT_ATTACK_ACTION_KEYS = ['slash', 'thrust', 'shiv'];
 
 const _knightAnim = CHARACTER_CLASSES.knight.visual.animations;
 const KNIGHT_ATTACK_ANIMATION_DURATION_MS = ms(
@@ -148,10 +148,10 @@ const SPEED_MENU_OPTION_HEIGHT = 28;
 const SPEED_MENU_GAP = 0;
 const SPEED_MENU_DEPTH = UTILITY_BUTTON_DEPTH + 10;
 
-// Hamburger utility menu (anchored to setup panel top-left)
-const UTILITY_MENU_BUTTON_X = 34;        // SETUP_PANEL_X + 10
-const UTILITY_MENU_BUTTON_Y = 28;        // SETUP_PANEL_Y + 10
-const UTILITY_MENU_BUTTON_SIZE = 34;
+// Hamburger utility menu
+const UTILITY_MENU_BUTTON_X = 8;
+const UTILITY_MENU_BUTTON_Y = 8;
+const UTILITY_MENU_BUTTON_SIZE = 28;
 const UTILITY_MENU_DROPDOWN_X = UTILITY_MENU_BUTTON_X;
 const UTILITY_MENU_DROPDOWN_Y = UTILITY_MENU_BUTTON_Y + UTILITY_MENU_BUTTON_SIZE + 6;
 const UTILITY_MENU_DROPDOWN_WIDTH = 128;
@@ -293,7 +293,7 @@ const ROUND_START_BANNER_SUBTITLE_FONT_SIZE = 22;
 const ROUND_START_BANNER_WIDTH = 560;
 const ROUND_START_BANNER_HEIGHT = 150;
 const ROUND_START_BANNER_Y = GAME_HEIGHT * 0.26;
-const ROUND_START_BANNER_HOLD_MS = ms(850);
+const ROUND_START_BANNER_HOLD_MS = ms(1600);
 const ROUND_START_BANNER_FADE_MS = ms(260);
 const ROUND_START_BANNER_DEPTH = 180;
 const ROUND_START_BANNER_BACKGROUND_ALPHA = 0.78;
@@ -301,6 +301,9 @@ const ROUND_START_BANNER_BACKGROUND_COLOR = '#071b35';
 const ROUND_START_BANNER_BORDER_COLOR = '#58a6ff';
 const ROUND_START_BANNER_TITLE_COLOR = '#d8ecff';
 const ROUND_START_BANNER_SUBTITLE_COLOR = '#9dccff';
+const FATIGUE_START_ROUND = 5;
+const FATIGUE_INTERVAL_ROUNDS = 5;
+const FATIGUE_RP_RECOVERY_PENALTY = 1;
 
 // Initiative order
 const INITIATIVE_ORDER_NUMBER_SHOW = true;
@@ -326,12 +329,13 @@ const BATTLE_OVER_RETURN_TO_SETUP_DELAY_MS = BATTLE_OVER_BANNER_HOLD_MS + ROUND_
 
 // Setup phase
 const SETUP_MIN_UNITS_TO_START = 1;
+const SETUP_FORMATION_CP_CAP = 5;
 const SETUP_AI_DEFAULT_COMMAND_SPEND = 6;
 const SETUP_UI_DEPTH = 150;
 const SETUP_PANEL_X = 24;
 const SETUP_PANEL_Y = 18;
 const SETUP_PANEL_WIDTH = GAME_WIDTH - 48;
-const SETUP_PANEL_HEIGHT = 168;
+const SETUP_PANEL_HEIGHT = 470;
 const SETUP_PANEL_ALPHA = 0.88;
 const SETUP_BUTTON_HEIGHT = 34;
 const SETUP_KNIGHT_CARD_WIDTH = 190;
@@ -339,27 +343,19 @@ const SETUP_KNIGHT_CARD_HEIGHT = 154;
 const SETUP_START_BUTTON_WIDTH = 150;
 const SETUP_COMMAND_ICON = '🚩';
 const SETUP_TITLE_Y_OFFSET = 18;
-const SETUP_PROGRESS_X_OFFSET = 24;
-const SETUP_ENEMY_PROGRESS_X_OFFSET = SETUP_PANEL_WIDTH - 24;
-const SETUP_PROGRESS_LEVEL_Y_OFFSET = 62;
-const SETUP_PROGRESS_FLAGS_Y_OFFSET = 86;
-const SETUP_PROGRESS_CXP_Y_OFFSET = 112;
-const SETUP_START_BUTTON_X_OFFSET = (SETUP_PANEL_WIDTH - SETUP_START_BUTTON_WIDTH) / 2;
-const SETUP_START_BUTTON_Y_OFFSET = 76;
-const SETUP_COMMAND_FLAG_FULL_ALPHA = 1;
-const SETUP_COMMAND_FLAG_SPENT_ALPHA = 0.18;
-const SETUP_COMMAND_FLAG_SPACING = 18;
-const SETUP_COMMAND_FLAG_FONT_SIZE = 16;
-const SETUP_UNITS_PANEL_X = 24;
-const SETUP_UNITS_PANEL_Y = SETUP_PANEL_Y + SETUP_PANEL_HEIGHT + 12;
-const SETUP_UNIT_TYPES = ['squire', 'knight', 'archer'];
+const SETUP_UNITS_PANEL_X = SETUP_PANEL_X;
+const SETUP_UNITS_PANEL_Y = SETUP_PANEL_Y;
+const SETUP_UNIT_TYPES = ['squire', 'thief', 'knight', 'archer'];
 const SETUP_UNIT_CARD_GAP = 14;
 const SETUP_UNITS_TITLE_X_OFFSET = 18;
-const SETUP_UNITS_TITLE_Y_OFFSET = 16;
+const SETUP_UNITS_TITLE_Y_OFFSET = SETUP_TITLE_Y_OFFSET;
 const SETUP_UNITS_CARD_X_OFFSET = 18;
-const SETUP_UNITS_CARD_Y_OFFSET = 48;
+const SETUP_UNITS_CARD_Y_OFFSET = 90;
+const SETUP_PROMOTED_UNITS_CARD_Y_OFFSET = 272;
 const SETUP_UNITS_PANEL_WIDTH = SETUP_UNITS_CARD_X_OFFSET * 2 + SETUP_KNIGHT_CARD_WIDTH * SETUP_UNIT_TYPES.length + SETUP_UNIT_CARD_GAP * (SETUP_UNIT_TYPES.length - 1);
-const SETUP_UNITS_PANEL_HEIGHT = 210;
+const SETUP_UNITS_PANEL_HEIGHT = SETUP_PANEL_HEIGHT;
+const SETUP_START_BUTTON_X = GAME_WIDTH / 2 - SETUP_START_BUTTON_WIDTH / 2;
+const SETUP_START_BUTTON_Y = FORMATION_CENTER_Y - BATTLE_GRID_HEIGHT / 2 - SETUP_BUTTON_HEIGHT - 24;
 const SETUP_KNIGHT_CARD_TITLE_X_OFFSET = 14;
 const SETUP_KNIGHT_CARD_TITLE_Y_OFFSET = 10;
 const SETUP_KNIGHT_CARD_COST_Y_OFFSET = 42;
@@ -369,6 +365,11 @@ const SETUP_KNIGHT_PREVIEW_LABEL_WIDTH = 32;
 const SETUP_KNIGHT_PREVIEW_ROW_GAP = 14;
 const SETUP_CELL_ALPHA_PLAYER = 0.18;
 const SETUP_CELL_ALPHA_AI = 0.08;
+const SETUP_CP_TOOLTIP_OFFSET_X = 18;
+const SETUP_CP_TOOLTIP_OFFSET_Y = 18;
+const SETUP_CP_TOOLTIP_PADDING = 8;
+const SETUP_CP_TOOLTIP_WIDTH = 150;
+const SETUP_CP_TOOLTIP_HEIGHT = 70;
 const SETUP_CELL_ALPHA_OCCUPIED = 0.28;
 const SETUP_CELL_STROKE_PLAYER = '#58a6ff';
 const SETUP_CELL_STROKE_AI = '#5f6674';
@@ -406,6 +407,12 @@ const SECONDARY_RESOURCE_COMMIT_STAGGER_MS = ms(250);
 const DAMAGE_BLINK_ALPHA = 0.4;
 const DAMAGE_BLINK_DURATION_MS = ms(160);
 const DAMAGE_BLINK_REPEAT = 1;
+const DODGE_FLIP_DURATION_MS = ms(300);
+const DODGE_FLIP_BACK_DISTANCE = 28;
+const DODGE_FLIP_UP_DISTANCE = 22;
+const DODGE_FLIP_ROTATION_DEGREES = 360;
+const DODGE_FLIP_FADE_ALPHA = 0.55;
+const DODGE_FLIP_RETURN_DURATION_MS = ms(120);
 
 // KO
 const KO_FADE_ALPHA = 0.10;
@@ -660,6 +667,7 @@ let redFormation = [];
 let blueFormation = [];
 let selectedSetupUnitType = 'knight';
 let setupNodes = [];
+let setupTooltipNodes = [];
 let commandLevel = STARTING_COMMAND_LEVEL;
 let commandXp = STARTING_COMMAND_XP;
 let enemyCommandLevel = STARTING_ENEMY_COMMAND_LEVEL;
@@ -1279,7 +1287,7 @@ function getSetupCommandUsed(teamKey) {
 }
 
 function getRedCommandMax() {
-  return commandLevel;
+  return SETUP_FORMATION_CP_CAP;
 }
 
 function getBlueCommandMax() {
@@ -1298,6 +1306,7 @@ function isSetupReady() {
 }
 
 function clearSetupUi() {
+  clearSetupCpTooltip();
   setupNodes.forEach((node) => {
     if (node && node.scene) {
       node.destroy();
@@ -1320,7 +1329,7 @@ function renderSetupUi() {
 }
 
 function renderSetupPanel() {
-  const panel = addSetupNode(sceneRef.add.rectangle(
+  addSetupNode(sceneRef.add.rectangle(
     SETUP_PANEL_X,
     SETUP_PANEL_Y,
     SETUP_PANEL_WIDTH,
@@ -1332,66 +1341,10 @@ function renderSetupPanel() {
     .setStrokeStyle(2, PHASER_COLORS.panelBorder)
     .setDepth(SETUP_UI_DEPTH));
 
-  const title = addSetupNode(sceneRef.add.text(
-    SETUP_PANEL_X + SETUP_PANEL_WIDTH / 2,
-    SETUP_PANEL_Y + SETUP_TITLE_Y_OFFSET,
-    'Preparations: Spend command points 🚩, ready your army, and start battle.',
-    headerTextStyle()
-  )
-    .setOrigin(0.5, 0)
-    .setDepth(SETUP_UI_DEPTH + 1));
-  addSetupNode(sceneRef.add.text(
-    SETUP_PANEL_X + SETUP_PROGRESS_X_OFFSET,
-    SETUP_PANEL_Y + SETUP_PROGRESS_LEVEL_Y_OFFSET,
-    `Command Level ${commandLevel}`,
-    smallTextStyle()
-  )
-    .setDepth(SETUP_UI_DEPTH + 1));
-  renderCommandFlagRow(
-    SETUP_PANEL_X + SETUP_PROGRESS_X_OFFSET,
-    SETUP_PANEL_Y + SETUP_PROGRESS_FLAGS_Y_OFFSET,
-    getRedCommandMax(),
-    getSetupCommandUsed('red'),
-    SETUP_UI_DEPTH + 1,
-    'left'
-  );
-  addSetupNode(sceneRef.add.text(
-    SETUP_PANEL_X + SETUP_PROGRESS_X_OFFSET,
-    SETUP_PANEL_Y + SETUP_PROGRESS_CXP_Y_OFFSET,
-    `${COMMAND_XP_TO_LEVEL - commandXp} CXP to next level...`,
-    smallTextStyle()
-  )
-    .setDepth(SETUP_UI_DEPTH + 1));
-
-  addSetupNode(sceneRef.add.text(
-    SETUP_PANEL_X + SETUP_ENEMY_PROGRESS_X_OFFSET,
-    SETUP_PANEL_Y + SETUP_PROGRESS_LEVEL_Y_OFFSET,
-    `Enemy Command Level ${enemyCommandLevel}`,
-    smallTextStyle()
-  )
-    .setOrigin(1, 0)
-    .setDepth(SETUP_UI_DEPTH + 1));
-  renderCommandFlagRow(
-    SETUP_PANEL_X + SETUP_ENEMY_PROGRESS_X_OFFSET,
-    SETUP_PANEL_Y + SETUP_PROGRESS_FLAGS_Y_OFFSET,
-    getBlueCommandMax(),
-    getSetupCommandUsed('blue'),
-    SETUP_UI_DEPTH + 1,
-    'right'
-  );
-  addSetupNode(sceneRef.add.text(
-    SETUP_PANEL_X + SETUP_ENEMY_PROGRESS_X_OFFSET,
-    SETUP_PANEL_Y + SETUP_PROGRESS_CXP_Y_OFFSET,
-    `${COMMAND_XP_TO_LEVEL - enemyCommandXp} CXP to next level...`,
-    smallTextStyle()
-  )
-    .setOrigin(1, 0)
-    .setDepth(SETUP_UI_DEPTH + 1));
-
   createSetupButton(
     'Start Battle',
-    SETUP_PANEL_X + SETUP_START_BUTTON_X_OFFSET,
-    SETUP_PANEL_Y + SETUP_START_BUTTON_Y_OFFSET,
+    SETUP_START_BUTTON_X,
+    SETUP_START_BUTTON_Y,
     SETUP_START_BUTTON_WIDTH,
     startBattle,
     isSetupReady()
@@ -1415,50 +1368,27 @@ function createSetupButton(label, x, y, width, onClick, isActive = true, fillAlp
   text.on('pointerdown', onClick);
 }
 
-function renderCommandFlagRow(x, y, maxCommand, usedCommand, depth, align) {
-  const startX = align === 'right'
-    ? x - (maxCommand - 1) * SETUP_COMMAND_FLAG_SPACING
-    : x;
-
-  for (let index = 0; index < maxCommand; index += 1) {
-    addSetupNode(sceneRef.add.text(
-      startX + index * SETUP_COMMAND_FLAG_SPACING,
-      y,
-      SETUP_COMMAND_ICON,
-      {
-        fontFamily: 'monospace',
-        fontSize: `${SETUP_COMMAND_FLAG_FONT_SIZE}px`,
-        color: COLORS.text
-      }
-    )
-      .setAlpha(index < usedCommand ? SETUP_COMMAND_FLAG_SPENT_ALPHA : SETUP_COMMAND_FLAG_FULL_ALPHA)
-      .setOrigin(align === 'right' ? 1 : 0, 0)
-      .setDepth(depth));
-  }
-}
-
 function renderUnitsPanel() {
-  const panel = addSetupNode(sceneRef.add.rectangle(
-    SETUP_UNITS_PANEL_X,
-    SETUP_UNITS_PANEL_Y,
-    SETUP_UNITS_PANEL_WIDTH,
-    SETUP_UNITS_PANEL_HEIGHT,
-    PHASER_COLORS.infoPanel
-  )
-    .setOrigin(0)
-    .setAlpha(SETUP_PANEL_ALPHA)
-    .setStrokeStyle(2, PHASER_COLORS.panelBorder)
-    .setDepth(SETUP_UI_DEPTH));
   addSetupNode(sceneRef.add.text(
     SETUP_UNITS_PANEL_X + SETUP_UNITS_TITLE_X_OFFSET,
     SETUP_UNITS_PANEL_Y + SETUP_UNITS_TITLE_Y_OFFSET,
-    'Units',
+    'Place your units',
     headerTextStyle()
   )
     .setDepth(SETUP_UI_DEPTH + 1));
-  SETUP_UNIT_TYPES.forEach((unitType, index) => {
+
+  renderSetupUnitCardRow(getSetupUnitTypesByPromotion(false), SETUP_UNITS_CARD_Y_OFFSET);
+  renderSetupUnitCardRow(getSetupUnitTypesByPromotion(true), SETUP_PROMOTED_UNITS_CARD_Y_OFFSET);
+}
+
+function getSetupUnitTypesByPromotion(isPromoted) {
+  return SETUP_UNIT_TYPES.filter((unitType) => getClassDefinition(unitType).promoted === isPromoted);
+}
+
+function renderSetupUnitCardRow(unitTypes, cardYOffset) {
+  unitTypes.forEach((unitType, index) => {
     const cardX = SETUP_UNITS_PANEL_X + SETUP_UNITS_CARD_X_OFFSET + index * (SETUP_KNIGHT_CARD_WIDTH + SETUP_UNIT_CARD_GAP);
-    renderSetupUnitCard(unitType, cardX, SETUP_UNITS_PANEL_Y + SETUP_UNITS_CARD_Y_OFFSET);
+    renderSetupUnitCard(unitType, cardX, SETUP_UNITS_PANEL_Y + cardYOffset);
   });
 }
 
@@ -1482,6 +1412,9 @@ function renderSetupGrid(teamKey) {
         .setInteractive({ useHandCursor: isEditableGrid })
         .setDepth(SETUP_UI_DEPTH - 3));
       cell.on('pointerdown', (pointer) => handleSetupPointerDown(teamKey, row, col, pointer));
+      cell.on('pointerover', (pointer) => updateSetupCpTooltip(teamKey, row, col, pointer));
+      cell.on('pointermove', (pointer) => updateSetupCpTooltip(teamKey, row, col, pointer));
+      cell.on('pointerout', clearSetupCpTooltip);
 
       if (placement) {
         renderSetupPlacementPreview(placement);
@@ -1582,6 +1515,64 @@ function renderSetupUnitCard(unitType, x, y) {
     selectedSetupUnitType = unitType;
     renderSetupUi();
   });
+}
+
+function canShowSetupCpTooltip(teamKey, row, col) {
+  return gamePhase === 'setup' &&
+    teamKey === 'red' &&
+    selectedSetupUnitType &&
+    !getSetupPlacementAt(teamKey, row, col) &&
+    getSetupCommandUsed(teamKey) + getUnitCommandCost(selectedSetupUnitType) <= getSetupCommandMax(teamKey);
+}
+
+function updateSetupCpTooltip(teamKey, row, col, pointer) {
+  if (!canShowSetupCpTooltip(teamKey, row, col)) {
+    clearSetupCpTooltip();
+    return;
+  }
+
+  const classDefinition = getClassDefinition(selectedSetupUnitType);
+  const unitCost = getUnitCommandCost(selectedSetupUnitType);
+  const commandMax = getSetupCommandMax(teamKey);
+  const availableCommand = commandMax - getSetupCommandUsed(teamKey);
+  const x = Math.min(
+    pointer.worldX + SETUP_CP_TOOLTIP_OFFSET_X,
+    GAME_WIDTH - SETUP_CP_TOOLTIP_WIDTH - SETUP_CP_TOOLTIP_PADDING
+  );
+  const y = Math.min(
+    pointer.worldY + SETUP_CP_TOOLTIP_OFFSET_Y,
+    GAME_HEIGHT - SETUP_CP_TOOLTIP_HEIGHT - SETUP_CP_TOOLTIP_PADDING
+  );
+
+  clearSetupCpTooltip();
+  const background = sceneRef.add.rectangle(
+    x,
+    y,
+    SETUP_CP_TOOLTIP_WIDTH,
+    SETUP_CP_TOOLTIP_HEIGHT,
+    PHASER_COLORS.infoPanel
+  )
+    .setOrigin(0)
+    .setAlpha(0.94)
+    .setStrokeStyle(1, PHASER_COLORS.panelBorder)
+    .setDepth(SETUP_UI_DEPTH + 20);
+  const text = sceneRef.add.text(
+    x + SETUP_CP_TOOLTIP_PADDING,
+    y + SETUP_CP_TOOLTIP_PADDING,
+    `${classDefinition.name}\nCost: ${SETUP_COMMAND_ICON} ${unitCost}\nAvailable: ${SETUP_COMMAND_ICON} ${availableCommand}/${commandMax}`,
+    smallTextStyle()
+  )
+    .setDepth(SETUP_UI_DEPTH + 21);
+  setupTooltipNodes.push(background, text);
+}
+
+function clearSetupCpTooltip() {
+  setupTooltipNodes.forEach((node) => {
+    if (node && node.scene) {
+      node.destroy();
+    }
+  });
+  setupTooltipNodes = [];
 }
 
 function renderSetupPlacementPreview(placement) {
@@ -2938,6 +2929,7 @@ function showRoundStartBanner(roundNumber) {
     return;
   }
 
+  const fatigueLevel = getFatigueLevel(roundNumber);
   const x = layout.battle.x + layout.battle.w / 2;
   const y = ROUND_START_BANNER_Y;
   const background = sceneRef.add.rectangle(
@@ -2958,7 +2950,10 @@ function showRoundStartBanner(roundNumber) {
     .setOrigin(0.5)
     .setAlpha(0)
     .setDepth(ROUND_START_BANNER_DEPTH + 1);
-  const subtitle = sceneRef.add.text(x, y + 34, 'Initiative rolled. AP and RP refilled.', {
+  const subtitleText = fatigueLevel > 0
+    ? `Initiative rolled. Fatigue: RP recovery -${fatigueLevel}`
+    : 'Initiative rolled. AP and RP refilled.';
+  const subtitle = sceneRef.add.text(x, y + 34, subtitleText, {
     fontFamily: 'monospace',
     fontSize: `${ROUND_START_BANNER_SUBTITLE_FONT_SIZE}px`,
     color: ROUND_START_BANNER_SUBTITLE_COLOR
@@ -3117,6 +3112,8 @@ function playAnimationEffect(animationEffect) {
     playKnightAttack(animationEffect.unit);
   } else if (animationEffect.type === 'parry') {
     playParryAnimation(animationEffect.unit);
+  } else if (animationEffect.type === 'dodge') {
+    playDodgeAnimation(animationEffect.unit, animationEffect.attacker);
   } else if (animationEffect.type === 'damage') {
     playDamageBlink(animationEffect.unit);
   } else if (animationEffect.type === 'ko') {
@@ -3329,6 +3326,57 @@ function playParryAnimation(unit) {
   playClassOneShotAnimation(unit, 'parry');
 }
 
+function playDodgeAnimation(unit, attacker) {
+  if (!hasBattlefieldVisuals(unit)) {
+    return;
+  }
+
+  const sprite = unit.rect;
+  const original = {
+    x: sprite.x,
+    y: sprite.y,
+    angle: sprite.angle,
+    alpha: sprite.alpha,
+    scaleX: sprite.scaleX,
+    scaleY: sprite.scaleY
+  };
+  const attackerX = attacker?.rect?.x ?? (unit.teamKey === 'red' ? GAME_WIDTH : 0);
+  const direction = unit.teamKey === 'red'
+    ? -1
+    : (unit.teamKey === 'blue' ? 1 : Math.sign(sprite.x - attackerX) || 1);
+  const rotation = direction * DODGE_FLIP_ROTATION_DEGREES;
+
+  sceneRef.tweens.add({
+    targets: sprite,
+    x: original.x + direction * DODGE_FLIP_BACK_DISTANCE,
+    y: original.y - DODGE_FLIP_UP_DISTANCE,
+    angle: original.angle + rotation,
+    alpha: DODGE_FLIP_FADE_ALPHA,
+    duration: DODGE_FLIP_DURATION_MS,
+    ease: 'Sine.easeOut',
+    onComplete: () => {
+      sceneRef.tweens.add({
+        targets: sprite,
+        x: original.x,
+        y: original.y,
+        angle: original.angle,
+        alpha: original.alpha,
+        scaleX: original.scaleX,
+        scaleY: original.scaleY,
+        duration: DODGE_FLIP_RETURN_DURATION_MS,
+        ease: 'Sine.easeIn',
+        onComplete: () => {
+          sprite.x = original.x;
+          sprite.y = original.y;
+          sprite.angle = original.angle;
+          sprite.alpha = original.alpha;
+          sprite.setScale(original.scaleX, original.scaleY);
+        }
+      });
+    }
+  });
+}
+
 function playDamageBlink(unit) {
   if (!hasBattlefieldVisuals(unit)) {
     return;
@@ -3423,10 +3471,11 @@ function startRound() {
   action = 1;
   turnQueue = [];
   resetTurnInitiativeProgress();
+  const fatigueLevel = getFatigueLevel(round);
 
   livingUnits().forEach((unit) => {
     unit.ap = unit.maxAp;
-    unit.rp = unit.maxRp;
+    unit.rp = getFatiguedRpRecovery(unit, round);
     refreshBattleUnitHud(unit);
   });
 
@@ -3434,6 +3483,24 @@ function startRound() {
   refreshInfoPanel();
   showRoundStartBanner(round);
   appendLog(`Round ${round} starts. Initiative rolled.`);
+  if (fatigueLevel > 0 && (round - FATIGUE_START_ROUND) % FATIGUE_INTERVAL_ROUNDS === 0) {
+    const fatigueText = round === FATIGUE_START_ROUND ? 'sets in' : 'worsens';
+    appendLog(`Round ${round}: Fatigue ${fatigueText}. RP recovery -${fatigueLevel}.`);
+  }
+}
+
+function getFatigueLevel(roundNumber) {
+  if (roundNumber < FATIGUE_START_ROUND) {
+    return 0;
+  }
+
+  return Math.floor((roundNumber - FATIGUE_START_ROUND) / FATIGUE_INTERVAL_ROUNDS + 1) *
+    FATIGUE_RP_RECOVERY_PENALTY;
+}
+
+function getFatiguedRpRecovery(unit, roundNumber) {
+  const recoveryTarget = Math.max(0, unit.maxRp - getFatigueLevel(roundNumber));
+  return Math.max(0, Math.min(unit.maxRp, Math.max(unit.rp, recoveryTarget)));
 }
 
 function rollRoundInitiativeOrder() {
@@ -3571,9 +3638,14 @@ function chooseAction(attacker) {
   return actions.slash || Object.values(actions)[0];
 }
 
-function chooseReaction(defender, attacker, selectedAction) {
+function chooseReaction(defender, attacker, selectedAction, attackContext = {}) {
+  const dodge = defender.reactions?.dodge;
   const block = defender.reactions?.block;
   const parry = defender.limits?.parry;
+
+  if (!attackContext.truesightActive && dodge && defender.rp >= (dodge.rpCost || 0)) {
+    return dodge;
+  }
 
   if (selectedAction.attackType !== 'melee') {
     return null;
@@ -3588,6 +3660,20 @@ function chooseReaction(defender, attacker, selectedAction) {
   }
 
   return null;
+}
+
+function chooseTruesightSupporter(attacker) {
+  return livingTeamUnits(attacker.teamKey)
+    .filter((unit) => unit.reactions?.truesight && unit.rp >= (unit.reactions.truesight.rpCost || 0))
+    .sort((a, b) => {
+      if (a.class === 'archer' && b.class !== 'archer') {
+        return -1;
+      }
+      if (a.class !== 'archer' && b.class === 'archer') {
+        return 1;
+      }
+      return getFormationSortOrder(a, b);
+    })[0] || null;
 }
 
 function buildTurnQueue() {
@@ -3726,7 +3812,31 @@ function resolveAction(attacker, defender, selectedAction) {
       delayMs: ACTION_CAST_LABEL_DELAY_MS
     }
   ];
-  const reaction = chooseReaction(defender, attacker, selectedAction);
+  const attackContext = { truesightActive: false };
+  const truesightSupporter = chooseTruesightSupporter(attacker);
+  if (truesightSupporter) {
+    const truesight = truesightSupporter.reactions.truesight;
+    const supporterRpBefore = truesightSupporter.rp;
+    truesightSupporter.rp = Math.max(0, truesightSupporter.rp - (truesight.rpCost || 0));
+    attackContext.truesightActive = true;
+    effects.push(`${truesightSupporter.name} uses ${formatReactionCost(truesight)}${truesight.name}.`);
+    visualEffects.push({
+      type: 'reactionCast',
+      unit: truesightSupporter,
+      reaction: truesight,
+      beforeAp: truesightSupporter.ap,
+      afterAp: truesightSupporter.ap,
+      maxAp: truesightSupporter.maxAp,
+      beforeRp: supporterRpBefore,
+      afterRp: truesightSupporter.rp,
+      maxRp: truesightSupporter.maxRp,
+      beforeLp: truesightSupporter.lp,
+      afterLp: truesightSupporter.lp,
+      maxLp: truesightSupporter.maxLp,
+      delayMs: REACTION_CAST_LABEL_DELAY_MS
+    });
+  }
+  const reaction = chooseReaction(defender, attacker, selectedAction, attackContext);
   const resultDelayMs = reaction ? DEFENSE_RESULT_DELAY_MS : NO_REACTION_RESULT_DELAY_MS;
   const returnDelayMs = reaction ? ATTACK_RETURN_DELAY_MS : NO_REACTION_RETURN_DELAY_MS;
 
@@ -3772,6 +3882,7 @@ function resolveAction(attacker, defender, selectedAction) {
     animationEffects.push({
       type: reaction.key,
       unit: defender,
+      attacker,
       delayMs: reaction.key === 'parry'
         ? Math.max(0, ATTACK_ANIMATION_START_DELAY_MS - KNIGHT_PARRY_SYNC_LEAD_MS)
         : Math.max(0, REACTION_CAST_LABEL_DELAY_MS - KNIGHT_BLOCK_SYNC_LEAD_MS)
@@ -3794,6 +3905,33 @@ function resolveAction(attacker, defender, selectedAction) {
     };
 
     visualEffects.push(reactionCastEffect);
+
+    if (reaction.key === 'dodge') {
+      const oldRp = defender.rp;
+      defender.rp = Math.min(defender.maxRp, defender.rp + (reaction.rpRefund || 0));
+      const rpGained = defender.rp - oldRp;
+      effects.push(`${defender.name} dodges the attack.`);
+      if (rpGained > 0) {
+        reactionCastEffect.afterRp = defender.rp;
+      }
+      visualEffects.push({
+        type: 'resourceChange',
+        unit: defender,
+        resourceKey: damageKey,
+        before: defender[damageKey],
+        after: defender[damageKey],
+        max: defender[damageKey === 'sp' ? 'maxSp' : 'maxHp'],
+        yOffset: DAMAGE_POPUP_Y_OFFSET,
+        delayMs: COUNTER_RESULT_DELAY_MS,
+        showZeroDamage: true
+      });
+
+      return {
+        logText: effects.join(' '),
+        visualEffects,
+        animationEffects
+      };
+    }
 
     if (remainingDamage <= 0) {
       const maxKey = damageKey === 'sp' ? 'maxSp' : 'maxHp';
