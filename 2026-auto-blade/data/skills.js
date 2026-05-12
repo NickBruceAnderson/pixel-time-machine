@@ -144,11 +144,12 @@ export const LIMITS = {
     limitType: 'parry',
     rpCost: 1,
     lpCost: 1,
-    blockAmount: 1,
+    blockAmount: 0,
+    blocksAllDamage: true,
     counterSpDamage: 3,
     rpDamage: 1,
-    shortText: '⬤⭐ → ⬤ + 🛡️🛡️🛡️ + Blocks',
-    tooltip: 'Parry costs 1 LP. It blocks incoming damage and breaks enemy stance.'
+    shortText: '🔷⭐ -> Blocks all, -🛡️🛡️🛡️, -🔷',
+    tooltip: 'Parry costs 1 RP and 1 LP. It blocks all melee damage, breaks enemy stance, and drains 1 RP.'
   }
 };
 

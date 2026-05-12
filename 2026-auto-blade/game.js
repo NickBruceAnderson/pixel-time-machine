@@ -3973,6 +3973,14 @@ function chooseReaction(defender, attacker, selectedAction, attackContext = {}) 
   return null;
 }
 
+function getReactionBlockedAmount(reaction, incomingDamage) {
+  if (reaction.blocksAllDamage) {
+    return incomingDamage;
+  }
+
+  return Math.min(reaction.blockAmount || 0, incomingDamage);
+}
+
 function createAttackContext(selectedAction) {
   return {
     hasTruestrike: false,
@@ -4395,7 +4403,7 @@ function resolveAction(attacker, defender, selectedAction) {
     const defenderRpAfter = defender.rp;
     const defenderLpAfter = defender.lp;
 
-    const blockedAmount = Math.min(reaction.blockAmount, remainingDamage);
+    const blockedAmount = getReactionBlockedAmount(reaction, remainingDamage);
     remainingDamage = Math.max(0, remainingDamage - blockedAmount);
 
     effects.push(`${defender.name} uses ${formatReactionCost(reaction)}${reaction.name}!`);
