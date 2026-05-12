@@ -293,7 +293,7 @@ const ROUND_START_BANNER_SUBTITLE_FONT_SIZE = 22;
 const ROUND_START_BANNER_WIDTH = 560;
 const ROUND_START_BANNER_HEIGHT = 150;
 const ROUND_START_BANNER_Y = GAME_HEIGHT * 0.26;
-const ROUND_START_BANNER_HOLD_MS = ms(1600);
+const ROUND_START_BANNER_HOLD_MS = ms(3600);
 const ROUND_START_BANNER_FADE_MS = ms(260);
 const ROUND_START_BANNER_DEPTH = 180;
 const ROUND_START_BANNER_BACKGROUND_ALPHA = 0.78;
@@ -413,6 +413,13 @@ const DODGE_FLIP_UP_DISTANCE = 22;
 const DODGE_FLIP_ROTATION_DEGREES = 360;
 const DODGE_FLIP_FADE_ALPHA = 0.55;
 const DODGE_FLIP_RETURN_DURATION_MS = ms(120);
+const RANGED_PROJECTILE_DURATION_MS = ms(450);
+const RANGED_PROJECTILE_ARC_HEIGHT = 80;
+const RANGED_PROJECTILE_SIZE = 5;
+const RANGED_PROJECTILE_START_X_OFFSET = 12;
+const RANGED_PROJECTILE_START_Y_OFFSET = -40;
+const RANGED_PROJECTILE_END_X_OFFSET = 0;
+const RANGED_PROJECTILE_END_Y_OFFSET = -35;
 
 // KO
 const KO_FADE_ALPHA = 0.10;
@@ -544,7 +551,7 @@ function getClassDefinition(characterClass) {
 }
 
 function getClassEquipmentItems(classDefinition) {
-  return Object.values(classDefinition.equipment || {})
+  return [...new Set(Object.values(classDefinition.equipment || {}))]
     .filter(Boolean)
     .map((equipmentKey) => {
       const item = EQUIPMENT[equipmentKey];
@@ -585,8 +592,19 @@ function calculateClassStats(characterClass) {
 function calculateClassActions(characterClass) {
   const classDefinition = getClassDefinition(characterClass);
   const actions = {};
+  const equipmentItems = getClassEquipmentItems(classDefinition);
+  const grantedActionKeys = new Set();
 
-  (classDefinition.actions || []).forEach((actionKey) => {
+  equipmentItems.forEach((item) => {
+    (item.grantsActions || []).forEach((actionKey) => grantedActionKeys.add(actionKey));
+  });
+
+  if (grantedActionKeys.size === 0) {
+    (classDefinition.actions || []).forEach((actionKey) => grantedActionKeys.add(actionKey));
+  }
+  grantedActionKeys.add('move');
+
+  grantedActionKeys.forEach((actionKey) => {
     const action = ACTIONS[actionKey];
     if (!action) {
       console.warn(`Unknown action: ${actionKey}`);
@@ -595,10 +613,16 @@ function calculateClassActions(characterClass) {
 
     actions[actionKey] = cloneAbility(action);
   });
-  getClassEquipmentItems(classDefinition).forEach((item) => {
+
+  equipmentItems.forEach((item) => {
     Object.entries(item.actionBonuses || {}).forEach(([actionKey, bonuses]) => {
       if (actions[actionKey]) {
         applyAbilityBonuses(actions[actionKey], bonuses);
+      }
+    });
+    (item.grantsActions || []).forEach((actionKey) => {
+      if (actions[actionKey] && Number.isFinite(actions[actionKey].range)) {
+        actions[actionKey].range += item.rangeBonus || 0;
       }
     });
   });
@@ -1240,10 +1264,9 @@ function renderPopupPanel(key) {
 
 function enterSetupPhase() {
   gamePhase = 'setup';
-  redFormation = [];
-  blueFormation = [];
+  redFormation = [createPlacement('red', 'back', 1, true, 'squire')];
+  blueFormation = [createPlacement('blue', 'back', 1, false, 'squire')];
   selectedSetupUnitType = 'knight';
-  regenerateBlueAiFormation();
   renderSetupUi();
 }
 
@@ -2388,9 +2411,24 @@ function livingEnemyUnits(unit) {
   return livingTeamUnits(enemyTeam);
 }
 
-function getTargetableEnemyRow(attacker, rowOrder) {
+function getOpposingRowDistance(attackerRow, defenderRow) {
+  const rowIndex = { front: 0, middle: 1, back: 2 };
+  return rowIndex[attackerRow] + rowIndex[defenderRow] + 1;
+}
+
+function getEffectiveActionRange(action) {
+  return Number.isFinite(action?.range) ? action.range : Infinity;
+}
+
+function isTargetInRange(attacker, defender, action) {
+  return getOpposingRowDistance(attacker.row, defender.row) <= getEffectiveActionRange(action);
+}
+
+function getTargetableEnemyRow(attacker, rowOrder, selectedAction) {
   const enemies = livingEnemyUnits(attacker);
-  return rowOrder.find((row) => enemies.some((enemy) => enemy.row === row)) || null;
+  return rowOrder.find((row) => enemies.some((enemy) => (
+    enemy.row === row && isTargetInRange(attacker, enemy, selectedAction)
+  ))) || null;
 }
 
 function chooseTarget(attacker, selectedAction) {
@@ -2398,8 +2436,11 @@ function chooseTarget(attacker, selectedAction) {
   if (enemies.length === 0) {
     return null;
   }
-  const rowOrder = selectedAction?.targetRows || ['front', 'middle', 'back'];
-  const targetableRow = getTargetableEnemyRow(attacker, rowOrder);
+  const rowOrder = ['front', 'middle', 'back'];
+  const targetableRow = getTargetableEnemyRow(attacker, rowOrder, selectedAction);
+  if (!targetableRow) {
+    return null;
+  }
   return enemies
     .filter((enemy) => enemy.row === targetableRow)
     .sort((a, b) => a.col - b.col || a.name.localeCompare(b.name))[0];
@@ -3122,6 +3163,8 @@ function playAnimationEffect(animationEffect) {
     playAttackLungeOut(animationEffect.unit, animationEffect.target);
   } else if (animationEffect.type === 'lungeReturn') {
     playAttackReturn(animationEffect.unit);
+  } else if (animationEffect.type === 'rangedProjectile') {
+    playRangedProjectile(animationEffect.unit, animationEffect.target);
   }
 }
 
@@ -3307,6 +3350,41 @@ function playAttackReturn(attacker) {
       duration: ATTACK_LUNGE_DURATION_MS,
       ease: 'Quad.easeInOut'
     });
+  });
+}
+
+function playRangedProjectile(attacker, defender) {
+  if (!hasBattlefieldVisuals(attacker) || !hasBattlefieldVisuals(defender)) {
+    return;
+  }
+
+  const attackerHomeX = attacker.rect.x;
+  const attackerHomeY = attacker.rect.y;
+  const startX = attacker.rect.x + (attacker.teamKey === 'red'
+    ? RANGED_PROJECTILE_START_X_OFFSET
+    : -RANGED_PROJECTILE_START_X_OFFSET);
+  const startY = attacker.rect.y + RANGED_PROJECTILE_START_Y_OFFSET;
+  const endX = defender.rect.x + RANGED_PROJECTILE_END_X_OFFSET;
+  const endY = defender.rect.y + RANGED_PROJECTILE_END_Y_OFFSET;
+  const projectile = sceneRef.add.circle(startX, startY, RANGED_PROJECTILE_SIZE, PHASER_COLORS.lp)
+    .setDepth(DEPTH_DAMAGE_TEXT);
+  const tweenState = { progress: 0 };
+
+  sceneRef.tweens.add({
+    targets: tweenState,
+    progress: 1,
+    duration: RANGED_PROJECTILE_DURATION_MS,
+    ease: 'Linear',
+    onUpdate: () => {
+      const t = tweenState.progress;
+      projectile.x = startX + (endX - startX) * t;
+      projectile.y = startY + (endY - startY) * t - Math.sin(Math.PI * t) * RANGED_PROJECTILE_ARC_HEIGHT;
+    },
+    onComplete: () => {
+      projectile.destroy();
+      attacker.rect.x = attackerHomeX;
+      attacker.rect.y = attackerHomeY;
+    }
   });
 }
 
@@ -3635,7 +3713,10 @@ function resetTurnInitiativeProgress() {
 
 function chooseAction(attacker) {
   const actions = attacker.actions || calculateClassActions(attacker.class);
-  return actions.slash || Object.values(actions)[0];
+  const attack = Object.values(actions).find((candidate) => (
+    candidate.key !== 'move' && chooseTarget(attacker, candidate)
+  ));
+  return attack || actions.move || null;
 }
 
 function chooseReaction(defender, attacker, selectedAction, attackContext = {}) {
@@ -3643,37 +3724,109 @@ function chooseReaction(defender, attacker, selectedAction, attackContext = {}) 
   const block = defender.reactions?.block;
   const parry = defender.limits?.parry;
 
-  if (!attackContext.truesightActive && dodge && defender.rp >= (dodge.rpCost || 0)) {
+  if (dodge && attackContext.canAttemptEvade !== false && defender.rp >= (dodge.rpCost || 0)) {
     return dodge;
   }
 
-  if (selectedAction.attackType !== 'melee') {
-    return null;
-  }
-
-  if (parry && defender.rp >= (parry.rpCost || 0) && defender.lp >= (parry.lpCost || 0)) {
+  if (parry && attackContext.canBeParried && defender.rp >= (parry.rpCost || 0) && defender.lp >= (parry.lpCost || 0)) {
     return parry;
   }
 
-  if (block && defender.rp >= (block.rpCost || 0)) {
+  if (block && attackContext.canBeBlocked && defender.rp >= (block.rpCost || 0)) {
     return block;
   }
 
   return null;
 }
 
-function chooseTruesightSupporter(attacker) {
-  return livingTeamUnits(attacker.teamKey)
-    .filter((unit) => unit.reactions?.truesight && unit.rp >= (unit.reactions.truesight.rpCost || 0))
-    .sort((a, b) => {
-      if (a.class === 'archer' && b.class !== 'archer') {
-        return -1;
-      }
-      if (a.class !== 'archer' && b.class === 'archer') {
-        return 1;
-      }
-      return getFormationSortOrder(a, b);
-    })[0] || null;
+function createAttackContext(selectedAction) {
+  return {
+    hasTruestrike: false,
+    canAttemptEvade: true,
+    canBeEvaded: true,
+    canBeBlocked: true,
+    canBeParried: selectedAction.attackType === 'melee'
+  };
+}
+
+function getReactionCategory(reaction) {
+  if (reaction.reactionType === 'dodge') {
+    return 'evade';
+  }
+
+  return reaction.reactionType || reaction.limitType || reaction.key;
+}
+
+function isEvadeReaction(reaction) {
+  return getReactionCategory(reaction) === 'evade';
+}
+
+function chooseTruestrikeReaction(attacker, selectedAction) {
+  if (attacker.class !== 'archer' || selectedAction.key !== 'arrowShot') {
+    return null;
+  }
+
+  const truestrike = attacker.reactions?.truestrike;
+  if (!truestrike || attacker.rp < (truestrike.rpCost || 0)) {
+    return null;
+  }
+
+  return truestrike;
+}
+
+function isRangedAction(action) {
+  return action?.attackType === 'ranged';
+}
+
+function getForwardRow(row) {
+  return { back: 'middle', middle: 'front', front: null }[row] || null;
+}
+
+function getOpenForwardCell(unit, targetRow) {
+  const occupiedCols = new Set(livingTeamUnits(unit.teamKey)
+    .filter((ally) => ally !== unit && ally.row === targetRow)
+    .map((ally) => ally.col));
+  const candidateCols = [unit.col, unit.col - 1, unit.col + 1]
+    .filter((col) => FORMATION_COLS.includes(col));
+  const openCol = candidateCols.find((col) => !occupiedCols.has(col));
+  return Number.isFinite(openCol) ? { row: targetRow, col: openCol } : null;
+}
+
+function setUnitFormationCell(unit, row, col) {
+  const { x, baseY } = getFormationPosition(unit.teamKey, row, col);
+  const spriteX = x + (unit.teamKey === 'red' ? UNIT_SPRITE_FORWARD_X_OFFSET : -UNIT_SPRITE_FORWARD_X_OFFSET);
+  unit.row = row;
+  unit.col = col;
+  unit.slotX = x;
+  unit.slotY = baseY;
+  unit.slotSpriteX = spriteX;
+  unit.rect.x = spriteX;
+  unit.rect.y = baseY;
+  unit.label.x = spriteX;
+  unit.label.y = baseY;
+  unit.shadow.x = x;
+  unit.shadow.y = baseY + UNIT_SHADOW_Y_OFFSET;
+  refreshBattleUnitHud(unit);
+  refreshInitiativeOrderNumbers();
+}
+
+function resolveMoveAction(unit, selectedAction) {
+  unit.ap = Math.max(0, unit.ap - selectedAction.apCost);
+  const targetRow = getForwardRow(unit.row);
+  if (!targetRow) {
+    refreshBattleUnitHud(unit);
+    return `${unit.name} is already at the front.`;
+  }
+
+  const targetCell = getOpenForwardCell(unit, targetRow);
+  if (!targetCell) {
+    refreshBattleUnitHud(unit);
+    return `${unit.name} cannot move forward.`;
+  }
+
+  const oldRow = unit.row;
+  setUnitFormationCell(unit, targetCell.row, targetCell.col);
+  return `${unit.name} moves from ${oldRow} to ${targetCell.row}.`;
 }
 
 function buildTurnQueue() {
@@ -3708,8 +3861,23 @@ function takeNextAction() {
   }
 
   const selectedAction = chooseAction(attacker);
+  if (!selectedAction) {
+    appendLog(`${attacker.name} has no action.`);
+    return;
+  }
+  if (selectedAction.key === 'move') {
+    setActiveCombatants(attacker, null);
+    const tag = `[R${round}T${turn}A${action}]`;
+    markUnitActedThisTurn(attacker);
+    const effectText = resolveMoveAction(attacker, selectedAction);
+    appendLog(`${tag} ${attacker.name} uses ${RESOURCE_ICONS.ap.repeat(selectedAction.apCost)}${selectedAction.name}.`, effectText);
+    action += 1;
+    refreshInfoPanel();
+    return;
+  }
   const defender = chooseTarget(attacker, selectedAction);
   if (!defender) {
+    appendLog(`${attacker.name} has no target in range.`);
     return;
   }
   setActiveCombatants(attacker, defender);
@@ -3812,27 +3980,27 @@ function resolveAction(attacker, defender, selectedAction) {
       delayMs: ACTION_CAST_LABEL_DELAY_MS
     }
   ];
-  const attackContext = { truesightActive: false };
-  const truesightSupporter = chooseTruesightSupporter(attacker);
-  if (truesightSupporter) {
-    const truesight = truesightSupporter.reactions.truesight;
-    const supporterRpBefore = truesightSupporter.rp;
-    truesightSupporter.rp = Math.max(0, truesightSupporter.rp - (truesight.rpCost || 0));
-    attackContext.truesightActive = true;
-    effects.push(`${truesightSupporter.name} uses ${formatReactionCost(truesight)}${truesight.name}.`);
+  const attackContext = createAttackContext(selectedAction);
+  const truestrike = chooseTruestrikeReaction(attacker, selectedAction);
+  if (truestrike) {
+    const attackerRpBeforeTruestrike = attacker.rp;
+    attacker.rp = Math.max(0, attacker.rp - (truestrike.rpCost || 0));
+    attackContext.hasTruestrike = true;
+    attackContext.canBeEvaded = false;
+    effects.push(`${attacker.name} uses ${formatReactionCost(truestrike)}${truestrike.name}.`);
     visualEffects.push({
       type: 'reactionCast',
-      unit: truesightSupporter,
-      reaction: truesight,
-      beforeAp: truesightSupporter.ap,
-      afterAp: truesightSupporter.ap,
-      maxAp: truesightSupporter.maxAp,
-      beforeRp: supporterRpBefore,
-      afterRp: truesightSupporter.rp,
-      maxRp: truesightSupporter.maxRp,
-      beforeLp: truesightSupporter.lp,
-      afterLp: truesightSupporter.lp,
-      maxLp: truesightSupporter.maxLp,
+      unit: attacker,
+      reaction: truestrike,
+      beforeAp: attacker.ap,
+      afterAp: attacker.ap,
+      maxAp: attacker.maxAp,
+      beforeRp: attackerRpBeforeTruestrike,
+      afterRp: attacker.rp,
+      maxRp: attacker.maxRp,
+      beforeLp: attacker.lp,
+      afterLp: attacker.lp,
+      maxLp: attacker.maxLp,
       delayMs: REACTION_CAST_LABEL_DELAY_MS
     });
   }
@@ -3840,19 +4008,26 @@ function resolveAction(attacker, defender, selectedAction) {
   const resultDelayMs = reaction ? DEFENSE_RESULT_DELAY_MS : NO_REACTION_RESULT_DELAY_MS;
   const returnDelayMs = reaction ? ATTACK_RETURN_DELAY_MS : NO_REACTION_RETURN_DELAY_MS;
 
-  const animationEffects = [
-    {
-      type: 'lungeOut',
-      unit: attacker,
-      target: defender,
-      delayMs: ATTACK_LUNGE_START_DELAY_MS
-    },
-    {
-      type: 'lungeReturn',
-      unit: attacker,
-      delayMs: returnDelayMs
-    }
-  ];
+  const animationEffects = isRangedAction(selectedAction)
+    ? [{
+        type: 'rangedProjectile',
+        unit: attacker,
+        target: defender,
+        delayMs: ATTACK_LUNGE_START_DELAY_MS
+      }]
+    : [
+        {
+          type: 'lungeOut',
+          unit: attacker,
+          target: defender,
+          delayMs: ATTACK_LUNGE_START_DELAY_MS
+        },
+        {
+          type: 'lungeReturn',
+          unit: attacker,
+          delayMs: returnDelayMs
+        }
+      ];
   if (KNIGHT_ATTACK_ACTION_KEYS.includes(selectedAction.key)) {
     animationEffects.unshift({
       type: 'attack',
@@ -3906,31 +4081,35 @@ function resolveAction(attacker, defender, selectedAction) {
 
     visualEffects.push(reactionCastEffect);
 
-    if (reaction.key === 'dodge') {
-      const oldRp = defender.rp;
-      defender.rp = Math.min(defender.maxRp, defender.rp + (reaction.rpRefund || 0));
-      const rpGained = defender.rp - oldRp;
-      effects.push(`${defender.name} dodges the attack.`);
-      if (rpGained > 0) {
-        reactionCastEffect.afterRp = defender.rp;
-      }
-      visualEffects.push({
-        type: 'resourceChange',
-        unit: defender,
-        resourceKey: damageKey,
-        before: defender[damageKey],
-        after: defender[damageKey],
-        max: defender[damageKey === 'sp' ? 'maxSp' : 'maxHp'],
-        yOffset: DAMAGE_POPUP_Y_OFFSET,
-        delayMs: COUNTER_RESULT_DELAY_MS,
-        showZeroDamage: true
-      });
+    if (isEvadeReaction(reaction)) {
+      if (!attackContext.canBeEvaded) {
+        effects.push(`${defender.name}'s ${reaction.name} fails because of Truestrike.`);
+      } else {
+        const oldRp = defender.rp;
+        defender.rp = Math.min(defender.maxRp, defender.rp + (reaction.rpRefund || 0));
+        const rpGained = defender.rp - oldRp;
+        effects.push(`${defender.name} dodges the attack.`);
+        if (rpGained > 0) {
+          reactionCastEffect.afterRp = defender.rp;
+        }
+        visualEffects.push({
+          type: 'resourceChange',
+          unit: defender,
+          resourceKey: damageKey,
+          before: defender[damageKey],
+          after: defender[damageKey],
+          max: defender[damageKey === 'sp' ? 'maxSp' : 'maxHp'],
+          yOffset: DAMAGE_POPUP_Y_OFFSET,
+          delayMs: COUNTER_RESULT_DELAY_MS,
+          showZeroDamage: true
+        });
 
-      return {
-        logText: effects.join(' '),
-        visualEffects,
-        animationEffects
-      };
+        return {
+          logText: effects.join(' '),
+          visualEffects,
+          animationEffects
+        };
+      }
     }
 
     if (remainingDamage <= 0) {
