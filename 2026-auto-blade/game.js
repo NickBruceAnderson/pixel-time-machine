@@ -39,10 +39,12 @@ const PHASER_COLORS = Object.fromEntries(
 const RESOURCE_ICONS = {
   hp: '❤️',
   sp: '🛡️',
-  ap: '⬤',
-  rp: '⬤',
+  ap: '🔶',
+  rp: '🔷',
   lp: '⭐',
-  ip: '🥾'
+  ip: '🚩',
+  mv: '🥾',
+  rn: '⏹️'
 };
 
 const RESOURCE_COLORS = {
@@ -224,7 +226,7 @@ const SETUP_UNIT_CARD_COST_ICON_FONT_SIZE = 18;
 const SETUP_UNIT_CARD_COST_ICON_X_OFFSET = 82;
 
 // HUD: CAST
-const CAST_TITLE_FONT_SIZE = 24;
+const CAST_TITLE_FONT_SIZE = 20;
 const CAST_CALLOUT_Y_OFFSET = 0;
 const CAST_CALLOUT_WIDTH = 160;
 const CAST_CALLOUT_HEIGHT = 35;
@@ -294,7 +296,8 @@ const ROUND_START_BANNER_WIDTH = 560;
 const ROUND_START_BANNER_HEIGHT = 150;
 const ROUND_START_BANNER_Y = GAME_HEIGHT * 0.26;
 const ROUND_START_BANNER_HOLD_MS = ms(3600);
-const ROUND_START_BANNER_FADE_MS = ms(260);
+const ROUND_START_BANNER_ACTION_START_DELAY_MS = ms(500);
+const ROUND_START_BANNER_FADE_MS = ms(500);
 const ROUND_START_BANNER_DEPTH = 180;
 const ROUND_START_BANNER_BACKGROUND_ALPHA = 0.78;
 const ROUND_START_BANNER_BACKGROUND_COLOR = '#071b35';
@@ -304,6 +307,9 @@ const ROUND_START_BANNER_SUBTITLE_COLOR = '#9dccff';
 const FATIGUE_START_ROUND = 5;
 const FATIGUE_INTERVAL_ROUNDS = 5;
 const FATIGUE_RP_RECOVERY_PENALTY = 1;
+const EXHAUSTION_START_ROUND = 10;
+const EXHAUSTION_INTERVAL_ROUNDS = 5;
+const EXHAUSTION_RP_DRAIN = 1;
 
 // Initiative order
 const INITIATIVE_ORDER_NUMBER_SHOW = true;
@@ -341,7 +347,7 @@ const SETUP_BUTTON_HEIGHT = 34;
 const SETUP_KNIGHT_CARD_WIDTH = 190;
 const SETUP_KNIGHT_CARD_HEIGHT = 154;
 const SETUP_START_BUTTON_WIDTH = 150;
-const SETUP_COMMAND_ICON = '🚩';
+const SETUP_COMMAND_ICON = '💲';
 const SETUP_TITLE_Y_OFFSET = 18;
 const SETUP_UNITS_PANEL_X = SETUP_PANEL_X;
 const SETUP_UNITS_PANEL_Y = SETUP_PANEL_Y;
@@ -377,8 +383,6 @@ const SETUP_PREVIEW_ALPHA_PLAYER = 1;
 const SETUP_PREVIEW_ALPHA_AI = 0.72;
 
 // Battle start
-const START_BATTLE_DELAY_MS = ms(250);
-
 // Action timing
 const ATTACK_RESOURCE_PREVIEW_DURATION_MS = ms(850);
 const ATTACK_RESOURCE_COMMIT_DURATION_MS = ms(200);
@@ -392,6 +396,8 @@ const DEFENDER_LP_GAIN_STAGGER_MS = ms(250);
 const LUNGE_DURATION_MS = ms(450);
 const FREEZE_DURATION_MS = ms(300);
 const RETURN_DURATION_MS = ms(450);
+const MOVE_ANIMATION_DURATION_MS = ms(450);
+const MOVE_ANIMATION_EASE = 'Sine.easeInOut';
 
 const ATTACK_LUNGE_STOP_DISTANCE = 132;
 
@@ -413,6 +419,12 @@ const DODGE_FLIP_UP_DISTANCE = 22;
 const DODGE_FLIP_ROTATION_DEGREES = 360;
 const DODGE_FLIP_FADE_ALPHA = 0.55;
 const DODGE_FLIP_RETURN_DURATION_MS = ms(120);
+const DODGE_FAIL_TILT_DEGREES = 90;
+const DODGE_FAIL_DROP_DISTANCE = 16;
+const DODGE_FAIL_DURATION_MS = ms(260);
+const DODGE_FAIL_RECOVER_DURATION_MS = ms(220);
+const DODGE_FAIL_BLINK_ALPHA = 0.45;
+const DODGE_FAIL_BLINK_COUNT = 2;
 const RANGED_PROJECTILE_DURATION_MS = ms(450);
 const RANGED_PROJECTILE_ARC_HEIGHT = 80;
 const RANGED_PROJECTILE_SIZE = 5;
@@ -563,6 +575,18 @@ function getClassEquipmentItems(classDefinition) {
     .filter(Boolean);
 }
 
+function getEquippedItems(unitOrClassDefinition) {
+  return getClassEquipmentItems(unitOrClassDefinition);
+}
+
+function getEquipmentStatBonuses(unitOrClassDefinition) {
+  const statBonuses = {};
+  getEquippedItems(unitOrClassDefinition).forEach((item) => {
+    applyStatBonuses(statBonuses, item.statBonuses);
+  });
+  return statBonuses;
+}
+
 function calculateClassStats(characterClass) {
   const classDefinition = getClassDefinition(characterClass);
   const stats = cloneStats(BASE_UNIT_STATS);
@@ -581,9 +605,7 @@ function calculateClassStats(characterClass) {
 
     applyStatBonuses(stats, trait.statBonuses);
   });
-  getClassEquipmentItems(classDefinition).forEach((item) => {
-    applyStatBonuses(stats, item.statBonuses);
-  });
+  applyStatBonuses(stats, getEquipmentStatBonuses(classDefinition));
 
   stats.lp = BASE_UNIT_STATS.lp;
   return stats;
@@ -593,16 +615,7 @@ function calculateClassActions(characterClass) {
   const classDefinition = getClassDefinition(characterClass);
   const actions = {};
   const equipmentItems = getClassEquipmentItems(classDefinition);
-  const grantedActionKeys = new Set();
-
-  equipmentItems.forEach((item) => {
-    (item.grantsActions || []).forEach((actionKey) => grantedActionKeys.add(actionKey));
-  });
-
-  if (grantedActionKeys.size === 0) {
-    (classDefinition.actions || []).forEach((actionKey) => grantedActionKeys.add(actionKey));
-  }
-  grantedActionKeys.add('move');
+  const grantedActionKeys = getEffectiveActions(classDefinition);
 
   grantedActionKeys.forEach((actionKey) => {
     const action = ACTIONS[actionKey];
@@ -626,14 +639,45 @@ function calculateClassActions(characterClass) {
       }
     });
   });
+  (classDefinition.traits || []).forEach((traitKey) => {
+    const trait = TRAITS[traitKey];
+    if (!trait) return;
+    Object.entries(trait.actionRangeBonus || {}).forEach(([actionKey, bonus]) => {
+      if (actions[actionKey] && Number.isFinite(actions[actionKey].range)) {
+        actions[actionKey].range += bonus;
+      }
+    });
+  });
+  return actions;
+}
+
+function getGrantedActions(unitOrClassDefinition) {
+  const actions = new Set();
+  getEquippedItems(unitOrClassDefinition).forEach((item) => {
+    (item.grantsActions || []).forEach((actionKey) => actions.add(actionKey));
+  });
+  return actions;
+}
+
+function getEffectiveActions(unitOrClassDefinition) {
+  const classDefinition = unitOrClassDefinition.class
+    ? getClassDefinition(unitOrClassDefinition.class)
+    : unitOrClassDefinition;
+  const actions = getGrantedActions(unitOrClassDefinition);
+  if (actions.size === 0) {
+    (classDefinition.actions || []).forEach((actionKey) => actions.add(actionKey));
+  }
+  actions.add('move');
   return actions;
 }
 
 function calculateClassReactions(characterClass) {
   const classDefinition = getClassDefinition(characterClass);
   const reactions = {};
+  const equipmentItems = getClassEquipmentItems(classDefinition);
+  const grantedReactionKeys = getEffectiveReactions(classDefinition);
 
-  (classDefinition.reactions || []).forEach((reactionKey) => {
+  grantedReactionKeys.forEach((reactionKey) => {
     const reaction = REACTIONS[reactionKey];
     if (!reaction) {
       console.warn(`Unknown reaction: ${reactionKey}`);
@@ -642,7 +686,7 @@ function calculateClassReactions(characterClass) {
 
     reactions[reactionKey] = cloneAbility(reaction);
   });
-  getClassEquipmentItems(classDefinition).forEach((item) => {
+  equipmentItems.forEach((item) => {
     Object.entries(item.reactionBonuses || {}).forEach(([reactionKey, bonuses]) => {
       if (reactions[reactionKey]) {
         applyAbilityBonuses(reactions[reactionKey], bonuses);
@@ -677,6 +721,36 @@ function calculateClassLimits(characterClass) {
 
 function hasTrait(unit, traitKey) {
   return (unit.traits || []).includes(traitKey);
+}
+
+function getInnateReactions(unitOrClassDefinition) {
+  const classDefinition = unitOrClassDefinition.class
+    ? getClassDefinition(unitOrClassDefinition.class)
+    : unitOrClassDefinition;
+  return new Set(classDefinition.reactions || []);
+}
+
+function getGrantedReactions(unitOrClassDefinition) {
+  const reactions = new Set();
+  getEquippedItems(unitOrClassDefinition).forEach((item) => {
+    (item.grantsReactions || []).forEach((reactionKey) => reactions.add(reactionKey));
+  });
+  return reactions;
+}
+
+function getEffectiveReactions(unitOrClassDefinition) {
+  return new Set([
+    ...getInnateReactions(unitOrClassDefinition),
+    ...getGrantedReactions(unitOrClassDefinition)
+  ]);
+}
+
+function getTraitValue(unit, traitKey, valueKey, fallback = 0) {
+  if (!hasTrait(unit, traitKey)) {
+    return fallback;
+  }
+
+  return TRAITS[traitKey]?.[valueKey] ?? fallback;
 }
 
 function getUnitCommandCost(unitType) {
@@ -789,6 +863,8 @@ function create() {
   sceneRef.input.keyboard.on('keydown-TWO', () => setBattleSpeed(2));
   sceneRef.input.keyboard.on('keydown-THREE', () => setBattleSpeed(4));
   sceneRef.input.keyboard.on('keydown-FOUR', () => setBattleSpeed(8));
+  sceneRef.input.keyboard.on('keydown-FIVE', () => setBattleSpeed(32));
+  sceneRef.input.keyboard.on('keydown-SIX', () => setBattleSpeed(64));
   sceneRef.input.keyboard.on(`keydown-${COMBAT_ZOOM_KEY}`, toggleCombatZoomMode);
   sceneRef.input.keyboard.on(`keydown-${BATTLE_GRID_TOGGLE_KEY}`, toggleBattleGridLines);
   sceneRef.input.keyboard.on(`keydown-${KNIGHT_RANDOM_IDLE_TWITCH_TEST_KEY}`, toggleKnightRandomIdleTwitch);
@@ -1209,7 +1285,10 @@ function renderStatsPanel(teamKey) {
     .setDepth(POPUP_DEPTH);
   const titleNode = sceneRef.add.text(rect.x + POPUP_PANEL_PADDING, rect.y + 18, getUnitDisplayName(unit), headerTextStyle())
     .setDepth(POPUP_DEPTH + 1);
-  statsPanelNodes[teamKey].push(bg, titleNode);
+  const unitCost = unit.cpCost || getUnitCommandCost(unit.class);
+  const costNode = sceneRef.add.text(rect.x + rect.w - POPUP_PANEL_PADDING, rect.y + 18, `${SETUP_COMMAND_ICON}${unitCost}`, headerTextStyle())
+    .setOrigin(1, 0).setDepth(POPUP_DEPTH + 1);
+  statsPanelNodes[teamKey].push(bg, titleNode, costNode);
 
   const contentX = rect.x + POPUP_STATS_PANEL_PADDING;
   const contentY = rect.y + 58;
@@ -1218,7 +1297,7 @@ function renderStatsPanel(teamKey) {
 
   const savedNodes = infoPanelNodes;
   infoPanelNodes = statsPanelNodes[teamKey];
-  renderCharacterPanel(unit, contentX, contentY, contentW, contentH);
+  renderCharacterPanel(unit, contentX, contentY, contentW, contentH, false);
   infoPanelNodes = savedNodes;
 }
 
@@ -1458,6 +1537,26 @@ function getUnitIdleScale(unitType) {
   return CHARACTER_CLASSES[unitType].visual.idle.scale;
 }
 
+function getUnitSpriteOffset(unitType) {
+  const idleVisual = CHARACTER_CLASSES[unitType].visual.idle;
+  return {
+    x: idleVisual.spriteOffsetX || 0,
+    y: idleVisual.spriteOffsetY || 0
+  };
+}
+
+function getUnitBaseSpriteX(teamKey, cellX) {
+  return cellX + (teamKey === 'red' ? UNIT_SPRITE_FORWARD_X_OFFSET : -UNIT_SPRITE_FORWARD_X_OFFSET);
+}
+
+function getUnitSpritePosition(unitType, teamKey, cellX, baseY) {
+  const offset = getUnitSpriteOffset(unitType);
+  return {
+    x: getUnitBaseSpriteX(teamKey, cellX) + offset.x,
+    y: baseY + offset.y
+  };
+}
+
 function drawResourceRow(x, y, label, resourceKey, current, max, depth, addNode) {
   const labelNode = sceneRef.add.text(x, y, `${label}:`, {
     fontFamily: 'monospace',
@@ -1502,6 +1601,15 @@ function renderSetupUnitStatsPreview(unitType, x, y) {
     drawResourceRow(x, rowY, left[0], left[1], left[2], left[2], depth, addSetupNode);
     drawResourceRow(rightColumnX, rowY, right[0], right[1], right[2], right[2], depth, addSetupNode);
   });
+
+  const classActions = calculateClassActions(unitType);
+  const mv = getEffectiveMoveDistance(getClassDefinition(unitType));
+  const rn = Object.values(classActions)
+    .filter((a) => a.key !== 'move' && Number.isFinite(a.range))
+    .reduce((max, a) => Math.max(max, a.range), 0);
+  const row4Y = y + pairs.length * RESOURCE_ROW_GAP;
+  drawResourceRow(x, row4Y, 'MV', 'mv', mv, mv, depth, addSetupNode);
+  drawResourceRow(rightColumnX, row4Y, 'RN', 'rn', rn, rn, depth, addSetupNode);
 }
 
 function renderSetupUnitCard(unitType, x, y) {
@@ -1520,19 +1628,12 @@ function renderSetupUnitCard(unitType, x, y) {
     classDefinition.name,
     headerTextStyle()
   ).setDepth(SETUP_UI_DEPTH + 2));
-  const costY = y + SETUP_KNIGHT_CARD_COST_Y_OFFSET;
   addSetupNode(sceneRef.add.text(
-    x + SETUP_KNIGHT_CARD_TITLE_X_OFFSET,
-    costY,
-    `Cost: ${getUnitCommandCost(unitType)}`,
-    smallTextStyle()
-  ).setOrigin(0, 0.5).setDepth(SETUP_UI_DEPTH + 2));
-  addSetupNode(sceneRef.add.text(
-    x + SETUP_UNIT_CARD_COST_ICON_X_OFFSET,
-    costY,
-    SETUP_COMMAND_ICON,
-    { fontFamily: 'monospace', fontSize: `${SETUP_UNIT_CARD_COST_ICON_FONT_SIZE}px`, color: COLORS.text }
-  ).setOrigin(0, 0.5).setDepth(SETUP_UI_DEPTH + 2));
+    x + SETUP_KNIGHT_CARD_WIDTH - SETUP_KNIGHT_CARD_TITLE_X_OFFSET,
+    y + SETUP_KNIGHT_CARD_TITLE_Y_OFFSET,
+    `${SETUP_COMMAND_ICON}${getUnitCommandCost(unitType)}`,
+    headerTextStyle()
+  ).setOrigin(1, 0).setDepth(SETUP_UI_DEPTH + 2));
   renderSetupUnitStatsPreview(unitType, x + SETUP_KNIGHT_PREVIEW_X_OFFSET, y + SETUP_KNIGHT_PREVIEW_Y_OFFSET);
   card.on('pointerdown', () => {
     selectedSetupUnitType = unitType;
@@ -1600,7 +1701,7 @@ function clearSetupCpTooltip() {
 
 function renderSetupPlacementPreview(placement) {
   const { x, baseY } = getFormationPosition(placement.team, placement.row, placement.col);
-  const spriteX = x + (placement.team === 'red' ? UNIT_SPRITE_FORWARD_X_OFFSET : -UNIT_SPRITE_FORWARD_X_OFFSET);
+  const spritePosition = getUnitSpritePosition(placement.unitType, placement.team, x, baseY);
   const shadow = addSetupNode(sceneRef.add.ellipse(
     x,
     baseY + UNIT_SHADOW_Y_OFFSET,
@@ -1610,7 +1711,7 @@ function renderSetupPlacementPreview(placement) {
   )
     .setAlpha(UNIT_SHADOW_ALPHA)
     .setDepth(SETUP_UI_DEPTH - 2));
-  const sprite = addSetupNode(sceneRef.add.sprite(spriteX, baseY, getUnitIdleTextureKey(placement.unitType), getUnitIdleDefaultFrame(placement.unitType))
+  const sprite = addSetupNode(sceneRef.add.sprite(spritePosition.x, spritePosition.y, getUnitIdleTextureKey(placement.unitType), getUnitIdleDefaultFrame(placement.unitType))
     .setScale(getUnitIdleScale(placement.unitType))
     .setFlipX(placement.team === 'blue')
     .setAlpha(placement.isPlayerControlled ? SETUP_PREVIEW_ALPHA_PLAYER : SETUP_PREVIEW_ALPHA_AI)
@@ -1755,9 +1856,8 @@ function createCharacter(name, characterClass, color, teamKey, row, col) {
   const classDefinition = getClassDefinition(characterClass);
   const classStats = calculateClassStats(characterClass);
   const { x, baseY } = getFormationPosition(teamKey, row, col);
-  const spriteX = x + (teamKey === 'red'
-    ? UNIT_SPRITE_FORWARD_X_OFFSET
-    : -UNIT_SPRITE_FORWARD_X_OFFSET);
+  const baseSpriteX = getUnitBaseSpriteX(teamKey, x);
+  const spritePosition = getUnitSpritePosition(characterClass, teamKey, x, baseY);
   
   const shadow = sceneRef.add.ellipse(
     x,
@@ -1770,8 +1870,8 @@ function createCharacter(name, characterClass, color, teamKey, row, col) {
   shadow.setDepth(DEPTH_SHADOW);
 
   const rect = sceneRef.add.sprite(
-    spriteX,
-    baseY,
+    spritePosition.x,
+    spritePosition.y,
     getUnitIdleTextureKey(characterClass),
     getUnitIdleDefaultFrame(characterClass)
   )
@@ -1780,7 +1880,7 @@ function createCharacter(name, characterClass, color, teamKey, row, col) {
   rect.setDepth(DEPTH_UNIT);
   rect.setInteractive({ useHandCursor: true });
 
-  const label = sceneRef.add.text(spriteX, baseY, name, {
+  const label = sceneRef.add.text(baseSpriteX, baseY, name, {
     fontFamily: 'monospace',
     fontSize: '20px',
     color: COLORS.text
@@ -1818,7 +1918,7 @@ function createCharacter(name, characterClass, color, teamKey, row, col) {
     maxIp: classStats.maxIp,
     slotX: x,
     slotY: baseY,
-    slotSpriteX: spriteX,
+    slotSpriteX: baseSpriteX,
     initiativeOrderNumber: null,
     initiativeOrderNode: null,
     shadow,
@@ -2047,6 +2147,10 @@ function buildEquipmentBonusSegments(item) {
     return buildStatBonusSegments(item.statBonuses);
   }
 
+  if (item.moveBonus) {
+    return [{ text: `Move +${item.moveBonus}` }];
+  }
+
   const parts = [];
 
   Object.entries(item.actionBonuses || {}).forEach(([actionKey, bonuses]) => {
@@ -2072,10 +2176,27 @@ function buildEquipmentBonusSegments(item) {
   ));
 }
 
-function getEquipmentSlotLabel(slot) {
-  return {
-    armor: 'AR'
-  }[slot] || 'EQ';
+function getEquipmentSlotDisplay(slotKey, item) {
+  const raw = slotKey || item.slotType || item.slot || 'gear';
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
+function buildActionDetailSegments(unit, actionData) {
+  if (actionData.key === 'move') {
+    const steps = getMoveStepCount(unit);
+    return [
+      resourceTextSegment('ap', actionData.apCost),
+      { text: ' -> ' + '🥾'.repeat(steps) }
+    ];
+  }
+
+  return [
+    resourceTextSegment('ap', actionData.apCost),
+    { text: ' -> ' },
+    resourceTextSegment('sp', actionData.spDamage),
+    { text: ' or ' },
+    resourceTextSegment('hp', actionData.hpDamage)
+  ];
 }
 
 function getBattleResourceDepth(unit, x, resourceKey) {
@@ -2416,7 +2537,10 @@ function getOpposingRowDistance(attackerRow, defenderRow) {
   return rowIndex[attackerRow] + rowIndex[defenderRow] + 1;
 }
 
-function getEffectiveActionRange(action) {
+function getEffectiveActionRange(unitOrAction, actionKey = null) {
+  const action = actionKey
+    ? unitOrAction.actions?.[actionKey]
+    : unitOrAction;
   return Number.isFinite(action?.range) ? action.range : Infinity;
 }
 
@@ -2522,7 +2646,7 @@ function renderActiveCombatPanel(attacker, defender, leftX, rightX, y, columnWid
   }
 }
 
-function renderCharacterPanel(unit, x, y, width, height) {
+function renderCharacterPanel(unit, x, y, width, height, showHeader = true) {
   const lineHeight = 19;
   const skillDetailOffset = 120;
   let cursorY = y;
@@ -2605,11 +2729,13 @@ function renderCharacterPanel(unit, x, y, width, height) {
 
   const className = unit.className || getClassDefinition(unit.class).name;
 
-  addPanelLine(`${unit.name} ${className}`);
+  if (showHeader) {
+    addPanelLine(className);
+  }
   const unitCpCost = unit.cpCost || getUnitCommandCost(unit.class);
 
   function addCommandPointLine(count) {
-    const labelNode = sceneRef.add.text(x, cursorY, 'CP:', smallTextStyle())
+    const labelNode = sceneRef.add.text(x, cursorY, 'COST:', smallTextStyle())
       .setOrigin(0, 0.5).setDepth(POPUP_DEPTH + 1);
     infoPanelNodes.push(labelNode);
     for (let i = 0; i < count; i++) {
@@ -2624,24 +2750,42 @@ function renderCharacterPanel(unit, x, y, width, height) {
     cursorY += lineHeight;
   }
 
-  addCommandPointLine(unitCpCost);
+  if (showHeader) {
+    addCommandPointLine(unitCpCost);
+  }
   addResourcePairLine('HP', 'hp', 'SP', 'sp');
   addResourcePairLine('AP', 'ap', 'RP', 'rp');
   addResourcePairLine('LP', 'lp', 'IP', 'ip');
+  {
+    const mv = getEffectiveMoveDistance(unit);
+    const rn = Object.values(unit.actions || {})
+      .filter((a) => a.key !== 'move' && Number.isFinite(a.range))
+      .reduce((max, a) => Math.max(max, a.range), 0);
+    const addNode = (node) => { infoPanelNodes.push(node); };
+    drawResourceRow(x, cursorY, 'MV', 'mv', mv, mv, POPUP_DEPTH + 1, addNode);
+    drawResourceRow(x + RESOURCE_ROW_PAIR_GAP, cursorY, 'RN', 'rn', rn, rn, POPUP_DEPTH + 1, addNode);
+    cursorY += lineHeight;
+  }
   addBlankLine();
 
   addPanelLine('Equipment:');
-  Object.values(unit.equipment || getClassDefinition(unit.class).equipment || {}).filter(Boolean).forEach((equipmentKey) => {
+  let equipmentRowCount = 0;
+  Object.entries(unit.equipment || getClassDefinition(unit.class).equipment || {}).filter(([, equipmentKey]) => Boolean(equipmentKey)).forEach(([slotKey, equipmentKey]) => {
     const item = EQUIPMENT[equipmentKey];
     if (!item) {
       return;
     }
 
     addRichSplitLine(
-      `${item.slotLabel || getEquipmentSlotLabel(item.slot)}: ${item.name}`,
+      `${getEquipmentSlotDisplay(slotKey, item)}: ${item.name}`,
       shortTextOrFallback(item, buildEquipmentBonusSegments(item))
     );
+    equipmentRowCount += 1;
   });
+  while (equipmentRowCount < 3) {
+    addBlankLine();
+    equipmentRowCount += 1;
+  }
   const unitTraits = unit.traits || getClassDefinition(unit.class).traits || [];
   if (unitTraits.length > 0) {
     addBlankLine();
@@ -2667,29 +2811,30 @@ function renderCharacterPanel(unit, x, y, width, height) {
   }
   addBlankLine();
 
-  addPanelLine('Skills:');
+  addPanelLine('Actions:');
   Object.values(unit.actions || {}).forEach((actionData, index) => {
-    addRichSplitLine(`A${index + 1}: ${actionData.name}`, [
-      resourceTextSegment('ap', actionData.apCost),
-      { text: ' -> ' },
-      resourceTextSegment('sp', actionData.spDamage),
-      { text: ' or ' },
-      resourceTextSegment('hp', actionData.hpDamage)
-    ]);
+    addRichSplitLine(`A${index + 1}: ${actionData.name}`, buildActionDetailSegments(unit, actionData));
   });
 
   addBlankLine();
   addPanelLine('Reactions:');
   Object.values(unit.reactions || {}).forEach((reactionData, index) => {
-    const fallback = reactionData.isPlaceholder
-      ? [{ text: 'Block for Ally' }]
-      : [
+    let fallback;
+    if (reactionData.isPlaceholder) {
+      fallback = [{ text: 'Block for Ally' }];
+    } else if (reactionData.key === 'truestrike') {
+      fallback = [resourceTextSegment('rp', reactionData.rpCost), { text: ' -> Grants 100% Accuracy' }];
+    } else if (reactionData.key === 'dodge') {
+      fallback = [resourceTextSegment('rp', reactionData.rpCost), { text: ' -> Grants 100% Evade' }];
+    } else {
+      fallback = [
         resourceTextSegment('rp', reactionData.rpCost),
         { text: ' -> Blocks ' },
         resourceTextSegment('sp', reactionData.blockAmount),
         { text: ' or ' },
         resourceTextSegment('hp', reactionData.blockAmount)
       ];
+    }
 
     addRichSplitLine(`R${index + 1}: ${reactionData.name}`, fallback);
   });
@@ -2991,9 +3136,16 @@ function showRoundStartBanner(roundNumber) {
     .setOrigin(0.5)
     .setAlpha(0)
     .setDepth(ROUND_START_BANNER_DEPTH + 1);
-  const subtitleText = fatigueLevel > 0
-    ? `Initiative rolled. Fatigue: RP recovery -${fatigueLevel}`
-    : 'Initiative rolled. AP and RP refilled.';
+  const subtitleParts = ['Initiative rolled.'];
+  if (fatigueLevel > 0) {
+    subtitleParts.push(`Fatigue: RP recovery -${fatigueLevel}`);
+  } else {
+    subtitleParts.push('AP and RP refilled.');
+  }
+  if (shouldApplyExhaustion(roundNumber)) {
+    subtitleParts.push(`Exhaustion: -${EXHAUSTION_RP_DRAIN} RP`);
+  }
+  const subtitleText = subtitleParts.join(' ');
   const subtitle = sceneRef.add.text(x, y + 34, subtitleText, {
     fontFamily: 'monospace',
     fontSize: `${ROUND_START_BANNER_SUBTITLE_FONT_SIZE}px`,
@@ -3155,6 +3307,8 @@ function playAnimationEffect(animationEffect) {
     playParryAnimation(animationEffect.unit);
   } else if (animationEffect.type === 'dodge') {
     playDodgeAnimation(animationEffect.unit, animationEffect.attacker);
+  } else if (animationEffect.type === 'dodgeFail') {
+    playFailedDodgeAnimation(animationEffect.unit, animationEffect.attacker);
   } else if (animationEffect.type === 'damage') {
     playDamageBlink(animationEffect.unit);
   } else if (animationEffect.type === 'ko') {
@@ -3455,6 +3609,73 @@ function playDodgeAnimation(unit, attacker) {
   });
 }
 
+function playFailedDodgeAnimation(unit, attacker) {
+  if (!hasBattlefieldVisuals(unit)) {
+    return;
+  }
+
+  const sprite = unit.rect;
+  const original = {
+    x: sprite.x,
+    y: sprite.y,
+    angle: sprite.angle,
+    alpha: sprite.alpha,
+    scaleX: sprite.scaleX,
+    scaleY: sprite.scaleY
+  };
+  const attackerX = attacker?.rect?.x ?? (unit.teamKey === 'red' ? GAME_WIDTH : 0);
+  const direction = unit.teamKey === 'red'
+    ? -1
+    : (unit.teamKey === 'blue' ? 1 : Math.sign(sprite.x - attackerX) || 1);
+
+  sceneRef.tweens.add({
+    targets: sprite,
+    angle: original.angle + direction * DODGE_FAIL_TILT_DEGREES,
+    y: original.y + DODGE_FAIL_DROP_DISTANCE,
+    alpha: DODGE_FAIL_BLINK_ALPHA,
+    duration: DODGE_FAIL_DURATION_MS,
+    ease: 'Sine.easeOut',
+    onComplete: () => {
+      let blinksLeft = DODGE_FAIL_BLINK_COUNT * 2;
+      function doBlink() {
+        if (blinksLeft <= 0) {
+          sceneRef.tweens.add({
+            targets: sprite,
+            x: original.x,
+            y: original.y,
+            angle: original.angle,
+            alpha: original.alpha,
+            scaleX: original.scaleX,
+            scaleY: original.scaleY,
+            duration: DODGE_FAIL_RECOVER_DURATION_MS,
+            ease: 'Sine.easeOut',
+            onComplete: () => {
+              sprite.x = original.x;
+              sprite.y = original.y;
+              sprite.angle = original.angle;
+              sprite.alpha = original.alpha;
+              sprite.setScale(original.scaleX, original.scaleY);
+            }
+          });
+          return;
+        }
+        const targetAlpha = blinksLeft % 2 === 0 ? DODGE_FAIL_BLINK_ALPHA : original.alpha;
+        sceneRef.tweens.add({
+          targets: sprite,
+          alpha: targetAlpha,
+          duration: DAMAGE_BLINK_DURATION_MS,
+          ease: 'Linear',
+          onComplete: () => {
+            blinksLeft--;
+            doBlink();
+          }
+        });
+      }
+      doBlink();
+    }
+  });
+}
+
 function playDamageBlink(unit) {
   if (!hasBattlefieldVisuals(unit)) {
     return;
@@ -3520,7 +3741,7 @@ function startBattle() {
   createUnits();
   startRound();
 
-  sceneRef.time.delayedCall(START_BATTLE_DELAY_MS, () => {
+  sceneRef.time.delayedCall(ROUND_START_BANNER_ACTION_START_DELAY_MS, () => {
     takeNextAction();
 
     actionTimer = sceneRef.time.addEvent({
@@ -3550,8 +3771,12 @@ function startRound() {
   turnQueue = [];
   resetTurnInitiativeProgress();
   const fatigueLevel = getFatigueLevel(round);
+  const isExhaustionRound = shouldApplyExhaustion(round);
 
   livingUnits().forEach((unit) => {
+    if (isExhaustionRound) {
+      unit.rp = Math.max(0, unit.rp - EXHAUSTION_RP_DRAIN);
+    }
     unit.ap = unit.maxAp;
     unit.rp = getFatiguedRpRecovery(unit, round);
     refreshBattleUnitHud(unit);
@@ -3564,6 +3789,10 @@ function startRound() {
   if (fatigueLevel > 0 && (round - FATIGUE_START_ROUND) % FATIGUE_INTERVAL_ROUNDS === 0) {
     const fatigueText = round === FATIGUE_START_ROUND ? 'sets in' : 'worsens';
     appendLog(`Round ${round}: Fatigue ${fatigueText}. RP recovery -${fatigueLevel}.`);
+  }
+  if (isExhaustionRound) {
+    const exhaustionText = round === EXHAUSTION_START_ROUND ? 'sets in' : 'worsens';
+    appendLog(`Round ${round}: Exhaustion ${exhaustionText}. Living units lose ${EXHAUSTION_RP_DRAIN} RP.`);
   }
 }
 
@@ -3579,6 +3808,11 @@ function getFatigueLevel(roundNumber) {
 function getFatiguedRpRecovery(unit, roundNumber) {
   const recoveryTarget = Math.max(0, unit.maxRp - getFatigueLevel(roundNumber));
   return Math.max(0, Math.min(unit.maxRp, Math.max(unit.rp, recoveryTarget)));
+}
+
+function shouldApplyExhaustion(roundNumber) {
+  return roundNumber >= EXHAUSTION_START_ROUND &&
+    (roundNumber - EXHAUSTION_START_ROUND) % EXHAUSTION_INTERVAL_ROUNDS === 0;
 }
 
 function rollRoundInitiativeOrder() {
@@ -3782,50 +4016,156 @@ function getForwardRow(row) {
   return { back: 'middle', middle: 'front', front: null }[row] || null;
 }
 
-function getOpenForwardCell(unit, targetRow) {
+function getOpenForwardCell(unit, targetRow, fromCol = unit.col) {
   const occupiedCols = new Set(livingTeamUnits(unit.teamKey)
     .filter((ally) => ally !== unit && ally.row === targetRow)
     .map((ally) => ally.col));
-  const candidateCols = [unit.col, unit.col - 1, unit.col + 1]
+  const candidateCols = [fromCol, fromCol - 1, fromCol + 1]
     .filter((col) => FORMATION_COLS.includes(col));
   const openCol = candidateCols.find((col) => !occupiedCols.has(col));
   return Number.isFinite(openCol) ? { row: targetRow, col: openCol } : null;
 }
 
-function setUnitFormationCell(unit, row, col) {
+function getMoveStepCount(unit) {
+  return getEffectiveMoveDistance(unit);
+}
+
+function getEffectiveMoveDistance(unit) {
+  return 1 + getEquippedItems(unit).reduce((sum, item) => sum + (item.moveBonus || 0), 0);
+}
+
+function setUnitFormationCell(unit, row, col, isAnimated = false) {
+  const fromPosition = {
+    rectX: unit.rect.x,
+    rectY: unit.rect.y,
+    labelX: unit.label.x,
+    labelY: unit.label.y,
+    shadowX: unit.shadow.x,
+    shadowY: unit.shadow.y,
+    stateNodes: getBattleStateNodes(unit).map((node) => ({ node, x: node.x, y: node.y }))
+  };
   const { x, baseY } = getFormationPosition(unit.teamKey, row, col);
-  const spriteX = x + (unit.teamKey === 'red' ? UNIT_SPRITE_FORWARD_X_OFFSET : -UNIT_SPRITE_FORWARD_X_OFFSET);
+  const baseSpriteX = getUnitBaseSpriteX(unit.teamKey, x);
+  const spritePosition = getUnitSpritePosition(unit.class, unit.teamKey, x, baseY);
+  const toPosition = {
+    rectX: spritePosition.x,
+    rectY: spritePosition.y,
+    labelX: baseSpriteX,
+    labelY: baseY,
+    shadowX: x,
+    shadowY: baseY + UNIT_SHADOW_Y_OFFSET
+  };
   unit.row = row;
   unit.col = col;
   unit.slotX = x;
   unit.slotY = baseY;
-  unit.slotSpriteX = spriteX;
-  unit.rect.x = spriteX;
-  unit.rect.y = baseY;
-  unit.label.x = spriteX;
-  unit.label.y = baseY;
-  unit.shadow.x = x;
-  unit.shadow.y = baseY + UNIT_SHADOW_Y_OFFSET;
-  refreshBattleUnitHud(unit);
+  unit.slotSpriteX = baseSpriteX;
+  if (isAnimated) {
+    playMoveAnimation(unit, fromPosition, toPosition);
+  } else {
+    unit.rect.x = toPosition.rectX;
+    unit.rect.y = toPosition.rectY;
+    unit.label.x = toPosition.labelX;
+    unit.label.y = toPosition.labelY;
+    unit.shadow.x = toPosition.shadowX;
+    unit.shadow.y = toPosition.shadowY;
+    refreshBattleUnitHud(unit);
+  }
   refreshInitiativeOrderNumbers();
+}
+
+function playMoveAnimation(unit, fromPosition, toPosition) {
+  unit.rect.x = fromPosition.rectX;
+  unit.rect.y = fromPosition.rectY;
+  unit.label.x = fromPosition.labelX;
+  unit.label.y = fromPosition.labelY;
+  unit.shadow.x = fromPosition.shadowX;
+  unit.shadow.y = fromPosition.shadowY;
+  fromPosition.stateNodes.forEach((entry) => {
+    if (isLiveBattlefieldNode(entry.node)) {
+      entry.node.x = entry.x;
+      entry.node.y = entry.y;
+    }
+  });
+
+  sceneRef.tweens.add({
+    targets: unit.rect,
+    x: toPosition.rectX,
+    y: toPosition.rectY,
+    duration: MOVE_ANIMATION_DURATION_MS,
+    ease: MOVE_ANIMATION_EASE,
+    onComplete: () => {
+      unit.rect.x = toPosition.rectX;
+      unit.rect.y = toPosition.rectY;
+      unit.label.x = toPosition.labelX;
+      unit.label.y = toPosition.labelY;
+      refreshBattleUnitHud(unit);
+      refreshInitiativeOrderNumbers();
+    }
+  });
+  sceneRef.tweens.add({
+    targets: unit.label,
+    x: toPosition.labelX,
+    y: toPosition.labelY,
+    duration: MOVE_ANIMATION_DURATION_MS,
+    ease: MOVE_ANIMATION_EASE
+  });
+  sceneRef.tweens.add({
+    targets: unit.shadow,
+    x: toPosition.shadowX,
+    y: toPosition.shadowY,
+    duration: MOVE_ANIMATION_DURATION_MS,
+    ease: MOVE_ANIMATION_EASE
+  });
+  fromPosition.stateNodes.forEach((entry) => {
+    if (!isLiveBattlefieldNode(entry.node)) {
+      return;
+    }
+
+    sceneRef.tweens.add({
+      targets: entry.node,
+      x: `+=${toPosition.rectX - fromPosition.rectX}`,
+      y: `+=${toPosition.rectY - fromPosition.rectY}`,
+      duration: MOVE_ANIMATION_DURATION_MS,
+      ease: MOVE_ANIMATION_EASE
+    });
+  });
 }
 
 function resolveMoveAction(unit, selectedAction) {
   unit.ap = Math.max(0, unit.ap - selectedAction.apCost);
-  const targetRow = getForwardRow(unit.row);
-  if (!targetRow) {
+  const oldRow = unit.row;
+  let currentRow = unit.row;
+  let currentCol = unit.col;
+  let targetCell = null;
+
+  for (let step = 0; step < getMoveStepCount(unit); step += 1) {
+    const targetRow = getForwardRow(currentRow);
+    if (!targetRow) {
+      break;
+    }
+
+    const nextCell = getOpenForwardCell(unit, targetRow, currentCol);
+    if (!nextCell) {
+      break;
+    }
+
+    targetCell = nextCell;
+    currentRow = nextCell.row;
+    currentCol = nextCell.col;
+  }
+
+  if (!getForwardRow(oldRow)) {
     refreshBattleUnitHud(unit);
     return `${unit.name} is already at the front.`;
   }
 
-  const targetCell = getOpenForwardCell(unit, targetRow);
   if (!targetCell) {
     refreshBattleUnitHud(unit);
     return `${unit.name} cannot move forward.`;
   }
 
-  const oldRow = unit.row;
-  setUnitFormationCell(unit, targetCell.row, targetCell.col);
+  setUnitFormationCell(unit, targetCell.row, targetCell.col, true);
   return `${unit.name} moves from ${oldRow} to ${targetCell.row}.`;
 }
 
@@ -3849,6 +4189,7 @@ function takeNextAction() {
   if (turnQueue.length === 0) {
     if (living.every((unit) => unit.ap <= 0)) {
       startRound();
+      sceneRef.time.delayedCall(ROUND_START_BANNER_ACTION_START_DELAY_MS, takeNextAction);
       return;
     }
     buildTurnQueue();
@@ -3869,6 +4210,10 @@ function takeNextAction() {
     setActiveCombatants(attacker, null);
     const tag = `[R${round}T${turn}A${action}]`;
     markUnitActedThisTurn(attacker);
+    showActionCastEffect({
+      unit: attacker,
+      action: selectedAction
+    });
     const effectText = resolveMoveAction(attacker, selectedAction);
     appendLog(`${tag} ${attacker.name} uses ${RESOURCE_ICONS.ap.repeat(selectedAction.apCost)}${selectedAction.name}.`, effectText);
     action += 1;
@@ -4054,8 +4399,9 @@ function resolveAction(attacker, defender, selectedAction) {
     remainingDamage = Math.max(0, remainingDamage - blockedAmount);
 
     effects.push(`${defender.name} uses ${formatReactionCost(reaction)}${reaction.name}!`);
+    const isFailedDodge = reaction.key === 'dodge' && !attackContext.canBeEvaded;
     animationEffects.push({
-      type: reaction.key,
+      type: isFailedDodge ? 'dodgeFail' : reaction.key,
       unit: defender,
       attacker,
       delayMs: reaction.key === 'parry'

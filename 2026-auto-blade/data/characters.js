@@ -30,13 +30,14 @@ export const CHARACTER_CLASSES = {
     cpCost: 1,
     promoted: false,
     statBonuses: {},
-    traits: [],
+    traits: ['fastLearner'],
+    gearSlots: ['sword', 'shield', 'armor'],
     equipment: {
-      rightHand: null,
-      leftHand: null,
+      sword: 'broadsword',
+      shield: 'buckler',
       armor: 'chainmail'
     },
-    actions: ['slash'],
+    actions: [],
     reactions: ['block'],
     limits: [],
     visual: {
@@ -46,7 +47,62 @@ export const CHARACTER_CLASSES = {
         frameWidth: 16,
         frameHeight: 16,
         defaultFrame: 0,
-        scale: 8
+        twitchFrame: 1,
+        scale: 8,
+        spriteOffsetX: 0,
+        spriteOffsetY: 0
+      },
+      animations: {
+        attack: {
+          textureKey: 'squire-attack',
+          assetPath: 'assets/squire/squire-attack.png',
+          frameWidth: 16,
+          frameHeight: 16,
+          startFrame: 0,
+          endFrame: 5,
+          frameRate: 12,
+          animationKey: 'squire-attack',
+          finalPoseHoldMs: 1000
+        },
+        block: {
+          textureKey: 'squire-block-parry',
+          assetPath: 'assets/squire/squire-block-parry.png',
+          frameWidth: 16,
+          frameHeight: 16,
+          startFrame: 0,
+          endFrame: 2,
+          frameRate: 10,
+          animationKey: 'squire-block',
+          finalPoseHoldMs: 1000
+        }
+      }
+    }
+  },
+  thief: {
+    key: 'thief',
+    name: 'Thief',
+    cpCost: 1,
+    promoted: false,
+    statBonuses: {},
+    traits: ['quick'],
+    gearSlots: ['dagger', 'armor'],
+    equipment: {
+      dagger: 'dagger',
+      armor: 'leather'
+    },
+    actions: [],
+    reactions: ['dodge'],
+    limits: [],
+    visual: {
+      idle: {
+        textureKey: 'thief-idle',
+        assetPath: 'assets/thief/thief-idle.png',
+        frameWidth: 16,
+        frameHeight: 16,
+        defaultFrame: 0,
+        scale: 8,
+        spriteOffsetX: -8,
+        spriteOffsetY: 0
       },
       animations: {}
     }
@@ -58,28 +114,31 @@ export const CHARACTER_CLASSES = {
     promoted: true,
     statBonuses: {},
     traits: ['hearty', 'guardian'],
+    gearSlots: ['sword', 'shield', 'armor'],
     equipment: {
-      rightHand: 'longsword',
-      leftHand: 'buckler',
+      sword: 'longsword',
+      shield: 'buckler',
       armor: 'plateMail'
     },
-    actions: ['slash', 'thrust'],
+    actions: [],
     reactions: ['block', 'cover'],
     limits: ['parry'],
     visual: {
       idle: {
         textureKey: 'knight-idle',
-        assetPath: 'assets/knight/Knight-Idle.png',
+        assetPath: 'assets/knight/knight-idle.png',
         frameWidth: 16,
         frameHeight: 16,
         defaultFrame: 0,
         twitchFrame: 1,
-        scale: 8
+        scale: 8,
+        spriteOffsetX: 0,
+        spriteOffsetY: 0
       },
       animations: {
         attack: {
           textureKey: 'knight-attack',
-          assetPath: 'assets/knight/Knight-Attack.png',
+          assetPath: 'assets/knight/knight-attack.png',
           frameWidth: 16,
           frameHeight: 16,
           startFrame: 0,
@@ -90,7 +149,7 @@ export const CHARACTER_CLASSES = {
         },
         block: {
           textureKey: 'knight-block-parry',
-          assetPath: 'assets/knight/Knight-Block-Parry.png',
+          assetPath: 'assets/knight/knight-block-parry.png',
           frameWidth: 16,
           frameHeight: 16,
           startFrame: 0,
@@ -101,7 +160,7 @@ export const CHARACTER_CLASSES = {
         },
         parry: {
           textureKey: 'knight-block-parry',
-          assetPath: 'assets/knight/Knight-Block-Parry.png',
+          assetPath: 'assets/knight/knight-block-parry.png',
           frameWidth: 16,
           frameHeight: 16,
           startFrame: 0,
@@ -120,14 +179,14 @@ export const CHARACTER_CLASSES = {
     cpCost: 1,
     promoted: false,
     statBonuses: {},
-    traits: [],
+    traits: ['marksman'],
+    gearSlots: ['bow', 'armor'],
     equipment: {
-      rightHand: null,
-      leftHand: null,
-      armor: null
+      bow: 'shortbow',
+      armor: 'leather'
     },
-    actions: ['arrowShot'],
-    reactions: [],
+    actions: [],
+    reactions: ['truestrike'],
     limits: [],
     visual: {
       idle: {
@@ -136,7 +195,9 @@ export const CHARACTER_CLASSES = {
         frameWidth: 16,
         frameHeight: 16,
         defaultFrame: 0,
-        scale: 8
+        scale: 8,
+        spriteOffsetX: -6,
+        spriteOffsetY: 0
       },
       animations: {}
     }
