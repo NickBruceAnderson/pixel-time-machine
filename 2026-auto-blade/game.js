@@ -436,7 +436,7 @@ const ARMY_TEST_ROSTER = [
 
 // Battle start
 // Action timing
-const ATTACK_RESOURCE_PREVIEW_DURATION_MS = ms(850);
+const ATTACK_RESOURCE_PREVIEW_DURATION_MS = ms(650);
 const ATTACK_RESOURCE_COMMIT_DURATION_MS = ms(200);
 const POST_ATTACK_RESOURCE_PAUSE_MS = ms(150);
 
@@ -504,6 +504,9 @@ const ATTACK_LUNGE_START_DELAY_MS =
 
 const ATTACK_LUNGE_DURATION_MS =
   LUNGE_DURATION_MS;
+
+const MOVE_ACTION_START_DELAY_MS =
+  ATTACK_LUNGE_START_DELAY_MS;
 
 const ATTACK_ANIMATION_START_DELAY_MS =
   ATTACK_LUNGE_START_DELAY_MS + ATTACK_LUNGE_DURATION_MS;
@@ -4606,7 +4609,7 @@ function playMoveAnimation(unit, fromPosition, toPosition) {
   });
 }
 
-function resolveMoveAction(unit, selectedAction) {
+function resolveMoveAction(unit, selectedAction, moveDelayMs = 0) {
   unit.ap = Math.max(0, unit.ap - selectedAction.apCost);
   const oldRow = unit.row;
   let currentRow = unit.row;
@@ -4639,7 +4642,18 @@ function resolveMoveAction(unit, selectedAction) {
     return `${unit.name} cannot move forward.`;
   }
 
-  setUnitFormationCell(unit, targetCell.row, targetCell.col, true);
+  if (moveDelayMs > 0) {
+    sceneRef.time.delayedCall(moveDelayMs, () => {
+      if (gamePhase !== 'battle' || unit.hp <= 0 || !hasBattlefieldVisuals(unit)) {
+        return;
+      }
+
+      setUnitFormationCell(unit, targetCell.row, targetCell.col, true);
+    });
+  } else {
+    setUnitFormationCell(unit, targetCell.row, targetCell.col, true);
+  }
+
   return `${unit.name} moves from ${oldRow} to ${targetCell.row}.`;
 }
 
@@ -4688,7 +4702,7 @@ function takeNextAction() {
       unit: attacker,
       action: selectedAction
     });
-    const effectText = resolveMoveAction(attacker, selectedAction);
+    const effectText = resolveMoveAction(attacker, selectedAction, MOVE_ACTION_START_DELAY_MS);
     appendLog(`${tag} ${attacker.name} uses ${RESOURCE_ICONS.ap.repeat(selectedAction.apCost)}${selectedAction.name}.`, effectText);
     action += 1;
     refreshInfoPanel();
