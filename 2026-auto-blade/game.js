@@ -420,7 +420,6 @@ const ROSTER_COLUMNS = 6;
 const FORMATION_ACTION_BUTTON_X = GAME_WIDTH - 292;
 const FORMATION_ACTION_BUTTON_Y = GAME_HEIGHT - 106;
 const FORMATION_ACTION_BUTTON_WIDTH = 228;
-const FORMATION_BOARD_ROW_TO_COMBAT_ROW = ['front', 'middle', 'back'];
 const PRACTICE_ENEMY_COUNT = 2;
 const PRACTICE_ENEMY_ALLOWED_CLASSES = ['squire', 'thief', 'archer'];
 const PRACTICE_ENEMY_FORMATION_SLOTS = [
@@ -1835,8 +1834,11 @@ function getSquadAssignedCells(squad) {
   return assigned;
 }
 
-function getCombatRowForBoardRow(row) {
-  return FORMATION_BOARD_ROW_TO_COMBAT_ROW[row] || 'middle';
+function getCombatCellForSquadBoardCell(boardRow, boardCol) {
+  return {
+    row: FORMATION_ROW_ORDER_RED[boardCol] || 'middle',
+    col: FORMATION_COLS[boardRow] ?? 1
+  };
 }
 
 function removeUnitFromArmySquads(unitId) {
@@ -1882,10 +1884,11 @@ function getSelectedArmySquadUnits() {
 
 function buildPracticeCombatFormations() {
   redFormation = getSelectedArmySquadUnits().map((unit) => {
+    const combatCell = getCombatCellForSquadBoardCell(unit.formationRow, unit.formationCol);
     return createPlacement(
       'red',
-      getCombatRowForBoardRow(unit.formationRow),
-      unit.formationCol,
+      combatCell.row,
+      combatCell.col,
       true,
       unit.unitType,
       unit.name
