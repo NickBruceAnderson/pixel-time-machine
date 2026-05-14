@@ -382,35 +382,40 @@ const SETUP_CELL_STROKE_AI = '#5f6674';
 const SETUP_PREVIEW_ALPHA_PLAYER = 1;
 const SETUP_PREVIEW_ALPHA_AI = 0.72;
 
-// Army management
-const ARMY_MAX_SQUADS = 3;
-const ARMY_SQUAD_COMMAND_POINTS = 2;
-const ARMY_MAX_VISIBLE_ROSTER_CARDS = 6;
-const ARMY_COMMAND_ICON = '👑';
-const ARMY_SELECTED_HIGHLIGHT_COLOR = '#58a6ff';
-const ARMY_HEADER_X = 64;
-const ARMY_HEADER_Y = 42;
-const ARMY_SQUAD_PANEL_X = 64;
-const ARMY_SQUAD_PANEL_Y = 110;
-const ARMY_SQUAD_PANEL_WIDTH = 390;
-const ARMY_SQUAD_PANEL_HEIGHT = 178;
-const ARMY_SQUAD_PANEL_GAP = 22;
-const ARMY_SQUAD_SLOT_WIDTH = 160;
-const ARMY_SQUAD_SLOT_HEIGHT = 78;
-const ARMY_SQUAD_SLOT_GAP = 18;
-const ARMY_SQUAD_SLOT_Y_OFFSET = 78;
-const ARMY_ROSTER_X = 510;
-const ARMY_ROSTER_Y = 110;
-const ARMY_ROSTER_CARD_WIDTH = 208;
-const ARMY_ROSTER_CARD_HEIGHT = 156;
-const ARMY_ROSTER_CARD_GAP = 18;
-const ARMY_ROSTER_COLUMNS = 3;
-const ARMY_ACTION_BUTTON_X = GAME_WIDTH - 284;
-const ARMY_ACTION_BUTTON_Y = GAME_HEIGHT - 106;
-const ARMY_ACTION_BUTTON_WIDTH = 220;
-const ARMY_DEFAULT_RED_SLOTS = [
-  { row: 'front', col: 1 },
-  { row: 'back', col: 1 }
+// Unit formation
+const MAX_SQUADS = 3;
+const COMMAND_POINTS_PER_SQUAD = 2;
+const MAX_VISIBLE_ROSTER_UNITS = 6;
+const FORMATION_COMMAND_ICON = '👑';
+const SELECTED_SQUAD_HIGHLIGHT = '#58a6ff';
+const SELECTED_UNIT_HIGHLIGHT = '#f2cf45';
+const FORMATION_HEADER_X = 64;
+const FORMATION_HEADER_Y = 42;
+const SQUAD_PANEL_X = 64;
+const SQUAD_PANEL_Y = 112;
+const SQUAD_PANEL_WIDTH = 560;
+const SQUAD_PANEL_HEIGHT = 300;
+const SQUAD_PANEL_GAP = 28;
+const SQUAD_BOARD_X_OFFSET = 76;
+const SQUAD_BOARD_Y_OFFSET = 84;
+const SQUAD_BOARD_CELL_WIDTH = 126;
+const SQUAD_BOARD_CELL_HEIGHT = 58;
+const SQUAD_BOARD_COLS = 3;
+const SQUAD_BOARD_ROWS = 3;
+const ROSTER_X = 64;
+const ROSTER_Y = 520;
+const ROSTER_CARD_WIDTH = 262;
+const ROSTER_CARD_HEIGHT = 164;
+const ROSTER_CARD_GAP = 20;
+const ROSTER_COLUMNS = 6;
+const FORMATION_ACTION_BUTTON_X = GAME_WIDTH - 292;
+const FORMATION_ACTION_BUTTON_Y = GAME_HEIGHT - 106;
+const FORMATION_ACTION_BUTTON_WIDTH = 228;
+const DEFAULT_SLOT_1_FORMATION_POSITION = { row: 'front', col: 1, boardRow: 1, boardCol: 1 };
+const DEFAULT_SLOT_2_FORMATION_POSITION = { row: 'back', col: 1, boardRow: 2, boardCol: 1 };
+const DEFAULT_SQUAD_FORMATION_POSITIONS = [
+  DEFAULT_SLOT_1_FORMATION_POSITION,
+  DEFAULT_SLOT_2_FORMATION_POSITION
 ];
 const ARMY_DEFAULT_BLUE_FORMATION = [
   { unitType: 'squire', row: 'back', col: 1 }
@@ -1419,9 +1424,9 @@ function initializeArmyManagement() {
   }
 
   if (armySquads.length === 0) {
-    armySquads = Array.from({ length: ARMY_MAX_SQUADS }, (_, index) => ({
-      name: `Squad ${index + 1}`,
-      unitIds: Array.from({ length: ARMY_SQUAD_COMMAND_POINTS }, () => null)
+    armySquads = Array.from({ length: MAX_SQUADS }, (_, index) => ({
+      name: `Squad ${String(index + 1).padStart(2, '0')}`,
+      unitIds: Array.from({ length: COMMAND_POINTS_PER_SQUAD }, () => null)
     }));
   }
 }
@@ -1505,7 +1510,7 @@ function renderArmyManagementScreen() {
     .setStrokeStyle(2, PHASER_COLORS.panelBorder)
     .setDepth(SETUP_UI_DEPTH));
 
-  addSetupNode(sceneRef.add.text(ARMY_HEADER_X, ARMY_HEADER_Y, 'Army', {
+  addSetupNode(sceneRef.add.text(FORMATION_HEADER_X, FORMATION_HEADER_Y, 'Unit Formation', {
     ...headerTextStyle(),
     fontSize: '36px'
   }).setDepth(SETUP_UI_DEPTH + 1));
@@ -1515,9 +1520,9 @@ function renderArmyManagementScreen() {
 
   createSetupButton(
     'Practice Combat',
-    ARMY_ACTION_BUTTON_X,
-    ARMY_ACTION_BUTTON_Y,
-    ARMY_ACTION_BUTTON_WIDTH,
+    FORMATION_ACTION_BUTTON_X,
+    FORMATION_ACTION_BUTTON_Y,
+    FORMATION_ACTION_BUTTON_WIDTH,
     startBattle,
     isSetupReady()
   );
@@ -1525,74 +1530,94 @@ function renderArmyManagementScreen() {
 
 function renderArmySquads() {
   armySquads.forEach((squad, squadIndex) => {
-    const x = ARMY_SQUAD_PANEL_X;
-    const y = ARMY_SQUAD_PANEL_Y + squadIndex * (ARMY_SQUAD_PANEL_HEIGHT + ARMY_SQUAD_PANEL_GAP);
+    const x = SQUAD_PANEL_X + squadIndex * (SQUAD_PANEL_WIDTH + SQUAD_PANEL_GAP);
+    const y = SQUAD_PANEL_Y;
     renderArmySquadPanel(squad, squadIndex, x, y);
   });
 }
 
 function renderArmySquadPanel(squad, squadIndex, x, y) {
   const isSelected = selectedArmySquadIndex === squadIndex;
-  const borderColor = cssHexToNumber(isSelected ? ARMY_SELECTED_HIGHLIGHT_COLOR : COLORS.panelBorder);
+  const borderColor = cssHexToNumber(isSelected ? SELECTED_SQUAD_HIGHLIGHT : COLORS.panelBorder);
+  const assignedCount = squad.unitIds.filter(Boolean).length;
   const panel = addSetupNode(sceneRef.add.rectangle(
     x,
     y,
-    ARMY_SQUAD_PANEL_WIDTH,
-    ARMY_SQUAD_PANEL_HEIGHT,
+    SQUAD_PANEL_WIDTH,
+    SQUAD_PANEL_HEIGHT,
     PHASER_COLORS.panel
   )
     .setOrigin(0)
     .setStrokeStyle(isSelected ? 3 : 2, borderColor)
     .setInteractive({ useHandCursor: true })
     .setDepth(SETUP_UI_DEPTH + 1));
-  panel.on('pointerdown', () => selectArmySquad(squadIndex));
+  panel.on('pointerdown', () => handleArmySquadPanelClick(squadIndex));
 
   const title = addSetupNode(sceneRef.add.text(x + 16, y + 14, squad.name, headerTextStyle())
     .setDepth(SETUP_UI_DEPTH + 2));
   const cp = addSetupNode(sceneRef.add.text(
-    x + ARMY_SQUAD_PANEL_WIDTH - 16,
+    x + SQUAD_PANEL_WIDTH - 16,
     y + 18,
-    `${ARMY_COMMAND_ICON} ${ARMY_SQUAD_COMMAND_POINTS}`,
+    `${FORMATION_COMMAND_ICON} ${COMMAND_POINTS_PER_SQUAD}   ${assignedCount}/${COMMAND_POINTS_PER_SQUAD}`,
     headerTextStyle()
   )
     .setOrigin(1, 0)
     .setDepth(SETUP_UI_DEPTH + 2));
-  [title, cp].forEach((node) => node.setInteractive({ useHandCursor: true }).on('pointerdown', () => selectArmySquad(squadIndex)));
+  [title, cp].forEach((node) => node.setInteractive({ useHandCursor: true }).on('pointerdown', () => handleArmySquadPanelClick(squadIndex)));
 
-  squad.unitIds.forEach((unitId, slotIndex) => {
-    const slotX = x + 16 + slotIndex * (ARMY_SQUAD_SLOT_WIDTH + ARMY_SQUAD_SLOT_GAP);
-    const slotY = y + ARMY_SQUAD_SLOT_Y_OFFSET;
-    renderArmySquadSlot(squadIndex, slotIndex, slotX, slotY, unitId);
-  });
+  renderArmySquadBoard(squad, squadIndex, x + SQUAD_BOARD_X_OFFSET, y + SQUAD_BOARD_Y_OFFSET);
+}
+
+function renderArmySquadBoard(squad, squadIndex, boardX, boardY) {
+  for (let row = 0; row < SQUAD_BOARD_ROWS; row += 1) {
+    for (let col = 0; col < SQUAD_BOARD_COLS; col += 1) {
+      const x = boardX + col * SQUAD_BOARD_CELL_WIDTH;
+      const y = boardY + row * SQUAD_BOARD_CELL_HEIGHT;
+      const slotIndex = getSquadSlotIndexAtBoardCell(row, col);
+      const unitId = slotIndex === null ? null : squad.unitIds[slotIndex];
+      renderArmySquadSlot(squadIndex, slotIndex, x, y, unitId);
+    }
+  }
+}
+
+function getSquadSlotIndexAtBoardCell(boardRow, boardCol) {
+  return DEFAULT_SQUAD_FORMATION_POSITIONS.findIndex((position) => (
+    position.boardRow === boardRow && position.boardCol === boardCol
+  ));
 }
 
 function renderArmySquadSlot(squadIndex, slotIndex, x, y, unitId) {
+  const isAssignableSlot = slotIndex >= 0;
   const unit = getArmyRosterUnit(unitId);
   const isSelectedUnit = unitId && selectedArmyRosterUnitId === unitId;
   const slot = addSetupNode(sceneRef.add.rectangle(
     x,
     y,
-    ARMY_SQUAD_SLOT_WIDTH,
-    ARMY_SQUAD_SLOT_HEIGHT,
+    SQUAD_BOARD_CELL_WIDTH - 8,
+    SQUAD_BOARD_CELL_HEIGHT - 8,
     PHASER_COLORS.infoPanel
   )
     .setOrigin(0)
-    .setAlpha(unit ? 0.95 : 0.52)
-    .setStrokeStyle(isSelectedUnit ? 3 : 1, cssHexToNumber(isSelectedUnit ? ARMY_SELECTED_HIGHLIGHT_COLOR : COLORS.panelBorder))
-    .setInteractive({ useHandCursor: true })
+    .setAlpha(unit ? 0.96 : (isAssignableSlot ? 0.58 : 0.24))
+    .setStrokeStyle(isSelectedUnit ? 3 : 1, cssHexToNumber(isSelectedUnit ? SELECTED_UNIT_HIGHLIGHT : COLORS.panelBorder))
     .setDepth(SETUP_UI_DEPTH + 2));
-  slot.on('pointerdown', () => handleArmySlotClick(squadIndex, slotIndex));
+  if (isAssignableSlot) {
+    slot.setInteractive({ useHandCursor: true });
+    slot.on('pointerdown', () => handleArmySlotClick(squadIndex, slotIndex));
+  }
 
-  const label = unit ? `${unit.name}\n${getClassDefinition(unit.unitType).name}` : `Slot ${slotIndex + 1}`;
+  const label = unit ? unit.name : (isAssignableSlot ? `Slot ${slotIndex + 1}` : '');
   const text = addSetupNode(sceneRef.add.text(x + 10, y + 10, label, smallTextStyle())
-    .setDepth(SETUP_UI_DEPTH + 3)
-    .setInteractive({ useHandCursor: true }));
-  text.on('pointerdown', () => handleArmySlotClick(squadIndex, slotIndex));
+    .setDepth(SETUP_UI_DEPTH + 3));
+  if (isAssignableSlot) {
+    text.setInteractive({ useHandCursor: true });
+    text.on('pointerdown', () => handleArmySlotClick(squadIndex, slotIndex));
+  }
 
   if (unit) {
     const sprite = addSetupNode(sceneRef.add.sprite(
-      x + ARMY_SQUAD_SLOT_WIDTH - 34,
-      y + ARMY_SQUAD_SLOT_HEIGHT - 18,
+      x + SQUAD_BOARD_CELL_WIDTH - 42,
+      y + SQUAD_BOARD_CELL_HEIGHT - 18,
       getUnitIdleTextureKey(unit.unitType),
       getUnitIdleDefaultFrame(unit.unitType)
     )
@@ -1605,15 +1630,15 @@ function renderArmySquadSlot(squadIndex, slotIndex, x, y, unitId) {
 }
 
 function renderArmyRoster() {
-  addSetupNode(sceneRef.add.text(ARMY_ROSTER_X, ARMY_HEADER_Y + 8, 'Roster', headerTextStyle())
+  addSetupNode(sceneRef.add.text(ROSTER_X, ROSTER_Y - 42, 'Available Units', headerTextStyle())
     .setDepth(SETUP_UI_DEPTH + 1));
 
-  for (let index = 0; index < ARMY_MAX_VISIBLE_ROSTER_CARDS; index += 1) {
+  for (let index = 0; index < MAX_VISIBLE_ROSTER_UNITS; index += 1) {
     const unit = armyRoster[index] || null;
-    const col = index % ARMY_ROSTER_COLUMNS;
-    const row = Math.floor(index / ARMY_ROSTER_COLUMNS);
-    const x = ARMY_ROSTER_X + col * (ARMY_ROSTER_CARD_WIDTH + ARMY_ROSTER_CARD_GAP);
-    const y = ARMY_ROSTER_Y + row * (ARMY_ROSTER_CARD_HEIGHT + ARMY_ROSTER_CARD_GAP);
+    const col = index % ROSTER_COLUMNS;
+    const row = Math.floor(index / ROSTER_COLUMNS);
+    const x = ROSTER_X + col * (ROSTER_CARD_WIDTH + ROSTER_CARD_GAP);
+    const y = ROSTER_Y + row * (ROSTER_CARD_HEIGHT + ROSTER_CARD_GAP);
     renderArmyRosterCard(unit, x, y);
   }
 }
@@ -1621,10 +1646,10 @@ function renderArmyRoster() {
 function renderArmyRosterCard(unit, x, y) {
   const isSelected = unit && selectedArmyRosterUnitId === unit.id;
   const fill = unit ? PHASER_COLORS.panel : PHASER_COLORS.infoPanel;
-  const card = addSetupNode(sceneRef.add.rectangle(x, y, ARMY_ROSTER_CARD_WIDTH, ARMY_ROSTER_CARD_HEIGHT, fill)
+  const card = addSetupNode(sceneRef.add.rectangle(x, y, ROSTER_CARD_WIDTH, ROSTER_CARD_HEIGHT, fill)
     .setOrigin(0)
     .setAlpha(unit ? 1 : 0.25)
-    .setStrokeStyle(isSelected ? 3 : 1, cssHexToNumber(isSelected ? ARMY_SELECTED_HIGHLIGHT_COLOR : COLORS.panelBorder))
+    .setStrokeStyle(isSelected ? 3 : 1, cssHexToNumber(isSelected ? SELECTED_UNIT_HIGHLIGHT : COLORS.panelBorder))
     .setDepth(SETUP_UI_DEPTH + 1));
 
   if (!unit) {
@@ -1678,6 +1703,25 @@ function selectArmyRosterUnit(unitId) {
 
 function selectArmySquad(squadIndex) {
   selectedArmySquadIndex = squadIndex;
+  renderSetupUi();
+}
+
+function handleArmySquadPanelClick(squadIndex) {
+  selectedArmySquadIndex = squadIndex;
+  if (!selectedArmyRosterUnitId) {
+    renderSetupUi();
+    return;
+  }
+
+  const squad = armySquads[squadIndex];
+  const emptySlotIndex = squad.unitIds.findIndex((unitId) => !unitId);
+  if (emptySlotIndex < 0) {
+    renderSetupUi();
+    return;
+  }
+
+  removeUnitFromArmySquads(selectedArmyRosterUnitId);
+  squad.unitIds[emptySlotIndex] = selectedArmyRosterUnitId;
   renderSetupUi();
 }
 
@@ -1740,7 +1784,7 @@ function getSelectedArmySquadUnits() {
 
 function buildPracticeCombatFormations() {
   redFormation = getSelectedArmySquadUnits().map((unit, index) => {
-    const position = ARMY_DEFAULT_RED_SLOTS[index] || ARMY_DEFAULT_RED_SLOTS[0];
+    const position = DEFAULT_SQUAD_FORMATION_POSITIONS[index] || DEFAULT_SLOT_1_FORMATION_POSITION;
     return createPlacement('red', position.row, position.col, true, unit.unitType, unit.name);
   });
 
