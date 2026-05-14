@@ -407,6 +407,10 @@ const SQUAD_BOARD_EMPTY_ALPHA = 0.58;
 const SQUAD_BOARD_OCCUPIED_ALPHA = 0.96;
 const SQUAD_BOARD_OCCUPIED_COLOR = '#20202a';
 const SELECTED_CELL_HIGHLIGHT = '#f2cf45';
+const FORMATION_BG_COLOR = 0x2f3434;
+const FORMATION_BG_DEPTH = DEPTH_GRID + 5;
+const ASSIGNED_CARD_ALPHA = 0.48;
+const ASSIGNED_CARD_FILL_COLOR = '#2b2d31';
 const ROSTER_X = 64;
 const ROSTER_Y = 520;
 const ROSTER_CARD_WIDTH = 262;
@@ -417,8 +421,11 @@ const FORMATION_ACTION_BUTTON_X = GAME_WIDTH - 292;
 const FORMATION_ACTION_BUTTON_Y = GAME_HEIGHT - 106;
 const FORMATION_ACTION_BUTTON_WIDTH = 228;
 const FORMATION_BOARD_ROW_TO_COMBAT_ROW = ['front', 'middle', 'back'];
-const ARMY_DEFAULT_BLUE_FORMATION = [
-  { unitType: 'squire', row: 'back', col: 1 }
+const PRACTICE_ENEMY_COUNT = 2;
+const PRACTICE_ENEMY_ALLOWED_CLASSES = ['squire', 'thief', 'archer'];
+const PRACTICE_ENEMY_FORMATION_SLOTS = [
+  { row: 'front', col: 1 },
+  { row: 'back', col: 1 }
 ];
 const ARMY_TEST_ROSTER = [
   { id: 'knight-1', name: 'Knight', unitType: 'knight' },
@@ -816,6 +823,8 @@ let selectedArmyRosterUnitId = null;
 let selectedArmySquadIndex = 0;
 let setupNodes = [];
 let setupTooltipNodes = [];
+let formationBackgroundNode = null;
+let utilityMenuButtonNodes = [];
 let commandLevel = STARTING_COMMAND_LEVEL;
 let commandXp = STARTING_COMMAND_XP;
 let enemyCommandLevel = STARTING_ENEMY_COMMAND_LEVEL;
@@ -1010,6 +1019,16 @@ function createLayout() {
     .setOrigin(0)
     .setStrokeStyle(2, PHASER_COLORS.panelBorder);
 
+  formationBackgroundNode = sceneRef.add.rectangle(
+    0,
+    0,
+    GAME_WIDTH,
+    GAME_HEIGHT,
+    FORMATION_BG_COLOR
+  )
+    .setOrigin(0)
+    .setDepth(FORMATION_BG_DEPTH);
+
   createPopupButtons();
 }
 
@@ -1046,6 +1065,25 @@ function createPopupButtons() {
 
   button.on('pointerdown', toggleUtilityMenu);
   label.on('pointerdown', toggleUtilityMenu);
+  utilityMenuButtonNodes = [button, label];
+}
+
+function setFormationScreenVisible(isVisible) {
+  if (formationBackgroundNode) {
+    formationBackgroundNode.setVisible(isVisible);
+  }
+
+  utilityMenuButtonNodes.forEach((node) => {
+    if (isLiveBattlefieldNode(node)) {
+      node.setVisible(!isVisible);
+    }
+  });
+
+  if (isVisible) {
+    hideUtilityMenu();
+    hideSpeedMenu();
+    closePopups();
+  }
 }
 
 function createUtilityButton(label, x, y, onClick) {
@@ -1393,15 +1431,10 @@ function renderPopupPanel(key) {
 
 function enterSetupPhase() {
   gamePhase = 'setup';
+  setFormationScreenVisible(true);
   initializeArmyManagement();
   redFormation = [];
-  blueFormation = ARMY_DEFAULT_BLUE_FORMATION.map((placement) => createPlacement(
-    'blue',
-    placement.row,
-    placement.col,
-    false,
-    placement.unitType
-  ));
+  blueFormation = [];
   selectedSetupUnitType = 'knight';
   renderSetupUi();
 }
@@ -1480,9 +1513,7 @@ function getSetupCommandMax(teamKey) {
 }
 
 function isSetupReady() {
-  return getSelectedArmySquadUnits().length >= SETUP_MIN_UNITS_TO_START &&
-    blueFormation.length >= SETUP_MIN_UNITS_TO_START &&
-    getSetupCommandUsed('blue') <= getBlueCommandMax();
+  return getSelectedArmySquadUnits().length >= SETUP_MIN_UNITS_TO_START;
 }
 
 function clearSetupUi() {
@@ -1642,7 +1673,12 @@ function renderArmyRoster() {
 
 function renderArmyRosterCard(unit, x, y) {
   const isSelected = unit && selectedArmyRosterUnitId === unit.id;
-  const fill = unit ? PHASER_COLORS.panel : PHASER_COLORS.infoPanel;
+  const assignment = unit ? getArmyUnitAssignment(unit.id) : null;
+  const isAssigned = Boolean(assignment);
+  const fill = unit
+    ? cssHexToNumber(isAssigned ? ASSIGNED_CARD_FILL_COLOR : COLORS.panel)
+    : PHASER_COLORS.infoPanel;
+  const contentAlpha = isAssigned ? ASSIGNED_CARD_ALPHA : 1;
   const card = addSetupNode(sceneRef.add.rectangle(x, y, ROSTER_CARD_WIDTH, ROSTER_CARD_HEIGHT, fill)
     .setOrigin(0)
     .setAlpha(unit ? 1 : 0.25)
@@ -1660,24 +1696,28 @@ function renderArmyRosterCard(unit, x, y) {
   card.on('pointerdown', () => selectArmyRosterUnit(unit.id));
 
   const classDefinition = getClassDefinition(unit.unitType);
-  const assignment = getArmyUnitAssignment(unit.id);
-  const assignmentText = assignment
-    ? `${armySquads[assignment.squadIndex].name} r${assignment.row + 1} c${assignment.col + 1}`
-    : 'Unassigned';
 
   [
     sceneRef.add.text(x + 14, y + 10, unit.name, headerTextStyle()),
-    sceneRef.add.text(x + 14, y + 40, classDefinition.name, smallTextStyle()),
-    sceneRef.add.text(x + 14, y + 122, assignmentText, smallTextStyle()).setAlpha(0.72)
+    sceneRef.add.text(x + 14, y + 40, classDefinition.name, smallTextStyle())
   ].forEach((node) => {
-    addSetupNode(node.setDepth(SETUP_UI_DEPTH + 2).setInteractive({ useHandCursor: true }));
+    addSetupNode(node.setAlpha(contentAlpha).setDepth(SETUP_UI_DEPTH + 2).setInteractive({ useHandCursor: true }));
     node.on('pointerdown', () => selectArmyRosterUnit(unit.id));
   });
 
-  renderArmyRosterStats(unit.unitType, x + 14, y + 72);
+  if (isAssigned) {
+    const check = addSetupNode(sceneRef.add.text(x + ROSTER_CARD_WIDTH - 28, y + 12, '✓', headerTextStyle())
+      .setOrigin(0.5, 0)
+      .setAlpha(contentAlpha)
+      .setDepth(SETUP_UI_DEPTH + 2)
+      .setInteractive({ useHandCursor: true }));
+    check.on('pointerdown', () => selectArmyRosterUnit(unit.id));
+  }
+
+  renderArmyRosterStats(unit.unitType, x + 14, y + 72, contentAlpha);
 }
 
-function renderArmyRosterStats(unitType, x, y) {
+function renderArmyRosterStats(unitType, x, y, alpha = 1) {
   const stats = calculateClassStats(unitType);
   const pairs = [
     ['HP', 'hp', stats.maxHp],
@@ -1689,7 +1729,10 @@ function renderArmyRosterStats(unitType, x, y) {
   pairs.forEach(([label, resourceKey, max], index) => {
     const rowX = x + (index % 2) * 86;
     const rowY = y + Math.floor(index / 2) * 22;
-    drawResourceRow(rowX, rowY, label, resourceKey, max, max, SETUP_UI_DEPTH + 2, addSetupNode);
+    drawResourceRow(rowX, rowY, label, resourceKey, max, max, SETUP_UI_DEPTH + 2, (node) => {
+      node.setAlpha(alpha);
+      addSetupNode(node);
+    });
   });
 }
 
@@ -1828,13 +1871,17 @@ function buildPracticeCombatFormations() {
     );
   });
 
-  blueFormation = ARMY_DEFAULT_BLUE_FORMATION.map((placement) => createPlacement(
-    'blue',
-    placement.row,
-    placement.col,
-    false,
-    placement.unitType
-  ));
+  blueFormation = createRandomPracticeEnemyFormation();
+}
+
+function createRandomPracticeEnemyFormation() {
+  return Array.from({ length: PRACTICE_ENEMY_COUNT }, (_, index) => {
+    const unitType = PRACTICE_ENEMY_ALLOWED_CLASSES[
+      Math.floor(Math.random() * PRACTICE_ENEMY_ALLOWED_CLASSES.length)
+    ];
+    const position = PRACTICE_ENEMY_FORMATION_SLOTS[index % PRACTICE_ENEMY_FORMATION_SLOTS.length];
+    return createPlacement('blue', position.row, position.col, false, unitType);
+  });
 }
 
 function renderSetupPanel() {
@@ -4123,6 +4170,7 @@ function startBattle() {
 
   clearSetupUi();
   clearAllStatsPanels();
+  setFormationScreenVisible(false);
   gamePhase = 'battle';
   round = 0;
   turn = 1;
