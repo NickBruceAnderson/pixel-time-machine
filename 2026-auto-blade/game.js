@@ -1634,13 +1634,13 @@ function renderArmySquadCell(squadIndex, row, col, x, y, unitId) {
     .setStrokeStyle(isSelectedUnit ? 3 : 1, cssHexToNumber(isSelectedUnit ? SELECTED_CELL_HIGHLIGHT : COLORS.panelBorder))
     .setInteractive({ useHandCursor: true })
     .setDepth(SETUP_UI_DEPTH + 2));
-  slot.on('pointerdown', () => handleArmyCellClick(squadIndex, row, col));
+  slot.on('pointerdown', (pointer) => handleArmyCellPointerDown(squadIndex, row, col, pointer));
 
   const label = unit ? unit.name : '';
   const text = addSetupNode(sceneRef.add.text(x + 10, y + 10, label, smallTextStyle())
     .setDepth(SETUP_UI_DEPTH + 3)
     .setInteractive({ useHandCursor: true }));
-  text.on('pointerdown', () => handleArmyCellClick(squadIndex, row, col));
+  text.on('pointerdown', (pointer) => handleArmyCellPointerDown(squadIndex, row, col, pointer));
 
   if (unit) {
     const sprite = addSetupNode(sceneRef.add.sprite(
@@ -1653,7 +1653,7 @@ function renderArmySquadCell(squadIndex, row, col, x, y, unitId) {
       .setTint(cssHexToNumber(RED_TEAM_UNIT_TINT))
       .setDepth(SETUP_UI_DEPTH + 3)
       .setInteractive({ useHandCursor: true }));
-    sprite.on('pointerdown', () => handleArmyCellClick(squadIndex, row, col));
+    sprite.on('pointerdown', (pointer) => handleArmyCellPointerDown(squadIndex, row, col, pointer));
   }
 }
 
@@ -1750,6 +1750,17 @@ function handleArmySquadPanelClick(squadIndex) {
   selectArmySquad(squadIndex);
 }
 
+function handleArmyCellPointerDown(squadIndex, row, col, pointer) {
+  if (pointer.rightButtonDown()) {
+    removeArmyUnitFromCell(squadIndex, row, col);
+    return;
+  }
+
+  if (pointer.leftButtonDown()) {
+    handleArmyCellClick(squadIndex, row, col);
+  }
+}
+
 function handleArmyCellClick(squadIndex, row, col) {
   selectedArmySquadIndex = squadIndex;
   const squad = armySquads[squadIndex];
@@ -1769,6 +1780,16 @@ function handleArmyCellClick(squadIndex, row, col) {
   }
 
   placeSelectedArmyUnitInCell(squadIndex, row, col);
+  renderSetupUi();
+}
+
+function removeArmyUnitFromCell(squadIndex, row, col) {
+  const squad = armySquads[squadIndex];
+  if (!squad.cells[row][col]) {
+    return;
+  }
+
+  squad.cells[row][col] = null;
   renderSetupUi();
 }
 
