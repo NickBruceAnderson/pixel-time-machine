@@ -325,7 +325,10 @@ const INITIATIVE_ORDER_ACTED_ALPHA = 0.20;
 const INITIATIVE_ORDER_INELIGIBLE_ALPHA = 0.10;
 
 // Command progression
-const STARTING_COMMAND_LEVEL = 6;
+const COMMAND_LEVEL_MIN = 1;
+const COMMAND_LEVEL_MAX = 9;
+const COMMAND_LEVEL_DEFAULT = 2;
+const STARTING_COMMAND_LEVEL = COMMAND_LEVEL_DEFAULT;
 const STARTING_COMMAND_XP = 0;
 const COMMAND_XP_TO_LEVEL = 10;
 const STARTING_ENEMY_COMMAND_LEVEL = 6;
@@ -335,7 +338,7 @@ const BATTLE_OVER_RETURN_TO_SETUP_DELAY_MS = BATTLE_OVER_BANNER_HOLD_MS + ROUND_
 
 // Setup phase
 const SETUP_MIN_UNITS_TO_START = 1;
-const SETUP_FORMATION_CP_CAP = 5;
+const SETUP_FORMATION_CP_CAP = COMMAND_LEVEL_DEFAULT;
 const SETUP_AI_DEFAULT_COMMAND_SPEND = 6;
 const SETUP_UI_DEPTH = 150;
 const SETUP_PANEL_X = 24;
@@ -383,16 +386,30 @@ const SETUP_PREVIEW_ALPHA_PLAYER = 1;
 const SETUP_PREVIEW_ALPHA_AI = 0.72;
 
 // Unit formation
-const MAX_SQUADS = 3;
-const COMMAND_POINTS_PER_SQUAD = 2;
-const MAX_VISIBLE_ROSTER_UNITS = 6;
+const MAX_SQUADS = 6;
+const COMMAND_POINTS_PER_SQUAD = COMMAND_LEVEL_DEFAULT;
+const PICKER_COLUMNS = 6;
+const PICKER_ROWS = 2;
+const PICKER_UNIT_COPY_COUNT = 3;
+const MAX_VISIBLE_ROSTER_UNITS = PICKER_COLUMNS * PICKER_ROWS;
 const FORMATION_COMMAND_ICON = '👑';
 const SELECTED_SQUAD_HIGHLIGHT = '#58a6ff';
 const SELECTED_UNIT_HIGHLIGHT = '#f2cf45';
 const FORMATION_HEADER_X = 64;
 const FORMATION_HEADER_Y = 42;
+const COMMAND_LEVEL_MINUS_BUTTON_X = GAME_WIDTH - 382;
+const COMMAND_LEVEL_TEXT_X = GAME_WIDTH - 328;
+const COMMAND_LEVEL_ICON_X = GAME_WIDTH - 80;
+const COMMAND_LEVEL_PLUS_BUTTON_X = GAME_WIDTH - 46;
+const COMMAND_LEVEL_BUTTON_Y = FORMATION_HEADER_Y + 4;
+const COMMAND_LEVEL_BUTTON_SIZE = 30;
+const SQUAD_LABEL_X = 64;
+const SQUAD_LABEL_Y = 104;
+const SQUAD_LABEL_COLUMNS = 6;
+const SQUAD_LABEL_COLUMN_SPACING = 292;
+const SQUAD_LABEL_ROW_SPACING = 38;
 const SQUAD_PANEL_X = 64;
-const SQUAD_PANEL_Y = 112;
+const SQUAD_PANEL_Y = 156;
 const SQUAD_PANEL_WIDTH = 560;
 const SQUAD_PANEL_HEIGHT = 300;
 const SQUAD_PANEL_GAP = 28;
@@ -411,12 +428,16 @@ const FORMATION_BG_COLOR = 0x2f3434;
 const FORMATION_BG_DEPTH = DEPTH_GRID + 5;
 const ASSIGNED_CARD_ALPHA = 0.48;
 const ASSIGNED_CARD_FILL_COLOR = '#2b2d31';
-const ROSTER_X = 64;
-const ROSTER_Y = 520;
+const PICKER_X_START = 64;
+const PICKER_BOTTOM_ANCHOR_Y = 1012;
+const PICKER_COLUMN_SPACING = 282;
+const PICKER_ROW_SPACING = 184;
+const ROSTER_X = PICKER_X_START;
 const ROSTER_CARD_WIDTH = 262;
 const ROSTER_CARD_HEIGHT = 164;
+const ROSTER_Y = PICKER_BOTTOM_ANCHOR_Y - ROSTER_CARD_HEIGHT - PICKER_ROW_SPACING * (PICKER_ROWS - 1);
 const ROSTER_CARD_GAP = 20;
-const ROSTER_COLUMNS = 6;
+const ROSTER_COLUMNS = PICKER_COLUMNS;
 const FORMATION_ACTION_BUTTON_X = GAME_WIDTH - 292;
 const FORMATION_ACTION_BUTTON_Y = GAME_HEIGHT - 106;
 const FORMATION_ACTION_BUTTON_WIDTH = 228;
@@ -433,6 +454,17 @@ const ARMY_TEST_ROSTER = [
   { id: 'thief-1', name: 'Thief', unitType: 'thief' },
   { id: 'archer-1', name: 'Archer', unitType: 'archer' }
 ];
+
+function createArmyTestRoster() {
+  return SETUP_UNIT_TYPES.flatMap((unitType) => {
+    const classDefinition = getClassDefinition(unitType);
+    return Array.from({ length: PICKER_UNIT_COPY_COUNT }, (_, index) => ({
+      id: `${unitType}-${index + 1}`,
+      name: `${classDefinition.name} ${index + 1}`,
+      unitType
+    }));
+  });
+}
 
 // Battle start
 // Action timing
@@ -823,6 +855,8 @@ let armyRoster = [];
 let armySquads = [];
 let selectedArmyRosterUnitId = null;
 let selectedArmySquadIndex = 0;
+let draggedArmyRosterUnitId = null;
+let draggedArmyRosterGhost = null;
 let setupNodes = [];
 let setupTooltipNodes = [];
 let formationBackgroundNode = null;
@@ -930,6 +964,8 @@ function create() {
   sceneRef.input.keyboard.on(`keydown-${BATTLE_GRID_TOGGLE_KEY}`, toggleBattleGridLines);
   sceneRef.input.keyboard.on(`keydown-${KNIGHT_RANDOM_IDLE_TWITCH_TEST_KEY}`, toggleKnightRandomIdleTwitch);
   sceneRef.input.on('pointerdown', handleGlobalPointerDown);
+  sceneRef.input.on('pointermove', handleArmyRosterDragMove);
+  sceneRef.input.on('pointerup', handleArmyRosterDragEnd);
 
   enterSetupPhase();
 }
@@ -1455,14 +1491,13 @@ function createPlacement(team, row, col, isPlayerControlled, unitType = 'knight'
 
 function initializeArmyManagement() {
   if (armyRoster.length === 0) {
-    armyRoster = ARMY_TEST_ROSTER.map((unit) => ({ ...unit }));
+    armyRoster = createArmyTestRoster();
   }
 
   if (armySquads.length === 0) {
     armySquads = Array.from({ length: MAX_SQUADS }, (_, index) => ({
       id: `squad-${index + 1}`,
-      name: `Squad ${String(index + 1).padStart(2, '0')}`,
-      commandPoints: COMMAND_POINTS_PER_SQUAD,
+      name: `Squad ${index + 1}`,
       cells: createEmptySquadCells()
     }));
   }
@@ -1503,7 +1538,7 @@ function getSetupCommandUsed(teamKey) {
 }
 
 function getRedCommandMax() {
-  return SETUP_FORMATION_CP_CAP;
+  return commandLevel;
 }
 
 function getBlueCommandMax() {
@@ -1555,6 +1590,7 @@ function renderArmyManagementScreen() {
     ...headerTextStyle(),
     fontSize: '36px'
   }).setDepth(SETUP_UI_DEPTH + 1));
+  renderCommandLevelControls();
 
   renderArmySquads();
   renderArmyRoster();
@@ -1570,10 +1606,65 @@ function renderArmyManagementScreen() {
 }
 
 function renderArmySquads() {
+  renderSquadCapacityLabels();
+  renderArmySquadPanel(armySquads[selectedArmySquadIndex], selectedArmySquadIndex, SQUAD_PANEL_X, SQUAD_PANEL_Y);
+}
+
+function renderCommandLevelControls() {
+  createSetupButton('-', COMMAND_LEVEL_MINUS_BUTTON_X, COMMAND_LEVEL_BUTTON_Y, COMMAND_LEVEL_BUTTON_SIZE, () => changeCommandLevel(-1), commandLevel > COMMAND_LEVEL_MIN);
+  addSetupNode(sceneRef.add.text(
+    COMMAND_LEVEL_TEXT_X,
+    FORMATION_HEADER_Y + 4,
+    `Command Level ${commandLevel}`,
+    headerTextStyle()
+  ).setDepth(SETUP_UI_DEPTH + 1));
+  addSetupNode(sceneRef.add.text(
+    COMMAND_LEVEL_ICON_X,
+    FORMATION_HEADER_Y + 4,
+    FORMATION_COMMAND_ICON,
+    headerTextStyle()
+  ).setOrigin(0.5, 0).setDepth(SETUP_UI_DEPTH + 1));
+  createSetupButton('+', COMMAND_LEVEL_PLUS_BUTTON_X, COMMAND_LEVEL_BUTTON_Y, COMMAND_LEVEL_BUTTON_SIZE, () => changeCommandLevel(1), commandLevel < COMMAND_LEVEL_MAX);
+}
+
+function renderSquadCapacityLabels() {
   armySquads.forEach((squad, squadIndex) => {
-    const x = SQUAD_PANEL_X + squadIndex * (SQUAD_PANEL_WIDTH + SQUAD_PANEL_GAP);
-    const y = SQUAD_PANEL_Y;
-    renderArmySquadPanel(squad, squadIndex, x, y);
+    const col = squadIndex % SQUAD_LABEL_COLUMNS;
+    const row = Math.floor(squadIndex / SQUAD_LABEL_COLUMNS);
+    const x = SQUAD_LABEL_X + col * SQUAD_LABEL_COLUMN_SPACING;
+    const y = SQUAD_LABEL_Y + row * SQUAD_LABEL_ROW_SPACING;
+    const assignedCount = getSquadAssignedCount(squad);
+    const commandPoints = getSquadCommandPoints(squad);
+    const isSelected = selectedArmySquadIndex === squadIndex;
+    const label = addSetupNode(sceneRef.add.text(
+      x,
+      y,
+      `${squad.name}: ${assignedCount} out of ${commandPoints}`,
+      smallTextStyle()
+    )
+      .setColor(isSelected ? SELECTED_SQUAD_HIGHLIGHT : COLORS.text)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(SETUP_UI_DEPTH + 2));
+    label.on('pointerdown', () => handleArmySquadPanelClick(squadIndex));
+  });
+}
+
+function changeCommandLevel(delta) {
+  commandLevel = Math.max(COMMAND_LEVEL_MIN, Math.min(COMMAND_LEVEL_MAX, commandLevel + delta));
+  trimArmySquadsToCommandLevel();
+  renderSetupUi();
+}
+
+function trimArmySquadsToCommandLevel() {
+  armySquads.forEach((squad) => {
+    let kept = 0;
+    squad.cells = squad.cells.map((rowCells) => rowCells.map((unitId) => {
+      if (!unitId) {
+        return null;
+      }
+      kept += 1;
+      return kept <= commandLevel ? unitId : null;
+    }));
   });
 }
 
@@ -1581,7 +1672,7 @@ function renderArmySquadPanel(squad, squadIndex, x, y) {
   const isSelected = selectedArmySquadIndex === squadIndex;
   const borderColor = cssHexToNumber(isSelected ? SELECTED_SQUAD_HIGHLIGHT : COLORS.panelBorder);
   const assignedCount = getSquadAssignedCount(squad);
-  const commandPoints = squad.commandPoints || COMMAND_POINTS_PER_SQUAD;
+  const commandPoints = getSquadCommandPoints(squad);
   const panel = addSetupNode(sceneRef.add.rectangle(
     x,
     y,
@@ -1667,8 +1758,8 @@ function renderArmyRoster() {
     const unit = armyRoster[index] || null;
     const col = index % ROSTER_COLUMNS;
     const row = Math.floor(index / ROSTER_COLUMNS);
-    const x = ROSTER_X + col * (ROSTER_CARD_WIDTH + ROSTER_CARD_GAP);
-    const y = ROSTER_Y + row * (ROSTER_CARD_HEIGHT + ROSTER_CARD_GAP);
+    const x = ROSTER_X + col * PICKER_COLUMN_SPACING;
+    const y = ROSTER_Y + row * PICKER_ROW_SPACING;
     renderArmyRosterCard(unit, x, y);
   }
 }
@@ -1695,7 +1786,7 @@ function renderArmyRosterCard(unit, x, y) {
   }
 
   card.setInteractive({ useHandCursor: true });
-  card.on('pointerdown', () => selectArmyRosterUnit(unit.id));
+  card.on('pointerdown', (pointer) => beginArmyRosterDrag(unit.id, pointer));
 
   const classDefinition = getClassDefinition(unit.unitType);
 
@@ -1704,7 +1795,7 @@ function renderArmyRosterCard(unit, x, y) {
     sceneRef.add.text(x + 14, y + 40, classDefinition.name, smallTextStyle())
   ].forEach((node) => {
     addSetupNode(node.setAlpha(contentAlpha).setDepth(SETUP_UI_DEPTH + 2).setInteractive({ useHandCursor: true }));
-    node.on('pointerdown', () => selectArmyRosterUnit(unit.id));
+    node.on('pointerdown', (pointer) => beginArmyRosterDrag(unit.id, pointer));
   });
 
   if (isAssigned) {
@@ -1741,6 +1832,74 @@ function renderArmyRosterStats(unitType, x, y, alpha = 1) {
 function selectArmyRosterUnit(unitId) {
   selectedArmyRosterUnitId = unitId;
   renderSetupUi();
+}
+
+function beginArmyRosterDrag(unitId, pointer) {
+  selectedArmyRosterUnitId = unitId;
+  draggedArmyRosterUnitId = unitId;
+  clearArmyRosterDragGhost();
+  const unit = getArmyRosterUnit(unitId);
+  draggedArmyRosterGhost = [
+    sceneRef.add.rectangle(pointer.worldX, pointer.worldY, ROSTER_CARD_WIDTH * 0.52, 48, PHASER_COLORS.panel)
+      .setAlpha(0.82)
+      .setStrokeStyle(1, cssHexToNumber(SELECTED_UNIT_HIGHLIGHT))
+      .setDepth(SETUP_UI_DEPTH + 30),
+    sceneRef.add.text(pointer.worldX - 56, pointer.worldY - 12, unit?.name || '', smallTextStyle())
+      .setDepth(SETUP_UI_DEPTH + 31)
+  ];
+}
+
+function handleArmyRosterDragMove(pointer) {
+  if (!draggedArmyRosterGhost) {
+    return;
+  }
+
+  draggedArmyRosterGhost[0].setPosition(pointer.worldX, pointer.worldY);
+  draggedArmyRosterGhost[1].setPosition(pointer.worldX - 56, pointer.worldY - 12);
+}
+
+function handleArmyRosterDragEnd(pointer) {
+  if (!draggedArmyRosterUnitId) {
+    return;
+  }
+
+  const cell = getVisibleArmyCellAt(pointer.worldX, pointer.worldY);
+  selectedArmyRosterUnitId = draggedArmyRosterUnitId;
+  draggedArmyRosterUnitId = null;
+  clearArmyRosterDragGhost();
+
+  if (cell) {
+    placeSelectedArmyUnitInCell(cell.squadIndex, cell.row, cell.col);
+  }
+
+  renderSetupUi();
+}
+
+function clearArmyRosterDragGhost() {
+  (draggedArmyRosterGhost || []).forEach((node) => {
+    if (node && node.scene) {
+      node.destroy();
+    }
+  });
+  draggedArmyRosterGhost = null;
+}
+
+function getVisibleArmyCellAt(x, y) {
+  const boardX = SQUAD_PANEL_X + SQUAD_BOARD_X_OFFSET;
+  const boardY = SQUAD_PANEL_Y + SQUAD_BOARD_Y_OFFSET;
+  for (let row = 0; row < SQUAD_BOARD_ROWS; row += 1) {
+    for (let col = 0; col < SQUAD_BOARD_COLS; col += 1) {
+      const cellX = boardX + col * (SQUAD_BOARD_CELL_WIDTH + SQUAD_BOARD_CELL_GAP);
+      const cellY = boardY + row * (SQUAD_BOARD_CELL_HEIGHT + SQUAD_BOARD_CELL_GAP);
+      if (x >= cellX &&
+          x <= cellX + SQUAD_BOARD_CELL_WIDTH - 8 &&
+          y >= cellY &&
+          y <= cellY + SQUAD_BOARD_CELL_HEIGHT - 8) {
+        return { squadIndex: selectedArmySquadIndex, row, col };
+      }
+    }
+  }
+  return null;
 }
 
 function selectArmySquad(squadIndex) {
@@ -1818,7 +1977,7 @@ function placeSelectedArmyUnitInCell(squadIndex, row, col) {
 }
 
 function getSquadCommandPoints(squad) {
-  return squad.commandPoints || COMMAND_POINTS_PER_SQUAD;
+  return commandLevel;
 }
 
 function getSquadAssignedCount(squad) {
@@ -5231,7 +5390,7 @@ function addCommandXp(amount) {
 
   while (commandXp >= COMMAND_XP_TO_LEVEL) {
     commandXp -= COMMAND_XP_TO_LEVEL;
-    commandLevel += 1;
+    commandLevel = Math.min(COMMAND_LEVEL_MAX, commandLevel + 1);
   }
 }
 
