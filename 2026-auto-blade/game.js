@@ -403,26 +403,32 @@ const COMMAND_LEVEL_ICON_X = GAME_WIDTH - 80;
 const COMMAND_LEVEL_PLUS_BUTTON_X = GAME_WIDTH - 46;
 const COMMAND_LEVEL_BUTTON_Y = FORMATION_HEADER_Y + 4;
 const COMMAND_LEVEL_BUTTON_SIZE = 30;
-const SQUAD_SCROLL_AREA_X = 64;
-const SQUAD_SCROLL_AREA_Y = 124;
-const SQUAD_SCROLL_AREA_WIDTH = GAME_WIDTH - 420;
-const SQUAD_SCROLL_AREA_HEIGHT = 318;
-const SQUAD_CARD_WIDTH = 262;
+const SQUAD_VIEWPORT_X = 236;
+const SQUAD_VIEWPORT_Y = 124;
+const SQUAD_VISIBLE_CARDS_PER_PAGE = 3;
+const SQUAD_CARD_WIDTH = 430;
 const SQUAD_CARD_HEIGHT = 300;
 const SQUAD_CARD_GAP = 20;
+const SQUAD_CARD_STEP = SQUAD_CARD_WIDTH + SQUAD_CARD_GAP;
+const SQUAD_VIEWPORT_WIDTH = SQUAD_CARD_WIDTH * SQUAD_VISIBLE_CARDS_PER_PAGE + SQUAD_CARD_GAP * (SQUAD_VISIBLE_CARDS_PER_PAGE - 1);
+const SQUAD_VIEWPORT_HEIGHT = 318;
+const SQUAD_PAGE_SCROLL_DISTANCE = SQUAD_CARD_STEP * SQUAD_VISIBLE_CARDS_PER_PAGE;
+const SQUAD_ARROW_BUTTON_Y = SQUAD_VIEWPORT_Y + SQUAD_CARD_HEIGHT / 2 - SETUP_BUTTON_HEIGHT / 2;
+const SQUAD_LEFT_ARROW_BUTTON_X = SQUAD_VIEWPORT_X - 76;
+const SQUAD_RIGHT_ARROW_BUTTON_X = SQUAD_VIEWPORT_X + SQUAD_VIEWPORT_WIDTH + 32;
+const SQUAD_ARROW_BUTTON_WIDTH = 44;
 const SQUAD_ACTIVE_BORDER_COLOR = SELECTED_SQUAD_HIGHLIGHT;
 const SQUAD_INACTIVE_BORDER_COLOR = COLORS.panelBorder;
-const SQUAD_PANEL_X = SQUAD_SCROLL_AREA_X;
-const SQUAD_PANEL_Y = SQUAD_SCROLL_AREA_Y;
-const SQUAD_BOARD_X_OFFSET = 29;
+const SQUAD_PANEL_X = SQUAD_VIEWPORT_X;
+const SQUAD_PANEL_Y = SQUAD_VIEWPORT_Y;
+const SQUAD_BOARD_X_OFFSET = 78;
 const SQUAD_BOARD_Y_OFFSET = 80;
-const SQUAD_BOARD_CELL_SIZE = 64;
+const SQUAD_BOARD_CELL_SIZE = 86;
 const SQUAD_BOARD_CELL_WIDTH = SQUAD_BOARD_CELL_SIZE;
 const SQUAD_BOARD_CELL_HEIGHT = SQUAD_BOARD_CELL_SIZE;
-const SQUAD_BOARD_CELL_GAP = 6;
+const SQUAD_BOARD_CELL_GAP = 8;
 const SQUAD_BOARD_COLS = 3;
 const SQUAD_BOARD_ROWS = 3;
-const SQUAD_SCROLL_WHEEL_SPEED = 1;
 const SQUAD_BOARD_EMPTY_ALPHA = 0.58;
 const SQUAD_BOARD_OCCUPIED_ALPHA = 0.96;
 const SQUAD_BOARD_OCCUPIED_COLOR = '#20202a';
@@ -967,6 +973,8 @@ function create() {
   sceneRef.input.keyboard.on(`keydown-${COMBAT_ZOOM_KEY}`, toggleCombatZoomMode);
   sceneRef.input.keyboard.on(`keydown-${BATTLE_GRID_TOGGLE_KEY}`, toggleBattleGridLines);
   sceneRef.input.keyboard.on(`keydown-${KNIGHT_RANDOM_IDLE_TWITCH_TEST_KEY}`, toggleKnightRandomIdleTwitch);
+  sceneRef.input.keyboard.on('keydown-LEFT', () => changeSquadPage(-1));
+  sceneRef.input.keyboard.on('keydown-RIGHT', () => changeSquadPage(1));
   sceneRef.input.on('pointerdown', handleGlobalPointerDown);
   sceneRef.input.on('pointermove', handleArmyRosterDragMove);
   sceneRef.input.on('pointerup', handleArmyRosterDragEnd);
@@ -1611,12 +1619,18 @@ function renderArmyManagementScreen() {
 }
 
 function renderArmySquads() {
+  renderSquadPageControls();
   armySquads.forEach((squad, squadIndex) => {
     const x = getSquadCardX(squadIndex);
     if (isSquadCardVisible(x)) {
-      renderArmySquadPanel(squad, squadIndex, x, SQUAD_SCROLL_AREA_Y);
+      renderArmySquadPanel(squad, squadIndex, x, SQUAD_VIEWPORT_Y);
     }
   });
+}
+
+function renderSquadPageControls() {
+  createSetupButton('<', SQUAD_LEFT_ARROW_BUTTON_X, SQUAD_ARROW_BUTTON_Y, SQUAD_ARROW_BUTTON_WIDTH, () => changeSquadPage(-1), squadScrollOffset > 0);
+  createSetupButton('>', SQUAD_RIGHT_ARROW_BUTTON_X, SQUAD_ARROW_BUTTON_Y, SQUAD_ARROW_BUTTON_WIDTH, () => changeSquadPage(1), squadScrollOffset < getMaxSquadScrollOffset());
 }
 
 function renderCommandLevelControls() {
@@ -1639,6 +1653,7 @@ function renderCommandLevelControls() {
 function changeCommandLevel(delta) {
   commandLevel = Math.max(COMMAND_LEVEL_MIN, Math.min(COMMAND_LEVEL_MAX, commandLevel + delta));
   trimArmySquadsToCommandLevel();
+  setSquadScrollOffset(squadScrollOffset);
   renderSetupUi();
 }
 
@@ -1689,20 +1704,29 @@ function renderArmySquadPanel(squad, squadIndex, x, y) {
 }
 
 function getSquadCardX(squadIndex) {
-  return SQUAD_SCROLL_AREA_X + squadIndex * (SQUAD_CARD_WIDTH + SQUAD_CARD_GAP) - squadScrollOffset;
+  return SQUAD_VIEWPORT_X + squadIndex * SQUAD_CARD_STEP - squadScrollOffset;
 }
 
 function isSquadCardVisible(x) {
-  return x >= SQUAD_SCROLL_AREA_X && x + SQUAD_CARD_WIDTH <= SQUAD_SCROLL_AREA_X + SQUAD_SCROLL_AREA_WIDTH;
+  return x >= SQUAD_VIEWPORT_X && x + SQUAD_CARD_WIDTH <= SQUAD_VIEWPORT_X + SQUAD_VIEWPORT_WIDTH;
 }
 
 function getMaxSquadScrollOffset() {
-  const contentWidth = armySquads.length * SQUAD_CARD_WIDTH + Math.max(0, armySquads.length - 1) * SQUAD_CARD_GAP;
-  return Math.max(0, contentWidth - SQUAD_SCROLL_AREA_WIDTH);
+  const pageCount = Math.ceil(armySquads.length / SQUAD_VISIBLE_CARDS_PER_PAGE);
+  return Math.max(0, pageCount - 1) * SQUAD_PAGE_SCROLL_DISTANCE;
 }
 
 function setSquadScrollOffset(offset) {
   squadScrollOffset = Math.max(0, Math.min(getMaxSquadScrollOffset(), offset));
+}
+
+function changeSquadPage(delta) {
+  if (gamePhase !== 'setup') {
+    return;
+  }
+
+  setSquadScrollOffset(squadScrollOffset + delta * SQUAD_PAGE_SCROLL_DISTANCE);
+  renderSetupUi();
 }
 
 function renderArmySquadBoard(squad, squadIndex, boardX, boardY) {
@@ -1889,20 +1913,21 @@ function clearArmyRosterDragGhost() {
 }
 
 function handleSetupSquadWheel(pointer, over, dx, dy) {
-  if (gamePhase !== 'setup' || !isPointerInsideSquadScrollArea(pointer.worldX, pointer.worldY)) {
+  if (gamePhase !== 'setup' || !isPointerInsideSquadViewport(pointer.worldX, pointer.worldY)) {
     return;
   }
 
   const delta = Math.abs(dx) > Math.abs(dy) ? dx : dy;
-  setSquadScrollOffset(squadScrollOffset + delta * SQUAD_SCROLL_WHEEL_SPEED);
-  renderSetupUi();
+  if (delta !== 0) {
+    changeSquadPage(Math.sign(delta));
+  }
 }
 
-function isPointerInsideSquadScrollArea(x, y) {
-  return x >= SQUAD_SCROLL_AREA_X &&
-    x <= SQUAD_SCROLL_AREA_X + SQUAD_SCROLL_AREA_WIDTH &&
-    y >= SQUAD_SCROLL_AREA_Y &&
-    y <= SQUAD_SCROLL_AREA_Y + SQUAD_SCROLL_AREA_HEIGHT;
+function isPointerInsideSquadViewport(x, y) {
+  return x >= SQUAD_VIEWPORT_X &&
+    x <= SQUAD_VIEWPORT_X + SQUAD_VIEWPORT_WIDTH &&
+    y >= SQUAD_VIEWPORT_Y &&
+    y <= SQUAD_VIEWPORT_Y + SQUAD_VIEWPORT_HEIGHT;
 }
 
 function getVisibleArmyCellAt(x, y) {
@@ -1913,7 +1938,7 @@ function getVisibleArmyCellAt(x, y) {
     }
 
     const boardX = cardX + SQUAD_BOARD_X_OFFSET;
-    const boardY = SQUAD_SCROLL_AREA_Y + SQUAD_BOARD_Y_OFFSET;
+    const boardY = SQUAD_VIEWPORT_Y + SQUAD_BOARD_Y_OFFSET;
     for (let row = 0; row < SQUAD_BOARD_ROWS; row += 1) {
       for (let col = 0; col < SQUAD_BOARD_COLS; col += 1) {
         const cellX = boardX + col * (SQUAD_BOARD_CELL_WIDTH + SQUAD_BOARD_CELL_GAP);
