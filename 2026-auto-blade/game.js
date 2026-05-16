@@ -403,23 +403,26 @@ const COMMAND_LEVEL_ICON_X = GAME_WIDTH - 80;
 const COMMAND_LEVEL_PLUS_BUTTON_X = GAME_WIDTH - 46;
 const COMMAND_LEVEL_BUTTON_Y = FORMATION_HEADER_Y + 4;
 const COMMAND_LEVEL_BUTTON_SIZE = 30;
-const SQUAD_LABEL_X = 64;
-const SQUAD_LABEL_Y = 104;
-const SQUAD_LABEL_COLUMNS = 6;
-const SQUAD_LABEL_COLUMN_SPACING = 292;
-const SQUAD_LABEL_ROW_SPACING = 38;
-const SQUAD_PANEL_X = 64;
-const SQUAD_PANEL_Y = 156;
-const SQUAD_PANEL_WIDTH = 560;
-const SQUAD_PANEL_HEIGHT = 300;
-const SQUAD_PANEL_GAP = 28;
-const SQUAD_BOARD_X_OFFSET = 76;
-const SQUAD_BOARD_Y_OFFSET = 84;
-const SQUAD_BOARD_CELL_WIDTH = 126;
-const SQUAD_BOARD_CELL_HEIGHT = 58;
+const SQUAD_SCROLL_AREA_X = 64;
+const SQUAD_SCROLL_AREA_Y = 124;
+const SQUAD_SCROLL_AREA_WIDTH = GAME_WIDTH - 420;
+const SQUAD_SCROLL_AREA_HEIGHT = 318;
+const SQUAD_CARD_WIDTH = 262;
+const SQUAD_CARD_HEIGHT = 300;
+const SQUAD_CARD_GAP = 20;
+const SQUAD_ACTIVE_BORDER_COLOR = SELECTED_SQUAD_HIGHLIGHT;
+const SQUAD_INACTIVE_BORDER_COLOR = COLORS.panelBorder;
+const SQUAD_PANEL_X = SQUAD_SCROLL_AREA_X;
+const SQUAD_PANEL_Y = SQUAD_SCROLL_AREA_Y;
+const SQUAD_BOARD_X_OFFSET = 29;
+const SQUAD_BOARD_Y_OFFSET = 80;
+const SQUAD_BOARD_CELL_SIZE = 64;
+const SQUAD_BOARD_CELL_WIDTH = SQUAD_BOARD_CELL_SIZE;
+const SQUAD_BOARD_CELL_HEIGHT = SQUAD_BOARD_CELL_SIZE;
 const SQUAD_BOARD_CELL_GAP = 6;
 const SQUAD_BOARD_COLS = 3;
 const SQUAD_BOARD_ROWS = 3;
+const SQUAD_SCROLL_WHEEL_SPEED = 1;
 const SQUAD_BOARD_EMPTY_ALPHA = 0.58;
 const SQUAD_BOARD_OCCUPIED_ALPHA = 0.96;
 const SQUAD_BOARD_OCCUPIED_COLOR = '#20202a';
@@ -855,6 +858,7 @@ let armyRoster = [];
 let armySquads = [];
 let selectedArmyRosterUnitId = null;
 let selectedArmySquadIndex = 0;
+let squadScrollOffset = 0;
 let draggedArmyRosterUnitId = null;
 let draggedArmyRosterGhost = null;
 let setupNodes = [];
@@ -966,6 +970,7 @@ function create() {
   sceneRef.input.on('pointerdown', handleGlobalPointerDown);
   sceneRef.input.on('pointermove', handleArmyRosterDragMove);
   sceneRef.input.on('pointerup', handleArmyRosterDragEnd);
+  sceneRef.input.on('wheel', handleSetupSquadWheel);
 
   enterSetupPhase();
 }
@@ -1606,8 +1611,12 @@ function renderArmyManagementScreen() {
 }
 
 function renderArmySquads() {
-  renderSquadCapacityLabels();
-  renderArmySquadPanel(armySquads[selectedArmySquadIndex], selectedArmySquadIndex, SQUAD_PANEL_X, SQUAD_PANEL_Y);
+  armySquads.forEach((squad, squadIndex) => {
+    const x = getSquadCardX(squadIndex);
+    if (isSquadCardVisible(x)) {
+      renderArmySquadPanel(squad, squadIndex, x, SQUAD_SCROLL_AREA_Y);
+    }
+  });
 }
 
 function renderCommandLevelControls() {
@@ -1625,28 +1634,6 @@ function renderCommandLevelControls() {
     headerTextStyle()
   ).setOrigin(0.5, 0).setDepth(SETUP_UI_DEPTH + 1));
   createSetupButton('+', COMMAND_LEVEL_PLUS_BUTTON_X, COMMAND_LEVEL_BUTTON_Y, COMMAND_LEVEL_BUTTON_SIZE, () => changeCommandLevel(1), commandLevel < COMMAND_LEVEL_MAX);
-}
-
-function renderSquadCapacityLabels() {
-  armySquads.forEach((squad, squadIndex) => {
-    const col = squadIndex % SQUAD_LABEL_COLUMNS;
-    const row = Math.floor(squadIndex / SQUAD_LABEL_COLUMNS);
-    const x = SQUAD_LABEL_X + col * SQUAD_LABEL_COLUMN_SPACING;
-    const y = SQUAD_LABEL_Y + row * SQUAD_LABEL_ROW_SPACING;
-    const assignedCount = getSquadAssignedCount(squad);
-    const commandPoints = getSquadCommandPoints(squad);
-    const isSelected = selectedArmySquadIndex === squadIndex;
-    const label = addSetupNode(sceneRef.add.text(
-      x,
-      y,
-      `${squad.name}: ${assignedCount} out of ${commandPoints}`,
-      smallTextStyle()
-    )
-      .setColor(isSelected ? SELECTED_SQUAD_HIGHLIGHT : COLORS.text)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(SETUP_UI_DEPTH + 2));
-    label.on('pointerdown', () => handleArmySquadPanelClick(squadIndex));
-  });
 }
 
 function changeCommandLevel(delta) {
@@ -1670,14 +1657,14 @@ function trimArmySquadsToCommandLevel() {
 
 function renderArmySquadPanel(squad, squadIndex, x, y) {
   const isSelected = selectedArmySquadIndex === squadIndex;
-  const borderColor = cssHexToNumber(isSelected ? SELECTED_SQUAD_HIGHLIGHT : COLORS.panelBorder);
+  const borderColor = cssHexToNumber(isSelected ? SQUAD_ACTIVE_BORDER_COLOR : SQUAD_INACTIVE_BORDER_COLOR);
   const assignedCount = getSquadAssignedCount(squad);
   const commandPoints = getSquadCommandPoints(squad);
   const panel = addSetupNode(sceneRef.add.rectangle(
     x,
     y,
-    SQUAD_PANEL_WIDTH,
-    SQUAD_PANEL_HEIGHT,
+    SQUAD_CARD_WIDTH,
+    SQUAD_CARD_HEIGHT,
     PHASER_COLORS.panel
   )
     .setOrigin(0)
@@ -1689,7 +1676,7 @@ function renderArmySquadPanel(squad, squadIndex, x, y) {
   const title = addSetupNode(sceneRef.add.text(x + 16, y + 14, squad.name, headerTextStyle())
     .setDepth(SETUP_UI_DEPTH + 2));
   const cp = addSetupNode(sceneRef.add.text(
-    x + SQUAD_PANEL_WIDTH - 16,
+    x + SQUAD_CARD_WIDTH - 16,
     y + 18,
     `${FORMATION_COMMAND_ICON} ${commandPoints}   ${assignedCount}/${commandPoints}`,
     headerTextStyle()
@@ -1699,6 +1686,23 @@ function renderArmySquadPanel(squad, squadIndex, x, y) {
   [title, cp].forEach((node) => node.setInteractive({ useHandCursor: true }).on('pointerdown', () => handleArmySquadPanelClick(squadIndex)));
 
   renderArmySquadBoard(squad, squadIndex, x + SQUAD_BOARD_X_OFFSET, y + SQUAD_BOARD_Y_OFFSET);
+}
+
+function getSquadCardX(squadIndex) {
+  return SQUAD_SCROLL_AREA_X + squadIndex * (SQUAD_CARD_WIDTH + SQUAD_CARD_GAP) - squadScrollOffset;
+}
+
+function isSquadCardVisible(x) {
+  return x >= SQUAD_SCROLL_AREA_X && x + SQUAD_CARD_WIDTH <= SQUAD_SCROLL_AREA_X + SQUAD_SCROLL_AREA_WIDTH;
+}
+
+function getMaxSquadScrollOffset() {
+  const contentWidth = armySquads.length * SQUAD_CARD_WIDTH + Math.max(0, armySquads.length - 1) * SQUAD_CARD_GAP;
+  return Math.max(0, contentWidth - SQUAD_SCROLL_AREA_WIDTH);
+}
+
+function setSquadScrollOffset(offset) {
+  squadScrollOffset = Math.max(0, Math.min(getMaxSquadScrollOffset(), offset));
 }
 
 function renderArmySquadBoard(squad, squadIndex, boardX, boardY) {
@@ -1884,18 +1888,42 @@ function clearArmyRosterDragGhost() {
   draggedArmyRosterGhost = null;
 }
 
+function handleSetupSquadWheel(pointer, over, dx, dy) {
+  if (gamePhase !== 'setup' || !isPointerInsideSquadScrollArea(pointer.worldX, pointer.worldY)) {
+    return;
+  }
+
+  const delta = Math.abs(dx) > Math.abs(dy) ? dx : dy;
+  setSquadScrollOffset(squadScrollOffset + delta * SQUAD_SCROLL_WHEEL_SPEED);
+  renderSetupUi();
+}
+
+function isPointerInsideSquadScrollArea(x, y) {
+  return x >= SQUAD_SCROLL_AREA_X &&
+    x <= SQUAD_SCROLL_AREA_X + SQUAD_SCROLL_AREA_WIDTH &&
+    y >= SQUAD_SCROLL_AREA_Y &&
+    y <= SQUAD_SCROLL_AREA_Y + SQUAD_SCROLL_AREA_HEIGHT;
+}
+
 function getVisibleArmyCellAt(x, y) {
-  const boardX = SQUAD_PANEL_X + SQUAD_BOARD_X_OFFSET;
-  const boardY = SQUAD_PANEL_Y + SQUAD_BOARD_Y_OFFSET;
-  for (let row = 0; row < SQUAD_BOARD_ROWS; row += 1) {
-    for (let col = 0; col < SQUAD_BOARD_COLS; col += 1) {
-      const cellX = boardX + col * (SQUAD_BOARD_CELL_WIDTH + SQUAD_BOARD_CELL_GAP);
-      const cellY = boardY + row * (SQUAD_BOARD_CELL_HEIGHT + SQUAD_BOARD_CELL_GAP);
-      if (x >= cellX &&
-          x <= cellX + SQUAD_BOARD_CELL_WIDTH - 8 &&
-          y >= cellY &&
-          y <= cellY + SQUAD_BOARD_CELL_HEIGHT - 8) {
-        return { squadIndex: selectedArmySquadIndex, row, col };
+  for (let squadIndex = 0; squadIndex < armySquads.length; squadIndex += 1) {
+    const cardX = getSquadCardX(squadIndex);
+    if (!isSquadCardVisible(cardX)) {
+      continue;
+    }
+
+    const boardX = cardX + SQUAD_BOARD_X_OFFSET;
+    const boardY = SQUAD_SCROLL_AREA_Y + SQUAD_BOARD_Y_OFFSET;
+    for (let row = 0; row < SQUAD_BOARD_ROWS; row += 1) {
+      for (let col = 0; col < SQUAD_BOARD_COLS; col += 1) {
+        const cellX = boardX + col * (SQUAD_BOARD_CELL_WIDTH + SQUAD_BOARD_CELL_GAP);
+        const cellY = boardY + row * (SQUAD_BOARD_CELL_HEIGHT + SQUAD_BOARD_CELL_GAP);
+        if (x >= cellX &&
+            x <= cellX + SQUAD_BOARD_CELL_WIDTH - 8 &&
+            y >= cellY &&
+            y <= cellY + SQUAD_BOARD_CELL_HEIGHT - 8) {
+          return { squadIndex, row, col };
+        }
       }
     }
   }
