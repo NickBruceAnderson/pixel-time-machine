@@ -390,7 +390,12 @@ const MAX_SQUADS = 6;
 const COMMAND_POINTS_PER_SQUAD = COMMAND_LEVEL_DEFAULT;
 const AVAILABLE_UNITS_COLUMNS = 6;
 const AVAILABLE_UNITS_VISIBLE_ROWS = 2;
-const PICKER_UNIT_COPY_COUNT = 6;
+const DEMO_AVAILABLE_UNIT_CLASSES = [
+  'squire', 'squire', 'squire', 'squire',
+  'thief', 'thief', 'thief', 'thief',
+  'archer', 'archer', 'archer', 'archer',
+  'knight', 'knight', 'knight', 'knight', 'knight', 'knight'
+];
 const DOUBLE_CLICK_MS = 280;
 const SQUAD_UNIT_DRAG_THRESHOLD = 8;
 const FORMATION_COMMAND_ICON = '👑';
@@ -588,12 +593,16 @@ const ARMY_ROSTER_NAME_POOL = [
 ];
 
 function createArmyTestRoster() {
-  return SETUP_UNIT_TYPES.flatMap((unitType, unitTypeIndex) => {
-    return Array.from({ length: PICKER_UNIT_COPY_COUNT }, (_, index) => ({
-      id: `${unitType}-${index + 1}`,
-      name: ARMY_ROSTER_NAME_POOL[(unitTypeIndex * PICKER_UNIT_COPY_COUNT + index) % ARMY_ROSTER_NAME_POOL.length],
+  const unitTypeCounts = {};
+
+  return DEMO_AVAILABLE_UNIT_CLASSES.map((unitType, index) => {
+    unitTypeCounts[unitType] = (unitTypeCounts[unitType] || 0) + 1;
+
+    return {
+      id: `${unitType}-${unitTypeCounts[unitType]}`,
+      name: ARMY_ROSTER_NAME_POOL[index % ARMY_ROSTER_NAME_POOL.length],
       unitType
-    }));
+    };
   });
 }
 
