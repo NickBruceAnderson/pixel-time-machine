@@ -127,7 +127,7 @@ const BLUE_TEAM_UNIT_TINT = '#3f6fd9';
 const UNIT_SHADOW_COLOR = '#071309';
 const UNIT_SHADOW_ALPHA = 0.38;
 const UNIT_SHADOW_WIDTH = 80;
-const UNIT_SHADOW_HEIGHT = 24;
+const UNIT_SHADOW_HEIGHT = 8;
 const UNIT_SHADOW_Y_OFFSET = 64;
 
 const BATTLE_GRID_WIDTH = FORMATION_ROW_SPACING * FORMATION_ROWS.length;
@@ -578,10 +578,35 @@ const FORMATION_TOOLTIP_DEFINITIONS = {
     description: 'A stronger defensive reaction. Parry can fully stop an incoming melee attack and punish the attacker when its conditions are met.'
   },
   thrust: {
-    title: 'Thrust',
-    description: 'A focused melee attack. Thrust spends AP and is better at pressuring HP once the target’s stance is broken.'
+    title: ‘Thrust’,
+    description: `A focused melee attack. Thrust spends AP and is better at pressuring HP once the target stance is broken.`
   }
 };
+
+const CLASS_TOOLTIPS = {
+  squire: ‘Squires are sturdy learners with balanced frontline stats. They rely on Block to survive pressure and grow quickly through Fast Learner.’,
+  thief: ‘Thieves are fast evasive duelists. They act quickly, pressure enemies with daggers, and use Dodge to avoid attacks when they have RP.’,
+  archer: ‘Archers are ranged hunters who punish evasive targets. Their Marksman trait gives extra range, and Truestrike can shut down Dodge.’,
+  knight: ‘Knights are promoted Squires built to protect the squad. They are tougher frontline defenders with stronger protective reactions.’
+};
+
+const UNIT_QUIPS = {
+  Alten: ‘Still believes one clean block can fix anything.’,
+  Alvin: ‘Volunteers first, then asks what the plan is.’,
+  Bria: ‘Keeps a spare knife and a sharper comeback.’,
+  Cedric: ‘Polishes his gear before every bad idea.’,
+  Dara: ‘Claims luck is a skill.’,
+  Emery: ‘Looks calm because panic would be inefficient.’,
+  Fay: ‘Counts arrows like other people count sheep.’,
+  Garakail: ‘Laughs loud enough to count as armor.’,
+  Iris: ‘Never misses a detail—or a target.’,
+  Jory: ‘Has a heroic pose ready, just in case.’,
+  Kale: ‘Says he is scouting, mostly wanders stylishly.’,
+  Lena: ‘Remembers every promise and every shortcut.’
+};
+
+const UNIT_QUIP_FALLBACK = ‘Still waiting for their legend to begin.’;
+
 const PRACTICE_ENEMY_COUNT = 2;
 const PRACTICE_ENEMY_ALLOWED_CLASSES = ['squire', 'thief', 'archer'];
 const PRACTICE_ENEMY_FORMATION_SLOTS = [
@@ -1008,6 +1033,7 @@ let draggedArmyRosterGhost = null;
 let setupNodes = [];
 let setupTooltipNodes = [];
 let formationHoverTargets = [];
+let dynamicTooltipDefinitions = {};
 let formationTooltipPanelNodes = [];
 let formationHoveredTooltipKey = null;
 let formationBackgroundNode = null;
@@ -1711,6 +1737,7 @@ function isSetupReady() {
 function clearSetupUi() {
   clearSetupCpTooltip();
   formationHoverTargets = [];
+  dynamicTooltipDefinitions = {};
   formationTooltipPanelNodes = [];
   formationHoveredTooltipKey = null;
   setupNodes.forEach((node) => {
@@ -1882,14 +1909,28 @@ function renderFormationTooltipPanel(tooltipKey = formationHoveredTooltipKey) {
   formationTooltipPanelNodes.push(background, titleNode, bodyNode);
 }
 
+function getUnitTooltip(name, unitType, className) {
+  const classDesc = CLASS_TOOLTIPS[unitType] || '';
+  const quip = UNIT_QUIPS[name] || UNIT_QUIP_FALLBACK;
+  return {
+    title: `${name} the ${className}`,
+    description: `${classDesc}\n\n${quip}`
+  };
+}
+
 function getTooltipDefinition(key) {
-  return FORMATION_TOOLTIP_DEFINITIONS[key] || null;
+  return FORMATION_TOOLTIP_DEFINITIONS[key] || dynamicTooltipDefinitions[key] || null;
 }
 
 function registerHoverTooltip(key, bounds) {
   if (!getTooltipDefinition(key)) {
     return;
   }
+  formationHoverTargets.push({ key, ...bounds });
+}
+
+function registerDynamicHoverTooltip(key, bounds, definition) {
+  dynamicTooltipDefinitions[key] = definition;
   formationHoverTargets.push({ key, ...bounds });
 }
 
@@ -2121,6 +2162,12 @@ function renderArmySquadCell(squadIndex, row, col, x, y, unitId) {
       .setDepth(SETUP_UI_DEPTH + 3)
       .setInteractive({ useHandCursor: true }));
     sprite.on('pointerdown', (pointer) => handleArmyCellPointerDown(squadIndex, row, col, pointer));
+    const cellClassDef = getClassDefinition(unit.unitType);
+    registerDynamicHoverTooltip(
+      `unit-squad:${unit.id}`,
+      { x, y, w: SQUAD_BOARD_CELL_WIDTH - 8, h: SQUAD_BOARD_CELL_HEIGHT - 8 },
+      getUnitTooltip(unit.name, unit.unitType, cellClassDef.name)
+    );
   }
 }
 
@@ -2289,6 +2336,11 @@ function renderArmyRosterCard(unit, x, y) {
   }
 
   renderArmyRosterStats(unit.unitType, x + 14, y + AVAILABLE_UNIT_STATS_Y_OFFSET, contentAlpha, SETUP_UI_DEPTH + 2);
+  registerDynamicHoverTooltip(
+    `unit-card:${unit.id}`,
+    { x, y, w: ROSTER_CARD_WIDTH, h: ROSTER_CARD_HEIGHT },
+    getUnitTooltip(unit.name, unit.unitType, classDefinition.name)
+  );
 }
 
 function renderArmyRosterStats(unitType, x, y, alpha = 1, depth = SETUP_UI_DEPTH + 2) {
