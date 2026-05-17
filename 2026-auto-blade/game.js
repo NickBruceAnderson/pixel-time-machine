@@ -465,6 +465,9 @@ const SQUAD_BOARD_HEIGHT = SQUAD_BOARD_CELL_HEIGHT * SQUAD_BOARD_ROWS + SQUAD_BO
 const SQUAD_BOARD_EMPTY_ALPHA = 0.58;
 const SQUAD_BOARD_OCCUPIED_ALPHA = 0.96;
 const SQUAD_BOARD_OCCUPIED_COLOR = '#20202a';
+const SQUAD_CELL_UNIT_ART_SCALE = 3.1;
+const SQUAD_CELL_UNIT_ART_OFFSET_Y = 0;
+const SQUAD_CELL_NAME_OFFSET_Y = -3;
 const SELECTED_CELL_HIGHLIGHT = '#f2cf45';
 const FORMATION_BG_COLOR = 0x2f3434;
 const FORMATION_BG_DEPTH = DEPTH_GRID + 5;
@@ -500,8 +503,8 @@ const ROSTER_SCROLLBAR_Y = ROSTER_Y;
 const ROSTER_SCROLLBAR_HEIGHT = ROSTER_VISIBLE_HEIGHT;
 const AVAILABLE_UNIT_NAME_FONT_SIZE = 20;
 const AVAILABLE_UNIT_CLASS_FONT_SIZE = 13;
-const AVAILABLE_UNIT_ART_SCALE = 2.25;
-const AVAILABLE_UNIT_ART_CENTER_Y_OFFSET = 80;
+const AVAILABLE_UNIT_ART_SCALE = 3.45;
+const AVAILABLE_UNIT_ART_CENTER_Y_OFFSET = 88;
 const AVAILABLE_UNIT_STATS_FONT_SIZE = 12;
 const AVAILABLE_UNIT_STATS_Y_OFFSET = 126;
 const AVAILABLE_UNIT_STATS_ROW_GAP = 18;
@@ -2093,19 +2096,25 @@ function renderArmySquadCell(squadIndex, row, col, x, y, unitId) {
   slot.on('pointerdown', (pointer) => handleArmyCellPointerDown(squadIndex, row, col, pointer));
 
   const label = unit ? unit.name : '';
-  const text = addSetupNode(sceneRef.add.text(x + 10, y + 10, label, smallTextStyle())
+  const text = addSetupNode(sceneRef.add.text(
+    x + SQUAD_BOARD_CELL_WIDTH / 2,
+    y + SQUAD_CELL_NAME_OFFSET_Y,
+    label,
+    smallTextStyle()
+  )
+    .setOrigin(0.5, 0.5)
     .setDepth(SETUP_UI_DEPTH + 3)
     .setInteractive({ useHandCursor: true }));
   text.on('pointerdown', (pointer) => handleArmyCellPointerDown(squadIndex, row, col, pointer));
 
   if (unit) {
     const sprite = addSetupNode(sceneRef.add.sprite(
-      x + SQUAD_BOARD_CELL_WIDTH - 42,
-      y + SQUAD_BOARD_CELL_HEIGHT - 18,
+      x + SQUAD_BOARD_CELL_WIDTH / 2,
+      y + SQUAD_BOARD_CELL_HEIGHT / 2 + SQUAD_CELL_UNIT_ART_OFFSET_Y,
       getUnitIdleTextureKey(unit.unitType),
       getUnitIdleDefaultFrame(unit.unitType)
     )
-      .setScale(3)
+      .setScale(SQUAD_CELL_UNIT_ART_SCALE)
       .setTint(cssHexToNumber(RED_TEAM_UNIT_TINT))
       .setDepth(SETUP_UI_DEPTH + 3)
       .setInteractive({ useHandCursor: true }));
