@@ -407,11 +407,13 @@ const SQUAD_VIEWPORT_X = 236;
 const SQUAD_VIEWPORT_Y = 124;
 const SQUAD_VISIBLE_CARDS_PER_PAGE = 3;
 const SQUAD_CARD_WIDTH = 430;
-const SQUAD_CARD_HEIGHT = 300;
+const SQUAD_CARD_HEIGHT = 360;
+const SQUAD_CARD_HEADER_HEIGHT = 64;
+const SQUAD_CARD_BODY_BOTTOM_PADDING = 16;
 const SQUAD_CARD_GAP = 20;
 const SQUAD_CARD_STEP = SQUAD_CARD_WIDTH + SQUAD_CARD_GAP;
 const SQUAD_VIEWPORT_WIDTH = SQUAD_CARD_WIDTH * SQUAD_VISIBLE_CARDS_PER_PAGE + SQUAD_CARD_GAP * (SQUAD_VISIBLE_CARDS_PER_PAGE - 1);
-const SQUAD_VIEWPORT_HEIGHT = 318;
+const SQUAD_VIEWPORT_HEIGHT = SQUAD_CARD_HEIGHT + 18;
 const SQUAD_PAGE_SCROLL_DISTANCE = SQUAD_CARD_STEP * SQUAD_VISIBLE_CARDS_PER_PAGE;
 const SQUAD_ARROW_BUTTON_Y = SQUAD_VIEWPORT_Y + SQUAD_CARD_HEIGHT / 2 - SETUP_BUTTON_HEIGHT / 2;
 const SQUAD_LEFT_ARROW_BUTTON_X = SQUAD_VIEWPORT_X - 76;
@@ -422,13 +424,14 @@ const SQUAD_INACTIVE_BORDER_COLOR = COLORS.panelBorder;
 const SQUAD_PANEL_X = SQUAD_VIEWPORT_X;
 const SQUAD_PANEL_Y = SQUAD_VIEWPORT_Y;
 const SQUAD_BOARD_X_OFFSET = 78;
-const SQUAD_BOARD_Y_OFFSET = 80;
 const SQUAD_BOARD_CELL_SIZE = 86;
 const SQUAD_BOARD_CELL_WIDTH = SQUAD_BOARD_CELL_SIZE;
 const SQUAD_BOARD_CELL_HEIGHT = SQUAD_BOARD_CELL_SIZE;
 const SQUAD_BOARD_CELL_GAP = 8;
 const SQUAD_BOARD_COLS = 3;
 const SQUAD_BOARD_ROWS = 3;
+const SQUAD_BOARD_WIDTH = SQUAD_BOARD_CELL_WIDTH * SQUAD_BOARD_COLS + SQUAD_BOARD_CELL_GAP * (SQUAD_BOARD_COLS - 1);
+const SQUAD_BOARD_HEIGHT = SQUAD_BOARD_CELL_HEIGHT * SQUAD_BOARD_ROWS + SQUAD_BOARD_CELL_GAP * (SQUAD_BOARD_ROWS - 1);
 const SQUAD_BOARD_EMPTY_ALPHA = 0.58;
 const SQUAD_BOARD_OCCUPIED_ALPHA = 0.96;
 const SQUAD_BOARD_OCCUPIED_COLOR = '#20202a';
@@ -1700,7 +1703,17 @@ function renderArmySquadPanel(squad, squadIndex, x, y) {
     .setDepth(SETUP_UI_DEPTH + 2));
   [title, cp].forEach((node) => node.setInteractive({ useHandCursor: true }).on('pointerdown', () => handleArmySquadPanelClick(squadIndex)));
 
-  renderArmySquadBoard(squad, squadIndex, x + SQUAD_BOARD_X_OFFSET, y + SQUAD_BOARD_Y_OFFSET);
+  const boardPosition = getArmySquadBoardPosition(x, y);
+  renderArmySquadBoard(squad, squadIndex, boardPosition.x, boardPosition.y);
+}
+
+function getArmySquadBoardPosition(cardX, cardY) {
+  const bodyTop = cardY + SQUAD_CARD_HEADER_HEIGHT;
+  const bodyHeight = SQUAD_CARD_HEIGHT - SQUAD_CARD_HEADER_HEIGHT - SQUAD_CARD_BODY_BOTTOM_PADDING;
+  return {
+    x: cardX + SQUAD_BOARD_X_OFFSET,
+    y: bodyTop + (bodyHeight - SQUAD_BOARD_HEIGHT) / 2
+  };
 }
 
 function getSquadCardX(squadIndex) {
@@ -1937,8 +1950,9 @@ function getVisibleArmyCellAt(x, y) {
       continue;
     }
 
-    const boardX = cardX + SQUAD_BOARD_X_OFFSET;
-    const boardY = SQUAD_VIEWPORT_Y + SQUAD_BOARD_Y_OFFSET;
+    const boardPosition = getArmySquadBoardPosition(cardX, SQUAD_VIEWPORT_Y);
+    const boardX = boardPosition.x;
+    const boardY = boardPosition.y;
     for (let row = 0; row < SQUAD_BOARD_ROWS; row += 1) {
       for (let col = 0; col < SQUAD_BOARD_COLS; col += 1) {
         const cellX = boardX + col * (SQUAD_BOARD_CELL_WIDTH + SQUAD_BOARD_CELL_GAP);
