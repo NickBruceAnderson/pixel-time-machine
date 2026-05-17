@@ -266,7 +266,7 @@ const BATTLE_HUD_BACKPLATE_WIDTH = 90;
 const BATTLE_HUD_BACKPLATE_HEIGHT = 30;
 const BATTLE_HUD_BACKPLATE_Y_OFFSET = 85;
 const BATTLE_HUD_BACKPLATE_COLOR = '#050506';
-const BATTLE_HUD_BACKPLATE_ALPHA = 0.0;
+const BATTLE_HUD_BACKPLATE_ALPHA = 0.20;
 const BATTLE_HUD_BACKPLATE_BORDER_COLOR = '#2e2e38';
 const BATTLE_HUD_BACKPLATE_BORDER_THICKNESS = 1;
 const BATTLE_HUD_BACKPLATE_DEPTH = DEPTH_UNIT_HUD - 1;
@@ -652,6 +652,7 @@ const DODGE_FAIL_DURATION_MS = ms(260);
 const DODGE_FAIL_RECOVER_DURATION_MS = ms(220);
 const DODGE_FAIL_BLINK_ALPHA = 0.45;
 const DODGE_FAIL_BLINK_COUNT = 2;
+const DODGE_RP_REFUND_VISUAL_DELAY_MS = ms(200);
 const RANGED_PROJECTILE_DURATION_MS = ms(450);
 const RANGED_PROJECTILE_ARC_HEIGHT = 80;
 const RANGED_PROJECTILE_SIZE = 5;
@@ -1029,6 +1030,7 @@ let turnQueue = [];
 let roundInitiativeOrder = [];
 let currentTurnActedUnits = new Set();
 let battleEnded = false;
+const resourceDisplayOverrides = new Map();
 let actionTimer;
 let speedLabel;
 let speedButton;
@@ -3595,14 +3597,14 @@ function createBattleMainResourceRow(unit) {
         { key: 'hp', current: unit.hp }
       ],
       [
-        { key: 'rp', current: unit.rp },
+        { key: 'rp', current: getDisplayedResource(unit, 'rp') },
         { key: 'ap', current: unit.ap }
       ]
     ]
     : [
       [
         { key: 'ap', current: unit.ap },
-        { key: 'rp', current: unit.rp }
+        { key: 'rp', current: getDisplayedResource(unit, 'rp') }
       ],
       [
         { key: 'hp', current: unit.hp },
@@ -3665,7 +3667,7 @@ function getStaticBattleResourceReservedGroupWidth() {
 }
 
 function isStaticResourceSlotFull(unit, resourceKey, index, slots) {
-  const current = unit[resourceKey];
+  const current = getDisplayedResource(unit, resourceKey);
   if (unit.teamKey === 'blue') {
     return index >= slots - current;
   }
@@ -3748,6 +3750,23 @@ function destroyBattleUnitHud(unit) {
 
     unit.battleHudNodes[groupKey] = [];
   });
+}
+
+function getDisplayedResource(unit, resourceKey) {
+  const override = resourceDisplayOverrides.get(`${unit.id}:${resourceKey}`);
+  return override !== undefined ? override : unit[resourceKey];
+}
+
+function setResourceDisplayOverride(unit, resourceKey, value) {
+  resourceDisplayOverrides.set(`${unit.id}:${resourceKey}`, value);
+}
+
+function clearResourceDisplayOverride(unit, resourceKey) {
+  resourceDisplayOverrides.delete(`${unit.id}:${resourceKey}`);
+}
+
+function clearAllResourceDisplayOverrides() {
+  resourceDisplayOverrides.clear();
 }
 
 function refreshBattleUnitHud(unit) {
@@ -4415,7 +4434,17 @@ function showReactionCastEffect(effect) {
   });
 
   sceneRef.time.delayedCall(REACTION_CAST_COMMIT_DELAY_MS - REACTION_CAST_LABEL_DELAY_MS, () => {
+    if (effect.rpSpentDisplay !== undefined) {
+      setResourceDisplayOverride(effect.unit, 'rp', effect.rpSpentDisplay);
+    }
     refreshBattleUnitHud(effect.unit);
+
+    if (effect.rpSpentDisplay !== undefined) {
+      sceneRef.time.delayedCall(DODGE_RP_REFUND_VISUAL_DELAY_MS, () => {
+        clearResourceDisplayOverride(effect.unit, 'rp');
+        refreshBattleUnitHud(effect.unit);
+      });
+    }
 
     sceneRef.time.delayedCall(DEFENDER_LP_GAIN_STAGGER_MS, () => {
       refreshBattleUnitHud(effect.unit);
@@ -5100,6 +5129,7 @@ function startBattle() {
   currentTurnActedUnits = new Set();
   battleEnded = false;
   battleRewardsGranted = false;
+  clearAllResourceDisplayOverrides();
   createUnits();
   startRound();
 
@@ -5818,6 +5848,7 @@ function resolveAction(attacker, defender, selectedAction) {
         effects.push(`${defender.name} dodges the attack.`);
         if (rpGained > 0) {
           reactionCastEffect.afterRp = defender.rp;
+          reactionCastEffect.rpSpentDisplay = defenderRpAfter;
         }
         visualEffects.push({
           type: 'resourceChange',
@@ -6043,6 +6074,7 @@ function endBattle(losingTeamKey) {
 
   gamePhase = 'battleOver';
   battleEnded = true;
+  clearAllResourceDisplayOverrides();
   if (actionTimer) {
     actionTimer.remove(false);
   }
@@ -6085,6 +6117,7 @@ function resetBattlefieldForSetup() {
     actionTimer = null;
   }
 
+  clearAllResourceDisplayOverrides();
   closePopups();
   clearInitiativeOrderNumbers();
   if (units) {
