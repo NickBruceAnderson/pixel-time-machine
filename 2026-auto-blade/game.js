@@ -403,8 +403,15 @@ const FORMATION_SECTION_PADDING = 16;
 const FORMATION_SCROLLBAR_WIDTH = 12;
 const FORMATION_LEFT_STATS_PANEL_X = 24;
 const FORMATION_LEFT_STATS_PANEL_WIDTH = POPUP_STATS_PANEL_WIDTH;
-const FORMATION_LEFT_STATS_PANEL_Y = 208;
-const FORMATION_LEFT_STATS_PANEL_HEIGHT = POPUP_STATS_PANEL_HEIGHT;
+const FORMATION_LEFT_STATS_PANEL_Y = SETUP_PANEL_Y + 55;
+const FORMATION_LEFT_STATS_PANEL_HEIGHT = 655;
+const FORMATION_LEFT_PANEL_GAP = 14;
+const FORMATION_TOOLTIP_PANEL_X = FORMATION_LEFT_STATS_PANEL_X;
+const FORMATION_TOOLTIP_PANEL_Y = FORMATION_LEFT_STATS_PANEL_Y + FORMATION_LEFT_STATS_PANEL_HEIGHT + FORMATION_LEFT_PANEL_GAP;
+const FORMATION_TOOLTIP_PANEL_WIDTH = FORMATION_LEFT_STATS_PANEL_WIDTH;
+const FORMATION_TOOLTIP_PANEL_HEIGHT = 164;
+const FORMATION_HOVER_TOOLTIP_DEFAULT_TITLE = 'Info';
+const FORMATION_HOVER_TOOLTIP_DEFAULT_TEXT = 'Hover a stat icon for details.';
 const FORMATION_CONTENT_X = SETUP_PANEL_X + FORMATION_COLUMN_GAP;
 const FORMATION_HEADER_X = FORMATION_CONTENT_X;
 const FORMATION_HEADER_Y = 42;
@@ -497,6 +504,12 @@ const AVAILABLE_UNIT_STATS_COLUMN_GAP = 82;
 const FORMATION_ACTION_BUTTON_X = FORMATION_LEFT_STATS_PANEL_X;
 const FORMATION_ACTION_BUTTON_Y = SETUP_PANEL_Y;
 const FORMATION_ACTION_BUTTON_WIDTH = FORMATION_LEFT_STATS_PANEL_WIDTH;
+const FORMATION_TOOLTIP_DEFINITIONS = {
+  hp: {
+    title: 'HP',
+    description: 'HP is health. A unit is defeated at 0 HP. HP is usually damaged after SP is broken.'
+  }
+};
 const PRACTICE_ENEMY_COUNT = 2;
 const PRACTICE_ENEMY_ALLOWED_CLASSES = ['squire', 'thief', 'archer'];
 const PRACTICE_ENEMY_FORMATION_SLOTS = [
@@ -917,6 +930,9 @@ let armyDragSource = null;
 let draggedArmyRosterGhost = null;
 let setupNodes = [];
 let setupTooltipNodes = [];
+let formationHoverTargets = [];
+let formationTooltipPanelNodes = [];
+let formationHoveredTooltipKey = null;
 let formationBackgroundNode = null;
 let utilityMenuButtonNodes = [];
 let commandLevel = STARTING_COMMAND_LEVEL;
@@ -1616,6 +1632,9 @@ function isSetupReady() {
 
 function clearSetupUi() {
   clearSetupCpTooltip();
+  formationHoverTargets = [];
+  formationTooltipPanelNodes = [];
+  formationHoveredTooltipKey = null;
   setupNodes.forEach((node) => {
     if (node && node.scene) {
       node.destroy();
@@ -1654,6 +1673,7 @@ function renderArmyManagementScreen() {
   renderCommandLevelControls();
 
   renderFormationSelectedUnitStatsPanel();
+  renderFormationTooltipPanel();
   renderArmySquads();
   renderArmyRoster();
 
@@ -1737,6 +1757,80 @@ function renderFormationSelectedUnitStatsPanel() {
   );
   infoPanelNodes = savedNodes;
   detailNodes.forEach(addSetupNode);
+  registerHoverTooltip('hp', {
+    x: rect.x + POPUP_STATS_PANEL_PADDING + RESOURCE_ROW_LABEL_WIDTH,
+    y: rect.y + 58 - 10,
+    w: 96,
+    h: 20
+  });
+}
+
+function renderFormationTooltipPanel(tooltipKey = formationHoveredTooltipKey) {
+  formationTooltipPanelNodes.forEach((node) => {
+    if (node && node.scene) {
+      node.destroy();
+    }
+  });
+  formationTooltipPanelNodes = [];
+
+  const tooltip = getTooltipDefinition(tooltipKey);
+  const title = tooltip?.title || FORMATION_HOVER_TOOLTIP_DEFAULT_TITLE;
+  const description = tooltip?.description || FORMATION_HOVER_TOOLTIP_DEFAULT_TEXT;
+  const background = addSetupNode(sceneRef.add.rectangle(
+    FORMATION_TOOLTIP_PANEL_X,
+    FORMATION_TOOLTIP_PANEL_Y,
+    FORMATION_TOOLTIP_PANEL_WIDTH,
+    FORMATION_TOOLTIP_PANEL_HEIGHT,
+    PHASER_COLORS.infoPanel
+  )
+    .setOrigin(0)
+    .setAlpha(POPUP_PANEL_BACKGROUND_ALPHA)
+    .setStrokeStyle(2, PHASER_COLORS.panelBorder)
+    .setDepth(POPUP_DEPTH));
+  const titleNode = addSetupNode(sceneRef.add.text(
+    FORMATION_TOOLTIP_PANEL_X + POPUP_PANEL_PADDING,
+    FORMATION_TOOLTIP_PANEL_Y + 16,
+    title,
+    headerTextStyle()
+  ).setDepth(POPUP_DEPTH + 1));
+  const bodyNode = addSetupNode(sceneRef.add.text(
+    FORMATION_TOOLTIP_PANEL_X + POPUP_PANEL_PADDING,
+    FORMATION_TOOLTIP_PANEL_Y + 54,
+    description,
+    smallTextStyle()
+  )
+    .setWordWrapWidth(FORMATION_TOOLTIP_PANEL_WIDTH - POPUP_PANEL_PADDING * 2)
+    .setDepth(POPUP_DEPTH + 1));
+  formationTooltipPanelNodes.push(background, titleNode, bodyNode);
+}
+
+function getTooltipDefinition(key) {
+  return FORMATION_TOOLTIP_DEFINITIONS[key] || null;
+}
+
+function registerHoverTooltip(key, bounds) {
+  formationHoverTargets.push({ key, ...bounds });
+}
+
+function getHoveredTooltip(x, y) {
+  return formationHoverTargets.find((target) => (
+    x >= target.x &&
+    x <= target.x + target.w &&
+    y >= target.y &&
+    y <= target.y + target.h
+  ))?.key || null;
+}
+
+function updateFormationHoverTooltip(pointer) {
+  if (gamePhase !== 'setup') {
+    return;
+  }
+  const key = getHoveredTooltip(pointer.worldX, pointer.worldY);
+  if (key === formationHoveredTooltipKey) {
+    return;
+  }
+  formationHoveredTooltipKey = key;
+  renderFormationTooltipPanel(key);
 }
 
 function createFormationRosterStatsUnit(rosterUnit) {
@@ -2129,6 +2223,14 @@ function renderArmyRosterStats(unitType, x, y, alpha = 1, depth = SETUP_UI_DEPTH
     })
       .setAlpha(alpha)
       .setDepth(depth));
+    if (resourceKey === 'hp') {
+      registerHoverTooltip('hp', {
+        x: rowX,
+        y: rowY - 8,
+        w: Math.max(24, max * 16),
+        h: 18
+      });
+    }
   });
 }
 
@@ -2227,6 +2329,7 @@ function beginArmyRosterDrag(unitId, pointer) {
 }
 
 function handleArmyRosterDragMove(pointer) {
+  updateFormationHoverTooltip(pointer);
   if (!armyDragSource) {
     return;
   }
