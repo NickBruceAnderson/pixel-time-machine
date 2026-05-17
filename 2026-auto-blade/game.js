@@ -397,9 +397,9 @@ const SELECTED_SQUAD_HIGHLIGHT = '#58a6ff';
 const SELECTED_UNIT_HIGHLIGHT = '#f2cf45';
 const FORMATION_LEFT_STATS_PANEL_X = 24;
 const FORMATION_LEFT_STATS_PANEL_Y = 124;
-const FORMATION_LEFT_STATS_PANEL_WIDTH = 180;
-const FORMATION_LEFT_STATS_PANEL_HEIGHT = 360;
-const FORMATION_CONTENT_X = 236;
+const FORMATION_LEFT_STATS_PANEL_WIDTH = POPUP_STATS_PANEL_WIDTH;
+const FORMATION_LEFT_STATS_PANEL_HEIGHT = POPUP_STATS_PANEL_HEIGHT;
+const FORMATION_CONTENT_X = 390;
 const FORMATION_HEADER_X = FORMATION_CONTENT_X;
 const FORMATION_HEADER_Y = 42;
 const COMMAND_LEVEL_BOX_WIDTH = 430;
@@ -453,11 +453,11 @@ const ASSIGNED_CARD_ALPHA = 0.48;
 const ASSIGNED_CARD_FILL_COLOR = '#2b2d31';
 const PICKER_X_START = FORMATION_CONTENT_X;
 const PICKER_BOTTOM_ANCHOR_Y = 1012;
-const AVAILABLE_UNITS_CELL_GAP = 16;
+const AVAILABLE_UNITS_CELL_GAP = 14;
 const AVAILABLE_UNITS_SCROLLBAR_WIDTH = 12;
 const AVAILABLE_UNITS_SCROLL_SPEED = 1;
 const ROSTER_X = PICKER_X_START;
-const ROSTER_CARD_WIDTH = 240;
+const ROSTER_CARD_WIDTH = 224;
 const ROSTER_CARD_HEIGHT = 164;
 const ROSTER_CARD_GAP = AVAILABLE_UNITS_CELL_GAP;
 const ROSTER_COLUMNS = AVAILABLE_UNITS_COLUMNS;
@@ -482,7 +482,7 @@ const AVAILABLE_UNIT_ART_CENTER_Y_OFFSET = 80;
 const AVAILABLE_UNIT_STATS_FONT_SIZE = 12;
 const AVAILABLE_UNIT_STATS_Y_OFFSET = 126;
 const AVAILABLE_UNIT_STATS_ROW_GAP = 18;
-const AVAILABLE_UNIT_STATS_COLUMN_GAP = 88;
+const AVAILABLE_UNIT_STATS_COLUMN_GAP = 82;
 const FORMATION_ACTION_BUTTON_X = GAME_WIDTH - 292;
 const FORMATION_ACTION_BUTTON_Y = GAME_HEIGHT - 106;
 const FORMATION_ACTION_BUTTON_WIDTH = 228;
@@ -1712,33 +1712,69 @@ function renderFormationSelectedUnitStatsPanel() {
     return;
   }
 
-  const rect = addSetupNode(sceneRef.add.rectangle(
-    FORMATION_LEFT_STATS_PANEL_X,
-    FORMATION_LEFT_STATS_PANEL_Y,
-    FORMATION_LEFT_STATS_PANEL_WIDTH,
-    FORMATION_LEFT_STATS_PANEL_HEIGHT,
-    PHASER_COLORS.infoPanel
-  )
+  const rect = {
+    x: FORMATION_LEFT_STATS_PANEL_X,
+    y: FORMATION_LEFT_STATS_PANEL_Y,
+    w: FORMATION_LEFT_STATS_PANEL_WIDTH,
+    h: FORMATION_LEFT_STATS_PANEL_HEIGHT
+  };
+  const detailUnit = createFormationRosterStatsUnit(unit);
+  const bg = addSetupNode(sceneRef.add.rectangle(rect.x, rect.y, rect.w, rect.h, PHASER_COLORS.infoPanel)
     .setOrigin(0)
-    .setAlpha(SETUP_PANEL_ALPHA)
+    .setAlpha(POPUP_PANEL_BACKGROUND_ALPHA)
     .setStrokeStyle(2, PHASER_COLORS.panelBorder)
-    .setDepth(SETUP_UI_DEPTH + 1));
-  const classDefinition = getClassDefinition(unit.unitType);
-  addSetupNode(sceneRef.add.text(FORMATION_LEFT_STATS_PANEL_X + 14, FORMATION_LEFT_STATS_PANEL_Y + 14, unit.name, {
-    ...headerTextStyle(),
-    fontSize: '22px'
-  }).setDepth(SETUP_UI_DEPTH + 2));
-  addSetupNode(sceneRef.add.text(FORMATION_LEFT_STATS_PANEL_X + 14, FORMATION_LEFT_STATS_PANEL_Y + 44, classDefinition.name, smallTextStyle())
-    .setDepth(SETUP_UI_DEPTH + 2));
-  addSetupNode(sceneRef.add.sprite(
-    FORMATION_LEFT_STATS_PANEL_X + FORMATION_LEFT_STATS_PANEL_WIDTH / 2,
-    FORMATION_LEFT_STATS_PANEL_Y + 118,
-    getUnitIdleTextureKey(unit.unitType),
-    getUnitIdleDefaultFrame(unit.unitType)
-  )
-    .setScale(3)
-    .setDepth(SETUP_UI_DEPTH + 2));
-  renderArmyRosterStats(unit.unitType, FORMATION_LEFT_STATS_PANEL_X + 18, FORMATION_LEFT_STATS_PANEL_Y + 178, 1, SETUP_UI_DEPTH + 2);
+    .setDepth(POPUP_DEPTH));
+  const titleNode = addSetupNode(sceneRef.add.text(rect.x + POPUP_PANEL_PADDING, rect.y + 18, `${unit.name} ${detailUnit.className}`, headerTextStyle())
+    .setDepth(POPUP_DEPTH + 1));
+  const costNode = addSetupNode(sceneRef.add.text(rect.x + rect.w - POPUP_PANEL_PADDING, rect.y + 18, `${SETUP_COMMAND_ICON}${detailUnit.cpCost}`, headerTextStyle())
+    .setOrigin(1, 0)
+    .setDepth(POPUP_DEPTH + 1));
+
+  const detailNodes = [];
+  const savedNodes = infoPanelNodes;
+  infoPanelNodes = detailNodes;
+  renderCharacterPanel(
+    detailUnit,
+    rect.x + POPUP_STATS_PANEL_PADDING,
+    rect.y + 58,
+    rect.w - POPUP_STATS_PANEL_PADDING * 2,
+    rect.h - 58 - POPUP_STATS_PANEL_PADDING,
+    false
+  );
+  infoPanelNodes = savedNodes;
+  detailNodes.forEach(addSetupNode);
+}
+
+function createFormationRosterStatsUnit(rosterUnit) {
+  const classDefinition = getClassDefinition(rosterUnit.unitType);
+  const classStats = calculateClassStats(rosterUnit.unitType);
+  return {
+    name: rosterUnit.name,
+    class: rosterUnit.unitType,
+    className: classDefinition.name,
+    cpCost: classDefinition.cpCost,
+    promoted: classDefinition.promoted,
+    traits: [...(classDefinition.traits || [])],
+    equipment: { ...(classDefinition.equipment || {}) },
+    actions: calculateClassActions(rosterUnit.unitType),
+    reactions: calculateClassReactions(rosterUnit.unitType),
+    limits: calculateClassLimits(rosterUnit.unitType),
+    teamKey: 'red',
+    row: 'front',
+    col: 0,
+    hp: classStats.hp,
+    maxHp: classStats.maxHp,
+    sp: classStats.sp,
+    maxSp: classStats.maxSp,
+    ap: classStats.ap,
+    maxAp: classStats.maxAp,
+    rp: classStats.rp,
+    maxRp: classStats.maxRp,
+    lp: classStats.lp,
+    maxLp: classStats.maxLp,
+    ip: classStats.ip,
+    maxIp: classStats.maxIp
+  };
 }
 
 function renderCommandLevelControls() {
@@ -2073,7 +2109,7 @@ function renderArmyRosterStats(unitType, x, y, alpha = 1, depth = SETUP_UI_DEPTH
   pairs.forEach(([label, resourceKey, max], index) => {
     const rowX = x + (index % 2) * AVAILABLE_UNIT_STATS_COLUMN_GAP;
     const rowY = y + Math.floor(index / 2) * AVAILABLE_UNIT_STATS_ROW_GAP;
-    const text = addSetupNode(sceneRef.add.text(rowX, rowY, `${RESOURCE_ICONS[resourceKey]} ${max}`, {
+    const text = addSetupNode(sceneRef.add.text(rowX, rowY, RESOURCE_ICONS[resourceKey].repeat(max), {
       fontFamily: 'monospace',
       fontSize: `${AVAILABLE_UNIT_STATS_FONT_SIZE}px`,
       color: getResourceIconColor(resourceKey)
