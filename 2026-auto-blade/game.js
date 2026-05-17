@@ -392,6 +392,7 @@ const AVAILABLE_UNITS_COLUMNS = 6;
 const AVAILABLE_UNITS_VISIBLE_ROWS = 2;
 const PICKER_UNIT_COPY_COUNT = 6;
 const DOUBLE_CLICK_MS = 280;
+const SQUAD_UNIT_DRAG_THRESHOLD = 8;
 const FORMATION_COMMAND_ICON = '👑';
 const SELECTED_SQUAD_HIGHLIGHT = '#58a6ff';
 const SELECTED_UNIT_HIGHLIGHT = '#f2cf45';
@@ -902,6 +903,7 @@ let squadScrollOffset = 0;
 let availableUnitsScrollRow = 0;
 let lastArmyRosterClick = { unitId: null, time: 0 };
 let draggedArmyRosterUnitId = null;
+let armyDragSource = null;
 let draggedArmyRosterGhost = null;
 let setupNodes = [];
 let setupTooltipNodes = [];
@@ -2189,7 +2191,61 @@ function selectArmyRosterUnit(unitId) {
 function beginArmyRosterDrag(unitId, pointer) {
   selectedArmyRosterUnitId = unitId;
   draggedArmyRosterUnitId = unitId;
+  armyDragSource = {
+    sourceType: 'available',
+    unitId
+  };
   clearArmyRosterDragGhost();
+  createArmyDragGhost(unitId, pointer);
+}
+
+function handleArmyRosterDragMove(pointer) {
+  if (!armyDragSource) {
+    return;
+  }
+
+  if (!draggedArmyRosterGhost && armyDragSource.sourceType === 'squad') {
+    const dx = pointer.worldX - armyDragSource.startX;
+    const dy = pointer.worldY - armyDragSource.startY;
+    if (Math.hypot(dx, dy) < SQUAD_UNIT_DRAG_THRESHOLD) {
+      return;
+    }
+    draggedArmyRosterUnitId = armyDragSource.unitId;
+    createArmyDragGhost(armyDragSource.unitId, pointer);
+  }
+
+  if (!draggedArmyRosterGhost) {
+    return;
+  }
+  draggedArmyRosterGhost[0].setPosition(pointer.worldX, pointer.worldY);
+  draggedArmyRosterGhost[1].setPosition(pointer.worldX - 56, pointer.worldY - 12);
+}
+
+function handleArmyRosterDragEnd(pointer) {
+  if (!armyDragSource) {
+    return;
+  }
+
+  const dragSource = armyDragSource;
+  const cell = getVisibleArmyCellAt(pointer.worldX, pointer.worldY);
+  selectedArmyRosterUnitId = dragSource.unitId;
+  armyDragSource = null;
+  draggedArmyRosterUnitId = null;
+  clearArmyRosterDragGhost();
+
+  if (dragSource.sourceType === 'squad' && !cell) {
+    renderSetupUi();
+    return;
+  }
+
+  if (cell) {
+    resolveArmyUnitDrop(dragSource, cell);
+  }
+
+  renderSetupUi();
+}
+
+function createArmyDragGhost(unitId, pointer) {
   const unit = getArmyRosterUnit(unitId);
   draggedArmyRosterGhost = [
     sceneRef.add.rectangle(pointer.worldX, pointer.worldY, ROSTER_CARD_WIDTH * 0.52, 48, PHASER_COLORS.panel)
@@ -2201,32 +2257,6 @@ function beginArmyRosterDrag(unitId, pointer) {
   ];
 }
 
-function handleArmyRosterDragMove(pointer) {
-  if (!draggedArmyRosterGhost) {
-    return;
-  }
-
-  draggedArmyRosterGhost[0].setPosition(pointer.worldX, pointer.worldY);
-  draggedArmyRosterGhost[1].setPosition(pointer.worldX - 56, pointer.worldY - 12);
-}
-
-function handleArmyRosterDragEnd(pointer) {
-  if (!draggedArmyRosterUnitId) {
-    return;
-  }
-
-  const cell = getVisibleArmyCellAt(pointer.worldX, pointer.worldY);
-  selectedArmyRosterUnitId = draggedArmyRosterUnitId;
-  draggedArmyRosterUnitId = null;
-  clearArmyRosterDragGhost();
-
-  if (cell) {
-    placeSelectedArmyUnitInCell(cell.squadIndex, cell.row, cell.col);
-  }
-
-  renderSetupUi();
-}
-
 function clearArmyRosterDragGhost() {
   (draggedArmyRosterGhost || []).forEach((node) => {
     if (node && node.scene) {
@@ -2234,6 +2264,34 @@ function clearArmyRosterDragGhost() {
     }
   });
   draggedArmyRosterGhost = null;
+}
+
+function resolveArmyUnitDrop(dragSource, targetCell) {
+  if (dragSource.sourceType === 'squad' &&
+      dragSource.sourceSquadIndex === targetCell.squadIndex) {
+    moveUnitWithinSquad(
+      dragSource.sourceSquadIndex,
+      dragSource.sourceRow,
+      dragSource.sourceCol,
+      targetCell.row,
+      targetCell.col
+    );
+    return;
+  }
+
+  placeSelectedArmyUnitInCell(targetCell.squadIndex, targetCell.row, targetCell.col);
+}
+
+function moveUnitWithinSquad(squadIndex, sourceRow, sourceCol, targetRow, targetCol) {
+  if (sourceRow === targetRow && sourceCol === targetCol) {
+    return;
+  }
+
+  const squad = armySquads[squadIndex];
+  const sourceUnitId = squad.cells[sourceRow][sourceCol];
+  const targetUnitId = squad.cells[targetRow][targetCol];
+  squad.cells[targetRow][targetCol] = sourceUnitId;
+  squad.cells[sourceRow][sourceCol] = targetUnitId;
 }
 
 function handleSetupSquadWheel(pointer, over, dx, dy) {
@@ -2317,8 +2375,29 @@ function handleArmyCellPointerDown(squadIndex, row, col, pointer) {
   }
 
   if (pointer.leftButtonDown()) {
+    const unitId = armySquads[squadIndex].cells[row][col];
+    if (unitId) {
+      beginArmySquadCellDrag(squadIndex, row, col, unitId, pointer);
+      return;
+    }
     handleArmyCellClick(squadIndex, row, col);
   }
+}
+
+function beginArmySquadCellDrag(squadIndex, row, col, unitId, pointer) {
+  selectedArmySquadIndex = squadIndex;
+  selectedArmyRosterUnitId = unitId;
+  draggedArmyRosterUnitId = null;
+  armyDragSource = {
+    sourceType: 'squad',
+    sourceSquadIndex: squadIndex,
+    sourceRow: row,
+    sourceCol: col,
+    unitId,
+    startX: pointer.worldX,
+    startY: pointer.worldY
+  };
+  clearArmyRosterDragGhost();
 }
 
 function handleArmyCellClick(squadIndex, row, col) {
