@@ -1839,7 +1839,7 @@ function renderArmySquadPanel(squad, squadIndex, x, y) {
   const cp = addSetupNode(sceneRef.add.text(
     x + SQUAD_CARD_WIDTH - 16,
     y + 18,
-    `${FORMATION_COMMAND_ICON} ${commandPoints}   ${assignedCount}/${commandPoints}`,
+    `${assignedCount}/${commandPoints}`,
     headerTextStyle()
   )
     .setOrigin(1, 0)
