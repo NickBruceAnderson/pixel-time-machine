@@ -507,7 +507,71 @@ const FORMATION_ACTION_BUTTON_WIDTH = FORMATION_LEFT_STATS_PANEL_WIDTH;
 const FORMATION_TOOLTIP_DEFINITIONS = {
   hp: {
     title: 'HP',
-    description: 'HP is health. A unit is defeated at 0 HP. HP is usually damaged after SP is broken.'
+    description: 'HP means Health Points. A unit is defeated at 0 HP. HP is usually damaged after SP is broken.'
+  },
+  sp: {
+    title: 'SP',
+    description: 'SP means Stance Points. SP is the first line of defense before HP. Breaking SP makes a unit much easier to hurt.'
+  },
+  ap: {
+    title: 'AP',
+    description: 'AP means Action Points. Units spend AP to use active actions like attacks or movement. AP refreshes at the start of each round.'
+  },
+  rp: {
+    title: 'RP',
+    description: 'RP means Reaction Points. Units spend RP on defensive or reactionary skills like Block, Dodge, or Parry. RP refreshes each round, but fatigue can reduce RP recovery later in battle.'
+  },
+  lp: {
+    title: 'LP',
+    description: 'LP means Limit Points. LP powers stronger class-defining reactions or future ultimate skills. Some advanced skills may require LP before they can trigger.'
+  },
+  ip: {
+    title: 'IP',
+    description: 'IP means Initiative Points. Higher IP usually acts earlier in battle. If initiative is tied, use the current battle tie-breaker behavior.'
+  },
+  mv: {
+    title: 'MV',
+    description: 'MV means Movement. Movement controls how far a unit can advance when it needs to move toward a target.'
+  },
+  rn: {
+    title: 'RN',
+    description: 'RN means Range. Range controls how far a unit can reach with attacks or actions.'
+  },
+  broadsword: {
+    title: 'Broadsword',
+    description: 'A basic sword for front-line fighters. It grants Slash, a reliable melee attack.'
+  },
+  buckler: {
+    title: 'Buckler',
+    description: 'A small shield. It improves Block and helps sturdy units protect their SP and HP.'
+  },
+  chainmail: {
+    title: 'Chainmail',
+    description: 'Medium armor that adds durability. It increases SP, giving the unit a stronger first line of defense.'
+  },
+  fastLearner: {
+    title: 'Fast Learner',
+    description: 'A Squire trait. This unit gains mastery faster, making it better at learning from equipped skills over time.'
+  },
+  slash: {
+    title: 'Slash',
+    description: 'A basic melee sword attack. Slash spends AP and deals damage to SP first, or HP if the target’s stance is broken.'
+  },
+  move: {
+    title: 'Move',
+    description: 'Move spends AP to advance toward an enemy when no target is currently in range.'
+  },
+  block: {
+    title: 'Block',
+    description: 'A defensive reaction. Block spends RP to reduce or prevent incoming damage. Block can still work against Truestrike.'
+  },
+  parry: {
+    title: 'Parry',
+    description: 'A stronger defensive reaction. Parry can fully stop an incoming melee attack and punish the attacker when its conditions are met.'
+  },
+  thrust: {
+    title: 'Thrust',
+    description: 'A focused melee attack. Thrust spends AP and is better at pressuring HP once the target’s stance is broken.'
   }
 };
 const PRACTICE_ENEMY_COUNT = 2;
@@ -1809,6 +1873,9 @@ function getTooltipDefinition(key) {
 }
 
 function registerHoverTooltip(key, bounds) {
+  if (!getTooltipDefinition(key)) {
+    return;
+  }
   formationHoverTargets.push({ key, ...bounds });
 }
 
@@ -2223,14 +2290,12 @@ function renderArmyRosterStats(unitType, x, y, alpha = 1, depth = SETUP_UI_DEPTH
     })
       .setAlpha(alpha)
       .setDepth(depth));
-    if (resourceKey === 'hp') {
-      registerHoverTooltip('hp', {
-        x: rowX,
-        y: rowY - 8,
-        w: Math.max(24, max * 16),
-        h: 18
-      });
-    }
+    registerHoverTooltip(resourceKey, {
+      x: rowX,
+      y: rowY - 8,
+      w: Math.max(24, max * 16),
+      h: 18
+    });
   });
 }
 
@@ -3940,6 +4005,18 @@ function renderCharacterPanel(unit, x, y, width, height, showHeader = true) {
 
     drawResourceRow(x, cursorY, leftLabel, leftKey, unit[leftKey], getMax(leftKey), depth, addNode);
     drawResourceRow(rightColumnX, cursorY, rightLabel, rightKey, unit[rightKey], getMax(rightKey), depth, addNode);
+    registerHoverTooltip(leftKey, {
+      x: x + RESOURCE_ROW_LABEL_WIDTH,
+      y: cursorY - 8,
+      w: 96,
+      h: 18
+    });
+    registerHoverTooltip(rightKey, {
+      x: rightColumnX + RESOURCE_ROW_LABEL_WIDTH,
+      y: cursorY - 8,
+      w: 96,
+      h: 18
+    });
     cursorY += lineHeight;
   }
 
@@ -3956,13 +4033,21 @@ function renderCharacterPanel(unit, x, y, width, height, showHeader = true) {
     infoPanelNodes.push(labelNode, detailNode);
     cursorY += lineHeight;
   }
-  function addRichSplitLine(label, segments) {
+  function addRichSplitLine(label, segments, tooltipKey = null) {
     const labelNode = sceneRef.add.text(x, cursorY, label.padEnd(12), smallTextStyle());
     labelNode.setDepth(POPUP_DEPTH + 1);
     labelNode.setWordWrapWidth(width);
 
     const detailNodes = addInlineTextSegments(segments, x + skillDetailOffset, cursorY, POPUP_DEPTH + 1, POPUP_DETAIL_TEXT_ALPHA);
     infoPanelNodes.push(labelNode, ...detailNodes);
+    if (tooltipKey) {
+      registerHoverTooltip(tooltipKey, {
+        x,
+        y: cursorY - 8,
+        w: width,
+        h: 18
+      });
+    }
     cursorY += lineHeight;
   }
 
@@ -4003,6 +4088,18 @@ function renderCharacterPanel(unit, x, y, width, height, showHeader = true) {
     const addNode = (node) => { infoPanelNodes.push(node); };
     drawResourceRow(x, cursorY, 'MV', 'mv', mv, mv, POPUP_DEPTH + 1, addNode);
     drawResourceRow(x + RESOURCE_ROW_PAIR_GAP, cursorY, 'RN', 'rn', rn, rn, POPUP_DEPTH + 1, addNode);
+    registerHoverTooltip('mv', {
+      x: x + RESOURCE_ROW_LABEL_WIDTH,
+      y: cursorY - 8,
+      w: 96,
+      h: 18
+    });
+    registerHoverTooltip('rn', {
+      x: x + RESOURCE_ROW_PAIR_GAP + RESOURCE_ROW_LABEL_WIDTH,
+      y: cursorY - 8,
+      w: 96,
+      h: 18
+    });
     cursorY += lineHeight;
   }
   addBlankLine();
@@ -4017,7 +4114,8 @@ function renderCharacterPanel(unit, x, y, width, height, showHeader = true) {
 
     addRichSplitLine(
       `${getEquipmentSlotDisplay(slotKey, item)}: ${item.name}`,
-      shortTextOrFallback(item, buildEquipmentBonusSegments(item))
+      shortTextOrFallback(item, buildEquipmentBonusSegments(item)),
+      equipmentKey
     );
     equipmentRowCount += 1;
   });
@@ -4044,7 +4142,8 @@ function renderCharacterPanel(unit, x, y, width, height, showHeader = true) {
 
       addRichSplitLine(
         `T${index + 1}: ${trait.name}`,
-        shortTextOrFallback(trait, fallback)
+        shortTextOrFallback(trait, fallback),
+        traitKey
       );
     });
   }
@@ -4052,7 +4151,7 @@ function renderCharacterPanel(unit, x, y, width, height, showHeader = true) {
 
   addPanelLine('Actions:');
   Object.values(unit.actions || {}).forEach((actionData, index) => {
-    addRichSplitLine(`A${index + 1}: ${actionData.name}`, buildActionDetailSegments(unit, actionData));
+    addRichSplitLine(`A${index + 1}: ${actionData.name}`, buildActionDetailSegments(unit, actionData), actionData.key);
   });
 
   addBlankLine();
@@ -4075,7 +4174,7 @@ function renderCharacterPanel(unit, x, y, width, height, showHeader = true) {
       ];
     }
 
-    addRichSplitLine(`R${index + 1}: ${reactionData.name}`, fallback);
+    addRichSplitLine(`R${index + 1}: ${reactionData.name}`, fallback, reactionData.key);
   });
 
   const unitLimits = Object.values(unit.limits || {});
@@ -4088,7 +4187,7 @@ function renderCharacterPanel(unit, x, y, width, height, showHeader = true) {
         { text: ' -> ' },
         resourceTextSegment('sp', limitData.counterSpDamage),
         { text: ' + Blocks' }
-      ]);
+      ], limitData.key);
     });
   }
 
