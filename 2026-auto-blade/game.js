@@ -1671,34 +1671,20 @@ function renderArmySquads() {
 }
 
 function renderSquadPageControls() {
-  const track = addSetupNode(sceneRef.add.rectangle(
-    SQUAD_SCROLLBAR_X,
-    SQUAD_SCROLLBAR_Y,
-    SQUAD_SCROLLBAR_WIDTH,
-    SQUAD_SCROLLBAR_HEIGHT,
-    PHASER_COLORS.panel
-  )
-    .setOrigin(0)
-    .setAlpha(0.8)
-    .setInteractive({ useHandCursor: true })
-    .setDepth(SETUP_UI_DEPTH + 1));
-
   const maxScrollOffset = getMaxSquadScrollOffset();
   const thumbWidth = maxScrollOffset === 0
     ? SQUAD_SCROLLBAR_WIDTH
     : SQUAD_SCROLLBAR_WIDTH * (SQUAD_VISIBLE_CARDS_PER_PAGE / MAX_SQUADS);
-  const thumbTravel = SQUAD_SCROLLBAR_WIDTH - thumbWidth;
-  const thumbX = SQUAD_SCROLLBAR_X + (maxScrollOffset === 0 ? 0 : thumbTravel * (squadScrollOffset / maxScrollOffset));
-  addSetupNode(sceneRef.add.rectangle(
-    thumbX,
-    SQUAD_SCROLLBAR_Y,
-    thumbWidth,
-    SQUAD_SCROLLBAR_HEIGHT,
-    cssHexToNumber(SELECTED_SQUAD_HIGHLIGHT)
-  )
-    .setOrigin(0)
-    .setAlpha(0.9)
-    .setDepth(SETUP_UI_DEPTH + 2));
+  const track = renderSetupScrollbar({
+    x: SQUAD_SCROLLBAR_X,
+    y: SQUAD_SCROLLBAR_Y,
+    width: SQUAD_SCROLLBAR_WIDTH,
+    height: SQUAD_SCROLLBAR_HEIGHT,
+    thumbSize: thumbWidth,
+    scroll: squadScrollOffset,
+    maxScroll: maxScrollOffset,
+    orientation: 'horizontal'
+  });
 
   track.on('pointerdown', (pointer) => {
     if (maxScrollOffset === 0) {
@@ -1986,31 +1972,44 @@ function renderArmyRosterScrollbar() {
     return;
   }
 
-  addSetupNode(sceneRef.add.rectangle(
-    ROSTER_SCROLLBAR_X,
-    ROSTER_SCROLLBAR_Y,
-    AVAILABLE_UNITS_SCROLLBAR_WIDTH,
-    ROSTER_SCROLLBAR_HEIGHT,
-    PHASER_COLORS.panel
-  )
-    .setOrigin(0)
-    .setAlpha(0.8)
-    .setDepth(SETUP_UI_DEPTH + 2));
-
   const maxScrollRow = getMaxAvailableUnitsScrollRow();
   const thumbHeight = Math.max(36, ROSTER_SCROLLBAR_HEIGHT * (ROSTER_VISIBLE_ROWS / totalRows));
-  const thumbTravel = ROSTER_SCROLLBAR_HEIGHT - thumbHeight;
-  const thumbY = ROSTER_SCROLLBAR_Y + (maxScrollRow === 0 ? 0 : thumbTravel * (availableUnitsScrollRow / maxScrollRow));
+  renderSetupScrollbar({
+    x: ROSTER_SCROLLBAR_X,
+    y: ROSTER_SCROLLBAR_Y,
+    width: AVAILABLE_UNITS_SCROLLBAR_WIDTH,
+    height: ROSTER_SCROLLBAR_HEIGHT,
+    thumbSize: thumbHeight,
+    scroll: availableUnitsScrollRow,
+    maxScroll: maxScrollRow,
+    orientation: 'vertical'
+  });
+}
+
+function renderSetupScrollbar({ x, y, width, height, thumbSize, scroll, maxScroll, orientation }) {
+  const track = addSetupNode(sceneRef.add.rectangle(x, y, width, height, PHASER_COLORS.panel)
+    .setOrigin(0)
+    .setAlpha(0.8)
+    .setInteractive({ useHandCursor: true })
+    .setDepth(SETUP_UI_DEPTH + 2));
+  const trackLength = orientation === 'horizontal' ? width : height;
+  const thumbTravel = trackLength - thumbSize;
+  const thumbOffset = maxScroll === 0 ? 0 : thumbTravel * (scroll / maxScroll);
+  const thumbX = orientation === 'horizontal' ? x + thumbOffset : x;
+  const thumbY = orientation === 'horizontal' ? y : y + thumbOffset;
+  const thumbWidth = orientation === 'horizontal' ? thumbSize : width;
+  const thumbHeight = orientation === 'horizontal' ? height : thumbSize;
   addSetupNode(sceneRef.add.rectangle(
-    ROSTER_SCROLLBAR_X,
+    thumbX,
     thumbY,
-    AVAILABLE_UNITS_SCROLLBAR_WIDTH,
+    thumbWidth,
     thumbHeight,
     cssHexToNumber(SELECTED_SQUAD_HIGHLIGHT)
   )
     .setOrigin(0)
     .setAlpha(0.9)
     .setDepth(SETUP_UI_DEPTH + 3));
+  return track;
 }
 
 function getArmyRosterRowCount() {
