@@ -468,6 +468,14 @@ const ROSTER_PANEL_HEIGHT = ROSTER_PANEL_HEADER_HEIGHT + ROSTER_VISIBLE_HEIGHT +
 const ROSTER_SCROLLBAR_X = ROSTER_PANEL_X + ROSTER_PANEL_WIDTH - ROSTER_PANEL_PADDING - AVAILABLE_UNITS_SCROLLBAR_WIDTH;
 const ROSTER_SCROLLBAR_Y = ROSTER_Y;
 const ROSTER_SCROLLBAR_HEIGHT = ROSTER_VISIBLE_HEIGHT;
+const AVAILABLE_UNIT_NAME_FONT_SIZE = 20;
+const AVAILABLE_UNIT_CLASS_FONT_SIZE = 13;
+const AVAILABLE_UNIT_ART_SCALE = 2.25;
+const AVAILABLE_UNIT_ART_CENTER_Y_OFFSET = 80;
+const AVAILABLE_UNIT_STATS_FONT_SIZE = 12;
+const AVAILABLE_UNIT_STATS_Y_OFFSET = 126;
+const AVAILABLE_UNIT_STATS_ROW_GAP = 18;
+const AVAILABLE_UNIT_STATS_COLUMN_GAP = 96;
 const FORMATION_ACTION_BUTTON_X = GAME_WIDTH - 292;
 const FORMATION_ACTION_BUTTON_Y = GAME_HEIGHT - 106;
 const FORMATION_ACTION_BUTTON_WIDTH = 228;
@@ -477,20 +485,18 @@ const PRACTICE_ENEMY_FORMATION_SLOTS = [
   { row: 'front', col: 1 },
   { row: 'back', col: 1 }
 ];
-const ARMY_TEST_ROSTER = [
-  { id: 'knight-1', name: 'Knight', unitType: 'knight' },
-  { id: 'squire-1', name: 'Squire', unitType: 'squire' },
-  { id: 'squire-2', name: 'Squire', unitType: 'squire' },
-  { id: 'thief-1', name: 'Thief', unitType: 'thief' },
-  { id: 'archer-1', name: 'Archer', unitType: 'archer' }
+const ARMY_ROSTER_NAME_POOL = [
+  'Alden', 'Bria', 'Cedric', 'Dara', 'Emery', 'Faye',
+  'Garrick', 'Hale', 'Iris', 'Jory', 'Kael', 'Lena',
+  'Mira', 'Nolan', 'Orin', 'Petra', 'Quinn', 'Rhea',
+  'Silas', 'Tessa', 'Ulric', 'Vera', 'Wren', 'Yara'
 ];
 
 function createArmyTestRoster() {
-  return SETUP_UNIT_TYPES.flatMap((unitType) => {
-    const classDefinition = getClassDefinition(unitType);
+  return SETUP_UNIT_TYPES.flatMap((unitType, unitTypeIndex) => {
     return Array.from({ length: PICKER_UNIT_COPY_COUNT }, (_, index) => ({
       id: `${unitType}-${index + 1}`,
-      name: `${classDefinition.name} ${index + 1}`,
+      name: ARMY_ROSTER_NAME_POOL[(unitTypeIndex * PICKER_UNIT_COPY_COUNT + index) % ARMY_ROSTER_NAME_POOL.length],
       unitType
     }));
   });
@@ -1929,17 +1935,39 @@ function renderArmyRosterCard(unit, x, y) {
   }
 
   card.setInteractive({ useHandCursor: true });
-  card.on('pointerdown', (pointer) => beginArmyRosterDrag(unit.id, pointer));
+  card.on('pointerdown', (pointer) => handleArmyRosterCardPointerDown(unit.id, pointer));
 
   const classDefinition = getClassDefinition(unit.unitType);
 
-  [
-    sceneRef.add.text(x + 14, y + 10, unit.name, headerTextStyle()),
-    sceneRef.add.text(x + 14, y + 40, classDefinition.name, smallTextStyle())
-  ].forEach((node) => {
-    addSetupNode(node.setAlpha(contentAlpha).setDepth(SETUP_UI_DEPTH + 2).setInteractive({ useHandCursor: true }));
-    node.on('pointerdown', (pointer) => beginArmyRosterDrag(unit.id, pointer));
+  const name = addSetupNode(sceneRef.add.text(x + 14, y + 8, unit.name, {
+    ...headerTextStyle(),
+    fontSize: `${AVAILABLE_UNIT_NAME_FONT_SIZE}px`
+  })
+    .setAlpha(contentAlpha)
+    .setDepth(SETUP_UI_DEPTH + 2)
+    .setInteractive({ useHandCursor: true }));
+  const className = addSetupNode(sceneRef.add.text(x + 14, y + 34, classDefinition.name, {
+    ...smallTextStyle(),
+    fontSize: `${AVAILABLE_UNIT_CLASS_FONT_SIZE}px`
+  })
+    .setAlpha(contentAlpha)
+    .setDepth(SETUP_UI_DEPTH + 2)
+    .setInteractive({ useHandCursor: true }));
+  [name, className].forEach((node) => {
+    node.on('pointerdown', (pointer) => handleArmyRosterCardPointerDown(unit.id, pointer));
   });
+
+  const sprite = addSetupNode(sceneRef.add.sprite(
+    x + ROSTER_CARD_WIDTH / 2,
+    y + AVAILABLE_UNIT_ART_CENTER_Y_OFFSET,
+    getUnitIdleTextureKey(unit.unitType),
+    getUnitIdleDefaultFrame(unit.unitType)
+  )
+    .setScale(AVAILABLE_UNIT_ART_SCALE)
+    .setAlpha(contentAlpha)
+    .setDepth(SETUP_UI_DEPTH + 2)
+    .setInteractive({ useHandCursor: true }));
+  sprite.on('pointerdown', (pointer) => handleArmyRosterCardPointerDown(unit.id, pointer));
 
   if (isAssigned) {
     const check = addSetupNode(sceneRef.add.text(x + ROSTER_CARD_WIDTH - 28, y + 12, '✓', headerTextStyle())
@@ -1947,10 +1975,10 @@ function renderArmyRosterCard(unit, x, y) {
       .setAlpha(contentAlpha)
       .setDepth(SETUP_UI_DEPTH + 2)
       .setInteractive({ useHandCursor: true }));
-    check.on('pointerdown', () => selectArmyRosterUnit(unit.id));
+    check.on('pointerdown', (pointer) => handleArmyRosterCardPointerDown(unit.id, pointer));
   }
 
-  renderArmyRosterStats(unit.unitType, x + 14, y + 72, contentAlpha);
+  renderArmyRosterStats(unit.unitType, x + 14, y + AVAILABLE_UNIT_STATS_Y_OFFSET, contentAlpha);
 }
 
 function renderArmyRosterStats(unitType, x, y, alpha = 1) {
@@ -1963,13 +1991,37 @@ function renderArmyRosterStats(unitType, x, y, alpha = 1) {
   ];
 
   pairs.forEach(([label, resourceKey, max], index) => {
-    const rowX = x + (index % 2) * 86;
-    const rowY = y + Math.floor(index / 2) * 22;
-    drawResourceRow(rowX, rowY, label, resourceKey, max, max, SETUP_UI_DEPTH + 2, (node) => {
-      node.setAlpha(alpha);
-      addSetupNode(node);
-    });
+    const rowX = x + (index % 2) * AVAILABLE_UNIT_STATS_COLUMN_GAP;
+    const rowY = y + Math.floor(index / 2) * AVAILABLE_UNIT_STATS_ROW_GAP;
+    const text = addSetupNode(sceneRef.add.text(rowX, rowY, `${label} ${max}`, {
+      fontFamily: 'monospace',
+      fontSize: `${AVAILABLE_UNIT_STATS_FONT_SIZE}px`,
+      color: getResourceIconColor(resourceKey)
+    })
+      .setAlpha(alpha)
+      .setDepth(SETUP_UI_DEPTH + 2));
   });
+}
+
+function handleArmyRosterCardPointerDown(unitId, pointer) {
+  if (pointer.rightButtonDown()) {
+    removeArmyRosterUnitAssignment(unitId);
+    return;
+  }
+
+  if (pointer.leftButtonDown()) {
+    beginArmyRosterDrag(unitId, pointer);
+  }
+}
+
+function removeArmyRosterUnitAssignment(unitId) {
+  const assignment = getArmyUnitAssignment(unitId);
+  if (!assignment) {
+    return;
+  }
+
+  armySquads[assignment.squadIndex].cells[assignment.row][assignment.col] = null;
+  renderSetupUi();
 }
 
 function selectArmyRosterUnit(unitId) {
