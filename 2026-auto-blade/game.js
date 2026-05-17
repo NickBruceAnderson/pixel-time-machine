@@ -344,7 +344,7 @@ const SETUP_UI_DEPTH = 150;
 const SETUP_PANEL_X = 24;
 const SETUP_PANEL_Y = 18;
 const SETUP_PANEL_WIDTH = GAME_WIDTH - 48;
-const SETUP_PANEL_HEIGHT = 470;
+const SETUP_PANEL_HEIGHT = 510;
 const SETUP_PANEL_ALPHA = 0.88;
 const SETUP_BUTTON_HEIGHT = 34;
 const SETUP_KNIGHT_CARD_WIDTH = 190;
@@ -388,21 +388,25 @@ const SETUP_PREVIEW_ALPHA_AI = 0.72;
 // Unit formation
 const MAX_SQUADS = 6;
 const COMMAND_POINTS_PER_SQUAD = COMMAND_LEVEL_DEFAULT;
-const PICKER_COLUMNS = 6;
-const PICKER_ROWS = 2;
-const PICKER_UNIT_COPY_COUNT = 3;
-const MAX_VISIBLE_ROSTER_UNITS = PICKER_COLUMNS * PICKER_ROWS;
+const AVAILABLE_UNITS_COLUMNS = 6;
+const AVAILABLE_UNITS_VISIBLE_ROWS = 2;
+const PICKER_UNIT_COPY_COUNT = 6;
 const FORMATION_COMMAND_ICON = '👑';
 const SELECTED_SQUAD_HIGHLIGHT = '#58a6ff';
 const SELECTED_UNIT_HIGHLIGHT = '#f2cf45';
 const FORMATION_HEADER_X = 64;
 const FORMATION_HEADER_Y = 42;
-const COMMAND_LEVEL_MINUS_BUTTON_X = GAME_WIDTH - 382;
-const COMMAND_LEVEL_TEXT_X = GAME_WIDTH - 328;
-const COMMAND_LEVEL_ICON_X = GAME_WIDTH - 80;
-const COMMAND_LEVEL_PLUS_BUTTON_X = GAME_WIDTH - 46;
-const COMMAND_LEVEL_BUTTON_Y = FORMATION_HEADER_Y + 4;
-const COMMAND_LEVEL_BUTTON_SIZE = 30;
+const COMMAND_LEVEL_BOX_WIDTH = 430;
+const COMMAND_LEVEL_BOX_HEIGHT = 54;
+const COMMAND_LEVEL_BOX_X = GAME_WIDTH - COMMAND_LEVEL_BOX_WIDTH - 40;
+const COMMAND_LEVEL_BOX_Y = FORMATION_HEADER_Y - 6;
+const COMMAND_LEVEL_CONTROL_SIZE = 24;
+const COMMAND_LEVEL_CONTROL_GAP = 14;
+const COMMAND_LEVEL_BUTTON_Y = COMMAND_LEVEL_BOX_Y + 15;
+const COMMAND_LEVEL_MINUS_BUTTON_X = COMMAND_LEVEL_BOX_X + 14;
+const COMMAND_LEVEL_TEXT_X = COMMAND_LEVEL_MINUS_BUTTON_X + COMMAND_LEVEL_CONTROL_SIZE + COMMAND_LEVEL_CONTROL_GAP;
+const COMMAND_LEVEL_ICON_X = COMMAND_LEVEL_BOX_X + COMMAND_LEVEL_BOX_WIDTH - COMMAND_LEVEL_CONTROL_SIZE - COMMAND_LEVEL_CONTROL_GAP - 32;
+const COMMAND_LEVEL_PLUS_BUTTON_X = COMMAND_LEVEL_BOX_X + COMMAND_LEVEL_BOX_WIDTH - COMMAND_LEVEL_CONTROL_SIZE - 14;
 const SQUAD_VIEWPORT_X = 236;
 const SQUAD_VIEWPORT_Y = 124;
 const SQUAD_VISIBLE_CARDS_PER_PAGE = 3;
@@ -442,14 +446,28 @@ const ASSIGNED_CARD_ALPHA = 0.48;
 const ASSIGNED_CARD_FILL_COLOR = '#2b2d31';
 const PICKER_X_START = 64;
 const PICKER_BOTTOM_ANCHOR_Y = 1012;
-const PICKER_COLUMN_SPACING = 282;
-const PICKER_ROW_SPACING = 184;
+const AVAILABLE_UNITS_CELL_GAP = 20;
+const AVAILABLE_UNITS_SCROLLBAR_WIDTH = 12;
+const AVAILABLE_UNITS_SCROLL_SPEED = 1;
 const ROSTER_X = PICKER_X_START;
 const ROSTER_CARD_WIDTH = 262;
 const ROSTER_CARD_HEIGHT = 164;
-const ROSTER_Y = PICKER_BOTTOM_ANCHOR_Y - ROSTER_CARD_HEIGHT - PICKER_ROW_SPACING * (PICKER_ROWS - 1);
-const ROSTER_CARD_GAP = 20;
-const ROSTER_COLUMNS = PICKER_COLUMNS;
+const ROSTER_CARD_GAP = AVAILABLE_UNITS_CELL_GAP;
+const ROSTER_COLUMNS = AVAILABLE_UNITS_COLUMNS;
+const ROSTER_VISIBLE_ROWS = AVAILABLE_UNITS_VISIBLE_ROWS;
+const ROSTER_COLUMN_SPACING = ROSTER_CARD_WIDTH + ROSTER_CARD_GAP;
+const ROSTER_ROW_SPACING = ROSTER_CARD_HEIGHT + ROSTER_CARD_GAP;
+const ROSTER_VISIBLE_HEIGHT = ROSTER_CARD_HEIGHT * ROSTER_VISIBLE_ROWS + ROSTER_CARD_GAP * (ROSTER_VISIBLE_ROWS - 1);
+const ROSTER_Y = PICKER_BOTTOM_ANCHOR_Y - ROSTER_VISIBLE_HEIGHT;
+const ROSTER_PANEL_PADDING = 16;
+const ROSTER_PANEL_HEADER_HEIGHT = 42;
+const ROSTER_PANEL_X = ROSTER_X - ROSTER_PANEL_PADDING;
+const ROSTER_PANEL_Y = ROSTER_Y - ROSTER_PANEL_HEADER_HEIGHT;
+const ROSTER_PANEL_WIDTH = ROSTER_CARD_WIDTH * ROSTER_COLUMNS + ROSTER_CARD_GAP * (ROSTER_COLUMNS - 1) + ROSTER_PANEL_PADDING * 2 + AVAILABLE_UNITS_SCROLLBAR_WIDTH + 12;
+const ROSTER_PANEL_HEIGHT = ROSTER_PANEL_HEADER_HEIGHT + ROSTER_VISIBLE_HEIGHT + ROSTER_PANEL_PADDING;
+const ROSTER_SCROLLBAR_X = ROSTER_PANEL_X + ROSTER_PANEL_WIDTH - ROSTER_PANEL_PADDING - AVAILABLE_UNITS_SCROLLBAR_WIDTH;
+const ROSTER_SCROLLBAR_Y = ROSTER_Y;
+const ROSTER_SCROLLBAR_HEIGHT = ROSTER_VISIBLE_HEIGHT;
 const FORMATION_ACTION_BUTTON_X = GAME_WIDTH - 292;
 const FORMATION_ACTION_BUTTON_Y = GAME_HEIGHT - 106;
 const FORMATION_ACTION_BUTTON_WIDTH = 228;
@@ -868,6 +886,7 @@ let armySquads = [];
 let selectedArmyRosterUnitId = null;
 let selectedArmySquadIndex = 0;
 let squadScrollOffset = 0;
+let availableUnitsScrollRow = 0;
 let draggedArmyRosterUnitId = null;
 let draggedArmyRosterGhost = null;
 let setupNodes = [];
@@ -1637,20 +1656,31 @@ function renderSquadPageControls() {
 }
 
 function renderCommandLevelControls() {
-  createSetupButton('-', COMMAND_LEVEL_MINUS_BUTTON_X, COMMAND_LEVEL_BUTTON_Y, COMMAND_LEVEL_BUTTON_SIZE, () => changeCommandLevel(-1), commandLevel > COMMAND_LEVEL_MIN);
+  addSetupNode(sceneRef.add.rectangle(
+    COMMAND_LEVEL_BOX_X,
+    COMMAND_LEVEL_BOX_Y,
+    COMMAND_LEVEL_BOX_WIDTH,
+    COMMAND_LEVEL_BOX_HEIGHT,
+    PHASER_COLORS.panel
+  )
+    .setOrigin(0)
+    .setAlpha(0.75)
+    .setStrokeStyle(1, PHASER_COLORS.panelBorder)
+    .setDepth(SETUP_UI_DEPTH + 1));
+  createSetupButton('-', COMMAND_LEVEL_MINUS_BUTTON_X, COMMAND_LEVEL_BUTTON_Y, COMMAND_LEVEL_CONTROL_SIZE, () => changeCommandLevel(-1), commandLevel > COMMAND_LEVEL_MIN, null, COMMAND_LEVEL_CONTROL_SIZE);
   addSetupNode(sceneRef.add.text(
     COMMAND_LEVEL_TEXT_X,
-    FORMATION_HEADER_Y + 4,
+    COMMAND_LEVEL_BOX_Y + 13,
     `Command Level ${commandLevel}`,
     headerTextStyle()
   ).setDepth(SETUP_UI_DEPTH + 1));
   addSetupNode(sceneRef.add.text(
     COMMAND_LEVEL_ICON_X,
-    FORMATION_HEADER_Y + 4,
+    COMMAND_LEVEL_BOX_Y + 13,
     FORMATION_COMMAND_ICON,
     headerTextStyle()
   ).setOrigin(0.5, 0).setDepth(SETUP_UI_DEPTH + 1));
-  createSetupButton('+', COMMAND_LEVEL_PLUS_BUTTON_X, COMMAND_LEVEL_BUTTON_Y, COMMAND_LEVEL_BUTTON_SIZE, () => changeCommandLevel(1), commandLevel < COMMAND_LEVEL_MAX);
+  createSetupButton('+', COMMAND_LEVEL_PLUS_BUTTON_X, COMMAND_LEVEL_BUTTON_Y, COMMAND_LEVEL_CONTROL_SIZE, () => changeCommandLevel(1), commandLevel < COMMAND_LEVEL_MAX, null, COMMAND_LEVEL_CONTROL_SIZE);
 }
 
 function changeCommandLevel(delta) {
@@ -1792,16 +1822,88 @@ function renderArmySquadCell(squadIndex, row, col, x, y, unitId) {
 }
 
 function renderArmyRoster() {
-  addSetupNode(sceneRef.add.text(ROSTER_X, ROSTER_Y - 42, 'Available Units', headerTextStyle())
+  clampAvailableUnitsScrollRow();
+  addSetupNode(sceneRef.add.rectangle(
+    ROSTER_PANEL_X,
+    ROSTER_PANEL_Y,
+    ROSTER_PANEL_WIDTH,
+    ROSTER_PANEL_HEIGHT,
+    PHASER_COLORS.infoPanel
+  )
+    .setOrigin(0)
+    .setAlpha(SETUP_PANEL_ALPHA)
+    .setStrokeStyle(2, PHASER_COLORS.panelBorder)
     .setDepth(SETUP_UI_DEPTH + 1));
 
-  for (let index = 0; index < MAX_VISIBLE_ROSTER_UNITS; index += 1) {
+  addSetupNode(sceneRef.add.text(ROSTER_X, ROSTER_PANEL_Y + 10, 'Available Units', headerTextStyle())
+    .setDepth(SETUP_UI_DEPTH + 2));
+
+  const firstVisibleIndex = availableUnitsScrollRow * ROSTER_COLUMNS;
+  const visibleSlotCount = ROSTER_COLUMNS * ROSTER_VISIBLE_ROWS;
+  for (let visibleIndex = 0; visibleIndex < visibleSlotCount; visibleIndex += 1) {
+    const index = firstVisibleIndex + visibleIndex;
     const unit = armyRoster[index] || null;
-    const col = index % ROSTER_COLUMNS;
-    const row = Math.floor(index / ROSTER_COLUMNS);
-    const x = ROSTER_X + col * PICKER_COLUMN_SPACING;
-    const y = ROSTER_Y + row * PICKER_ROW_SPACING;
+    const col = visibleIndex % ROSTER_COLUMNS;
+    const row = Math.floor(visibleIndex / ROSTER_COLUMNS);
+    const x = ROSTER_X + col * ROSTER_COLUMN_SPACING;
+    const y = ROSTER_Y + row * ROSTER_ROW_SPACING;
     renderArmyRosterCard(unit, x, y);
+  }
+
+  renderArmyRosterScrollbar();
+}
+
+function renderArmyRosterScrollbar() {
+  const totalRows = getArmyRosterRowCount();
+  if (totalRows <= ROSTER_VISIBLE_ROWS) {
+    return;
+  }
+
+  addSetupNode(sceneRef.add.rectangle(
+    ROSTER_SCROLLBAR_X,
+    ROSTER_SCROLLBAR_Y,
+    AVAILABLE_UNITS_SCROLLBAR_WIDTH,
+    ROSTER_SCROLLBAR_HEIGHT,
+    PHASER_COLORS.panel
+  )
+    .setOrigin(0)
+    .setAlpha(0.8)
+    .setDepth(SETUP_UI_DEPTH + 2));
+
+  const maxScrollRow = getMaxAvailableUnitsScrollRow();
+  const thumbHeight = Math.max(36, ROSTER_SCROLLBAR_HEIGHT * (ROSTER_VISIBLE_ROWS / totalRows));
+  const thumbTravel = ROSTER_SCROLLBAR_HEIGHT - thumbHeight;
+  const thumbY = ROSTER_SCROLLBAR_Y + (maxScrollRow === 0 ? 0 : thumbTravel * (availableUnitsScrollRow / maxScrollRow));
+  addSetupNode(sceneRef.add.rectangle(
+    ROSTER_SCROLLBAR_X,
+    thumbY,
+    AVAILABLE_UNITS_SCROLLBAR_WIDTH,
+    thumbHeight,
+    cssHexToNumber(SELECTED_SQUAD_HIGHLIGHT)
+  )
+    .setOrigin(0)
+    .setAlpha(0.9)
+    .setDepth(SETUP_UI_DEPTH + 3));
+}
+
+function getArmyRosterRowCount() {
+  return Math.ceil(armyRoster.length / ROSTER_COLUMNS);
+}
+
+function getMaxAvailableUnitsScrollRow() {
+  return Math.max(0, getArmyRosterRowCount() - ROSTER_VISIBLE_ROWS);
+}
+
+function clampAvailableUnitsScrollRow() {
+  availableUnitsScrollRow = Math.max(0, Math.min(getMaxAvailableUnitsScrollRow(), availableUnitsScrollRow));
+}
+
+function changeAvailableUnitsScroll(delta) {
+  const oldScrollRow = availableUnitsScrollRow;
+  availableUnitsScrollRow += Math.sign(delta) * AVAILABLE_UNITS_SCROLL_SPEED;
+  clampAvailableUnitsScrollRow();
+  if (availableUnitsScrollRow !== oldScrollRow) {
+    renderSetupUi();
   }
 }
 
@@ -1926,14 +2028,34 @@ function clearArmyRosterDragGhost() {
 }
 
 function handleSetupSquadWheel(pointer, over, dx, dy) {
-  if (gamePhase !== 'setup' || !isPointerInsideSquadViewport(pointer.worldX, pointer.worldY)) {
+  if (gamePhase !== 'setup') {
     return;
   }
 
   const delta = Math.abs(dx) > Math.abs(dy) ? dx : dy;
+  if (delta === 0) {
+    return;
+  }
+
+  if (isPointerInsideAvailableUnitsViewport(pointer.worldX, pointer.worldY)) {
+    changeAvailableUnitsScroll(delta);
+    return;
+  }
+
+  if (!isPointerInsideSquadViewport(pointer.worldX, pointer.worldY)) {
+    return;
+  }
+
   if (delta !== 0) {
     changeSquadPage(Math.sign(delta));
   }
+}
+
+function isPointerInsideAvailableUnitsViewport(x, y) {
+  return x >= ROSTER_PANEL_X &&
+    x <= ROSTER_PANEL_X + ROSTER_PANEL_WIDTH &&
+    y >= ROSTER_Y &&
+    y <= ROSTER_Y + ROSTER_VISIBLE_HEIGHT;
 }
 
 function isPointerInsideSquadViewport(x, y) {
@@ -2141,15 +2263,22 @@ function renderSetupPanel() {
   renderArmyManagementScreen();
 }
 
-function createSetupButton(label, x, y, width, onClick, isActive = true, fillAlpha = null) {
+function createSetupButton(label, x, y, width, onClick, isActive = true, fillAlpha = null, height = SETUP_BUTTON_HEIGHT) {
   const fill = isActive ? PHASER_COLORS.sp : PHASER_COLORS.panel;
-  const button = addSetupNode(sceneRef.add.rectangle(x, y, width, SETUP_BUTTON_HEIGHT, fill)
+  const button = addSetupNode(sceneRef.add.rectangle(x, y, width, height, fill)
     .setOrigin(0)
     .setAlpha(fillAlpha ?? (isActive ? 0.85 : 0.45))
     .setStrokeStyle(1, PHASER_COLORS.panelBorder)
     .setInteractive({ useHandCursor: true })
     .setDepth(SETUP_UI_DEPTH + 1));
-  const text = addSetupNode(sceneRef.add.text(x + 12, y + 9, label, combatLogToggleTextStyle())
+  const isCompact = width <= COMMAND_LEVEL_CONTROL_SIZE || label.length === 1;
+  const text = addSetupNode(sceneRef.add.text(
+    isCompact ? x + width / 2 : x + 12,
+    isCompact ? y + height / 2 : y + 9,
+    label,
+    combatLogToggleTextStyle()
+  )
+    .setOrigin(isCompact ? 0.5 : 0, isCompact ? 0.5 : 0)
     .setInteractive({ useHandCursor: true })
     .setAlpha(isActive ? 1 : 0.55)
     .setDepth(SETUP_UI_DEPTH + 2));
