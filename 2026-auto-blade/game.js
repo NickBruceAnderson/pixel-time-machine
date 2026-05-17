@@ -2123,6 +2123,9 @@ function renderArmyRosterStats(unitType, x, y, alpha = 1, depth = SETUP_UI_DEPTH
 
 function handleArmyRosterCardPointerDown(unitId, pointer) {
   if (pointer.rightButtonDown()) {
+    if (clearSelectedFormationUnitIfMatched(unitId)) {
+      return;
+    }
     removeArmyRosterUnitAssignment(unitId);
     return;
   }
@@ -2136,6 +2139,19 @@ function handleArmyRosterCardPointerDown(unitId, pointer) {
     }
     beginArmyRosterDrag(unitId, pointer);
   }
+}
+
+function clearSelectedFormationUnitIfMatched(unitId) {
+  if (selectedArmyRosterUnitId !== unitId) {
+    return false;
+  }
+
+  selectedArmyRosterUnitId = null;
+  armyDragSource = null;
+  draggedArmyRosterUnitId = null;
+  clearArmyRosterDragGhost();
+  renderSetupUi();
+  return true;
 }
 
 function isArmyRosterDoubleClick(unitId, pointer) {
@@ -2370,6 +2386,10 @@ function handleArmySquadPanelClick(squadIndex) {
 
 function handleArmyCellPointerDown(squadIndex, row, col, pointer) {
   if (pointer.rightButtonDown()) {
+    const unitId = armySquads[squadIndex].cells[row][col];
+    if (unitId && clearSelectedFormationUnitIfMatched(unitId)) {
+      return;
+    }
     removeArmyUnitFromCell(squadIndex, row, col);
     return;
   }
