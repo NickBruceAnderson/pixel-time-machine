@@ -262,13 +262,13 @@ const BATTLE_RESOURCE_CENTER_DEPTH_BONUS = 30;
 
 // HUD: Resource backplate
 const BATTLE_HUD_BACKPLATE_ENABLED = true;
-const BATTLE_HUD_BACKPLATE_WIDTH = 90;
+const BATTLE_HUD_BACKPLATE_WIDTH = 100;
 const BATTLE_HUD_BACKPLATE_HEIGHT = 30;
 const BATTLE_HUD_BACKPLATE_Y_OFFSET = 85;
 const BATTLE_HUD_BACKPLATE_COLOR = '#050506';
-const BATTLE_HUD_BACKPLATE_ALPHA = 0.20;
+const BATTLE_HUD_BACKPLATE_ALPHA = 0.10;
 const BATTLE_HUD_BACKPLATE_BORDER_COLOR = '#2e2e38';
-const BATTLE_HUD_BACKPLATE_BORDER_THICKNESS = 1;
+const BATTLE_HUD_BACKPLATE_BORDER_THICKNESS = 0;
 const BATTLE_HUD_BACKPLATE_DEPTH = DEPTH_UNIT_HUD - 1;
 
 // HUD: LP
@@ -466,8 +466,18 @@ const SQUAD_BOARD_EMPTY_ALPHA = 0.58;
 const SQUAD_BOARD_OCCUPIED_ALPHA = 0.96;
 const SQUAD_BOARD_OCCUPIED_COLOR = '#20202a';
 const SQUAD_CELL_UNIT_ART_SCALE = 3.1;
-const SQUAD_CELL_UNIT_ART_OFFSET_Y = 0;
-const SQUAD_CELL_NAME_OFFSET_Y = -3;
+const SQUAD_CELL_UNIT_ART_OFFSET_Y = -12;
+const SQUAD_CELL_NAME_OFFSET_Y = -7;
+const SQUAD_CELL_NAME_OFFSET_X = -2;
+const SQUAD_CELL_NAME_BACKING_ALPHA = 0.72;
+const SQUAD_CELL_SLOT_DEPTH = SETUP_UI_DEPTH + 2;
+const SQUAD_CELL_SPRITE_DEPTH = SETUP_UI_DEPTH + 3;
+const SQUAD_CELL_NAME_DEPTH = SETUP_UI_DEPTH + 5;
+const ARMY_DRAG_GHOST_SIZE = SQUAD_BOARD_CELL_WIDTH - 8;
+const ARMY_DRAG_GHOST_ALPHA = 0.86;
+const ARMY_DRAG_GHOST_NAME_OFFSET_Y = -28;
+const ARMY_DRAG_GHOST_SPRITE_OFFSET_Y = 0;
+const ARMY_DRAG_GHOST_SPRITE_SCALE = SQUAD_CELL_UNIT_ART_SCALE;
 const SELECTED_CELL_HIGHLIGHT = '#f2cf45';
 const FORMATION_BG_COLOR = 0x2f3434;
 const FORMATION_BG_DEPTH = DEPTH_GRID + 5;
@@ -503,12 +513,14 @@ const ROSTER_SCROLLBAR_Y = ROSTER_Y;
 const ROSTER_SCROLLBAR_HEIGHT = ROSTER_VISIBLE_HEIGHT;
 const AVAILABLE_UNIT_NAME_FONT_SIZE = 20;
 const AVAILABLE_UNIT_CLASS_FONT_SIZE = 13;
-const AVAILABLE_UNIT_ART_SCALE = 3.45;
-const AVAILABLE_UNIT_ART_CENTER_Y_OFFSET = 88;
+const AVAILABLE_UNIT_ART_SCALE = 5.5;
+const AVAILABLE_UNIT_ART_CENTER_Y_OFFSET = 74;
 const AVAILABLE_UNIT_STATS_FONT_SIZE = 12;
 const AVAILABLE_UNIT_STATS_Y_OFFSET = 126;
 const AVAILABLE_UNIT_STATS_ROW_GAP = 18;
-const AVAILABLE_UNIT_STATS_COLUMN_GAP = 82;
+const AVAILABLE_UNIT_STATS_GROUP_RESERVED_WIDTH = 52; // fits up to 4 icons
+const AVAILABLE_UNIT_STATS_GROUP_GAP = 20;
+const AVAILABLE_UNIT_STATS_ICON_SPACING = 13;
 const FORMATION_ACTION_BUTTON_X = FORMATION_LEFT_STATS_PANEL_X;
 const FORMATION_ACTION_BUTTON_Y = SETUP_PANEL_Y;
 const FORMATION_ACTION_BUTTON_WIDTH = FORMATION_LEFT_STATS_PANEL_WIDTH;
@@ -578,34 +590,42 @@ const FORMATION_TOOLTIP_DEFINITIONS = {
     description: 'A stronger defensive reaction. Parry can fully stop an incoming melee attack and punish the attacker when its conditions are met.'
   },
   thrust: {
-    title: ‘Thrust’,
-    description: `A focused melee attack. Thrust spends AP and is better at pressuring HP once the target stance is broken.`
+    title: 'Thrust',
+    description: 'A focused melee attack. Thrust spends AP and is better at pressuring HP once the target stance is broken.'
+  },
+  commandLevel: {
+    title: 'Command Level',
+    description: 'Command Level caps how many units you can place in each squad. Higher Command Level lets each squad field more units.'
+  },
+  squadSpot: {
+    title: 'Squad Spot',
+    description: 'A squad spot is a position where one unit can be placed. A squad can only use as many filled spots as its Command Level allows.'
   }
 };
 
 const CLASS_TOOLTIPS = {
-  squire: ‘Squires are sturdy learners with balanced frontline stats. They rely on Block to survive pressure and grow quickly through Fast Learner.’,
-  thief: ‘Thieves are fast evasive duelists. They act quickly, pressure enemies with daggers, and use Dodge to avoid attacks when they have RP.’,
-  archer: ‘Archers are ranged hunters who punish evasive targets. Their Marksman trait gives extra range, and Truestrike can shut down Dodge.’,
-  knight: ‘Knights are promoted Squires built to protect the squad. They are tougher frontline defenders with stronger protective reactions.’
+  squire: 'Squires are sturdy learners with balanced frontline stats. They rely on Block to survive pressure and grow quickly through Fast Learner.',
+  thief: 'Thieves are fast evasive duelists. They act quickly, pressure enemies with daggers, and use Dodge to avoid attacks when they have RP.',
+  archer: 'Archers are ranged hunters who punish evasive targets. Their Marksman trait gives extra range, and Truestrike can shut down Dodge.',
+  knight: 'Knights are promoted Squires built to protect the squad. They are tougher frontline defenders with stronger protective reactions.'
 };
 
 const UNIT_QUIPS = {
-  Alten: ‘Still believes one clean block can fix anything.’,
-  Alvin: ‘Volunteers first, then asks what the plan is.’,
-  Bria: ‘Keeps a spare knife and a sharper comeback.’,
-  Cedric: ‘Polishes his gear before every bad idea.’,
-  Dara: ‘Claims luck is a skill.’,
-  Emery: ‘Looks calm because panic would be inefficient.’,
-  Fay: ‘Counts arrows like other people count sheep.’,
-  Garakail: ‘Laughs loud enough to count as armor.’,
-  Iris: ‘Never misses a detail—or a target.’,
-  Jory: ‘Has a heroic pose ready, just in case.’,
-  Kale: ‘Says he is scouting, mostly wanders stylishly.’,
-  Lena: ‘Remembers every promise and every shortcut.’
+  Alten: 'Still believes one clean block can fix anything.',
+  Alvin: 'Volunteers first, then asks what the plan is.',
+  Bria: 'Keeps a spare knife and a sharper comeback.',
+  Cedric: 'Polishes his gear before every bad idea.',
+  Dara: 'Claims luck is a skill.',
+  Emery: 'Looks calm because panic would be inefficient.',
+  Fay: 'Counts arrows like other people count sheep.',
+  Garakail: 'Laughs loud enough to count as armor.',
+  Iris: 'Never misses a detail—or a target.',
+  Jory: 'Has a heroic pose ready, just in case.',
+  Kale: 'Says he is scouting, mostly wanders stylishly.',
+  Lena: 'Remembers every promise and every shortcut.'
 };
 
-const UNIT_QUIP_FALLBACK = ‘Still waiting for their legend to begin.’;
+const UNIT_QUIP_FALLBACK = 'Still waiting for their legend to begin.';
 
 const PRACTICE_ENEMY_COUNT = 2;
 const PRACTICE_ENEMY_ALLOWED_CLASSES = ['squire', 'thief', 'archer'];
@@ -1847,24 +1867,33 @@ function renderFormationSelectedUnitStatsPanel() {
     .setAlpha(POPUP_PANEL_BACKGROUND_ALPHA)
     .setStrokeStyle(2, PHASER_COLORS.panelBorder)
     .setDepth(POPUP_DEPTH));
-  const titleNode = addSetupNode(sceneRef.add.text(rect.x + POPUP_PANEL_PADDING, rect.y + 18, `${unit.name} ${detailUnit.className}`, headerTextStyle())
+  addSetupNode(sceneRef.add.text(rect.x + POPUP_PANEL_PADDING, rect.y + 10, unit.name, headerTextStyle())
     .setDepth(POPUP_DEPTH + 1));
+  addSetupNode(sceneRef.add.text(rect.x + POPUP_PANEL_PADDING, rect.y + 36, detailUnit.className, {
+    ...smallTextStyle(),
+    fontSize: '13px'
+  }).setDepth(POPUP_DEPTH + 1));
+  registerDynamicHoverTooltip(
+    `selected-unit-header:${unit.id}`,
+    { x: rect.x, y: rect.y, w: rect.w, h: 58 },
+    getUnitTooltip(unit.name, unit.unitType, detailUnit.className)
+  );
   const detailNodes = [];
   const savedNodes = infoPanelNodes;
   infoPanelNodes = detailNodes;
   renderCharacterPanel(
     detailUnit,
     rect.x + POPUP_STATS_PANEL_PADDING,
-    rect.y + 58,
+    rect.y + 72,
     rect.w - POPUP_STATS_PANEL_PADDING * 2,
-    rect.h - 58 - POPUP_STATS_PANEL_PADDING,
+    rect.h - 72 - POPUP_STATS_PANEL_PADDING,
     false
   );
   infoPanelNodes = savedNodes;
   detailNodes.forEach(addSetupNode);
   registerHoverTooltip('hp', {
     x: rect.x + POPUP_STATS_PANEL_PADDING + RESOURCE_ROW_LABEL_WIDTH,
-    y: rect.y + 58 - 10,
+    y: rect.y + 62,
     w: 96,
     h: 20
   });
@@ -2013,6 +2042,12 @@ function renderCommandLevelControls() {
     headerTextStyle()
   ).setOrigin(0.5, 0).setDepth(SETUP_UI_DEPTH + 1));
   createSetupButton('+', COMMAND_LEVEL_PLUS_BUTTON_X, COMMAND_LEVEL_BUTTON_Y, COMMAND_LEVEL_CONTROL_SIZE, () => changeCommandLevel(1), commandLevel < COMMAND_LEVEL_MAX, null, COMMAND_LEVEL_CONTROL_SIZE);
+  registerHoverTooltip('commandLevel', {
+    x: COMMAND_LEVEL_BOX_X,
+    y: COMMAND_LEVEL_BOX_Y,
+    w: COMMAND_LEVEL_BOX_WIDTH,
+    h: COMMAND_LEVEL_BOX_HEIGHT
+  });
 }
 
 function changeCommandLevel(delta) {
@@ -2135,18 +2170,24 @@ function renderArmySquadCell(squadIndex, row, col, x, y, unitId) {
     .setAlpha(unit ? SQUAD_BOARD_OCCUPIED_ALPHA : SQUAD_BOARD_EMPTY_ALPHA)
     .setStrokeStyle(isSelectedUnit ? 3 : 1, cssHexToNumber(isSelectedUnit ? SELECTED_CELL_HIGHLIGHT : COLORS.panelBorder))
     .setInteractive({ useHandCursor: true })
-    .setDepth(SETUP_UI_DEPTH + 2));
+    .setDepth(SQUAD_CELL_SLOT_DEPTH));
   slot.on('pointerdown', (pointer) => handleArmyCellPointerDown(squadIndex, row, col, pointer));
+  if (!unit) {
+    registerHoverTooltip('squadSpot', { x, y, w: SQUAD_BOARD_CELL_WIDTH - 8, h: SQUAD_BOARD_CELL_HEIGHT - 8 });
+  }
 
   const label = unit ? unit.name : '';
-  const text = addSetupNode(sceneRef.add.text(
-    x + SQUAD_BOARD_CELL_WIDTH / 2,
-    y + SQUAD_CELL_NAME_OFFSET_Y,
-    label,
-    smallTextStyle()
-  )
+  const nameX = x + (SQUAD_BOARD_CELL_WIDTH - 8) / 2 + SQUAD_CELL_NAME_OFFSET_X;
+  const nameY = y + SQUAD_CELL_NAME_OFFSET_Y;
+  if (label) {
+    addSetupNode(sceneRef.add.rectangle(nameX, nameY, 72, 14, 0x141414)
+      .setOrigin(0.5, 0.5)
+      .setAlpha(SQUAD_CELL_NAME_BACKING_ALPHA)
+      .setDepth(SQUAD_CELL_NAME_DEPTH - 1));
+  }
+  const text = addSetupNode(sceneRef.add.text(nameX, nameY, label, smallTextStyle())
     .setOrigin(0.5, 0.5)
-    .setDepth(SETUP_UI_DEPTH + 3)
+    .setDepth(SQUAD_CELL_NAME_DEPTH)
     .setInteractive({ useHandCursor: true }));
   text.on('pointerdown', (pointer) => handleArmyCellPointerDown(squadIndex, row, col, pointer));
 
@@ -2159,7 +2200,7 @@ function renderArmySquadCell(squadIndex, row, col, x, y, unitId) {
     )
       .setScale(SQUAD_CELL_UNIT_ART_SCALE)
       .setTint(cssHexToNumber(RED_TEAM_UNIT_TINT))
-      .setDepth(SETUP_UI_DEPTH + 3)
+      .setDepth(SQUAD_CELL_SPRITE_DEPTH)
       .setInteractive({ useHandCursor: true }));
     sprite.on('pointerdown', (pointer) => handleArmyCellPointerDown(squadIndex, row, col, pointer));
     const cellClassDef = getClassDefinition(unit.unitType);
@@ -2335,7 +2376,7 @@ function renderArmyRosterCard(unit, x, y) {
     check.on('pointerdown', (pointer) => handleArmyRosterCardPointerDown(unit.id, pointer));
   }
 
-  renderArmyRosterStats(unit.unitType, x + 14, y + AVAILABLE_UNIT_STATS_Y_OFFSET, contentAlpha, SETUP_UI_DEPTH + 2);
+  renderArmyRosterStats(unit.unitType, x, ROSTER_CARD_WIDTH, y + AVAILABLE_UNIT_STATS_Y_OFFSET, contentAlpha, SETUP_UI_DEPTH + 2);
   registerDynamicHoverTooltip(
     `unit-card:${unit.id}`,
     { x, y, w: ROSTER_CARD_WIDTH, h: ROSTER_CARD_HEIGHT },
@@ -2343,7 +2384,7 @@ function renderArmyRosterCard(unit, x, y) {
   );
 }
 
-function renderArmyRosterStats(unitType, x, y, alpha = 1, depth = SETUP_UI_DEPTH + 2) {
+function renderArmyRosterStats(unitType, cardX, cardWidth, y, alpha = 1, depth = SETUP_UI_DEPTH + 2) {
   const stats = calculateClassStats(unitType);
   const pairs = [
     ['HP', 'hp', stats.maxHp],
@@ -2352,10 +2393,14 @@ function renderArmyRosterStats(unitType, x, y, alpha = 1, depth = SETUP_UI_DEPTH
     ['RP', 'rp', stats.maxRp]
   ];
 
+  const blockWidth = AVAILABLE_UNIT_STATS_GROUP_RESERVED_WIDTH * 2 + AVAILABLE_UNIT_STATS_GROUP_GAP;
+  const startX = cardX + cardWidth / 2 - blockWidth / 2;
+  const colStep = AVAILABLE_UNIT_STATS_GROUP_RESERVED_WIDTH + AVAILABLE_UNIT_STATS_GROUP_GAP;
+
   pairs.forEach(([label, resourceKey, max], index) => {
-    const rowX = x + (index % 2) * AVAILABLE_UNIT_STATS_COLUMN_GAP;
+    const rowX = startX + (index % 2) * colStep;
     const rowY = y + Math.floor(index / 2) * AVAILABLE_UNIT_STATS_ROW_GAP;
-    const text = addSetupNode(sceneRef.add.text(rowX, rowY, RESOURCE_ICONS[resourceKey].repeat(max), {
+    addSetupNode(sceneRef.add.text(rowX, rowY, RESOURCE_ICONS[resourceKey].repeat(max), {
       fontFamily: 'monospace',
       fontSize: `${AVAILABLE_UNIT_STATS_FONT_SIZE}px`,
       color: getResourceIconColor(resourceKey)
@@ -2365,7 +2410,7 @@ function renderArmyRosterStats(unitType, x, y, alpha = 1, depth = SETUP_UI_DEPTH
     registerHoverTooltip(resourceKey, {
       x: rowX,
       y: rowY - 8,
-      w: Math.max(24, max * 16),
+      w: Math.max(AVAILABLE_UNIT_STATS_ICON_SPACING, max * AVAILABLE_UNIT_STATS_ICON_SPACING),
       h: 18
     });
   });
@@ -2484,8 +2529,9 @@ function handleArmyRosterDragMove(pointer) {
   if (!draggedArmyRosterGhost) {
     return;
   }
-  draggedArmyRosterGhost[0].setPosition(pointer.worldX, pointer.worldY);
-  draggedArmyRosterGhost[1].setPosition(pointer.worldX - 56, pointer.worldY - 12);
+  draggedArmyRosterGhost.forEach(({ node, offsetX, offsetY }) => {
+    node.setPosition(pointer.worldX + offsetX, pointer.worldY + offsetY);
+  });
 }
 
 function handleArmyRosterDragEnd(pointer) {
@@ -2514,18 +2560,35 @@ function handleArmyRosterDragEnd(pointer) {
 
 function createArmyDragGhost(unitId, pointer) {
   const unit = getArmyRosterUnit(unitId);
-  draggedArmyRosterGhost = [
-    sceneRef.add.rectangle(pointer.worldX, pointer.worldY, ROSTER_CARD_WIDTH * 0.52, 48, PHASER_COLORS.panel)
-      .setAlpha(0.82)
-      .setStrokeStyle(1, cssHexToNumber(SELECTED_UNIT_HIGHLIGHT))
-      .setDepth(SETUP_UI_DEPTH + 30),
-    sceneRef.add.text(pointer.worldX - 56, pointer.worldY - 12, unit?.name || '', smallTextStyle())
-      .setDepth(SETUP_UI_DEPTH + 31)
+  const bg = sceneRef.add.rectangle(pointer.worldX, pointer.worldY, ARMY_DRAG_GHOST_SIZE, ARMY_DRAG_GHOST_SIZE, cssHexToNumber(SQUAD_BOARD_OCCUPIED_COLOR))
+    .setOrigin(0.5)
+    .setAlpha(ARMY_DRAG_GHOST_ALPHA)
+    .setStrokeStyle(2, cssHexToNumber(SELECTED_CELL_HIGHLIGHT))
+    .setDepth(SETUP_UI_DEPTH + 30);
+  const nameText = sceneRef.add.text(pointer.worldX, pointer.worldY + ARMY_DRAG_GHOST_NAME_OFFSET_Y, unit?.name || '', smallTextStyle())
+    .setOrigin(0.5, 0.5)
+    .setDepth(SETUP_UI_DEPTH + 32);
+  const nodes = [
+    { node: bg, offsetX: 0, offsetY: 0 },
+    { node: nameText, offsetX: 0, offsetY: ARMY_DRAG_GHOST_NAME_OFFSET_Y }
   ];
+  if (unit) {
+    const sprite = sceneRef.add.sprite(
+      pointer.worldX,
+      pointer.worldY + ARMY_DRAG_GHOST_SPRITE_OFFSET_Y,
+      getUnitIdleTextureKey(unit.unitType),
+      getUnitIdleDefaultFrame(unit.unitType)
+    )
+      .setScale(ARMY_DRAG_GHOST_SPRITE_SCALE)
+      .setTint(cssHexToNumber(RED_TEAM_UNIT_TINT))
+      .setDepth(SETUP_UI_DEPTH + 31);
+    nodes.push({ node: sprite, offsetX: 0, offsetY: ARMY_DRAG_GHOST_SPRITE_OFFSET_Y });
+  }
+  draggedArmyRosterGhost = nodes;
 }
 
 function clearArmyRosterDragGhost() {
-  (draggedArmyRosterGhost || []).forEach((node) => {
+  (draggedArmyRosterGhost || []).forEach(({ node }) => {
     if (node && node.scene) {
       node.destroy();
     }
@@ -2926,8 +2989,10 @@ function getUnitBaseSpriteX(teamKey, cellX) {
 
 function getUnitSpritePosition(unitType, teamKey, cellX, baseY) {
   const offset = getUnitSpriteOffset(unitType);
+  const facingSign = teamKey === 'blue' ? -1 : 1;
+
   return {
-    x: getUnitBaseSpriteX(teamKey, cellX) + offset.x,
+    x: getUnitBaseSpriteX(teamKey, cellX) + offset.x * facingSign,
     y: baseY + offset.y
   };
 }

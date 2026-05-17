@@ -101,7 +101,7 @@ export const CHARACTER_CLASSES = {
         frameHeight: 16,
         defaultFrame: 0,
         scale: 8,
-        spriteOffsetX: -8,
+        spriteOffsetX: -20,
         spriteOffsetY: 0
       },
       animations: {}
@@ -196,7 +196,7 @@ export const CHARACTER_CLASSES = {
         frameHeight: 16,
         defaultFrame: 0,
         scale: 8,
-        spriteOffsetX: -6,
+        spriteOffsetX: -36,
         spriteOffsetY: 0
       },
       animations: {}
