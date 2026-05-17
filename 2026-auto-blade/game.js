@@ -391,10 +391,16 @@ const COMMAND_POINTS_PER_SQUAD = COMMAND_LEVEL_DEFAULT;
 const AVAILABLE_UNITS_COLUMNS = 6;
 const AVAILABLE_UNITS_VISIBLE_ROWS = 2;
 const PICKER_UNIT_COPY_COUNT = 6;
+const DOUBLE_CLICK_MS = 280;
 const FORMATION_COMMAND_ICON = '👑';
 const SELECTED_SQUAD_HIGHLIGHT = '#58a6ff';
 const SELECTED_UNIT_HIGHLIGHT = '#f2cf45';
-const FORMATION_HEADER_X = 64;
+const FORMATION_LEFT_STATS_PANEL_X = 24;
+const FORMATION_LEFT_STATS_PANEL_Y = 124;
+const FORMATION_LEFT_STATS_PANEL_WIDTH = 180;
+const FORMATION_LEFT_STATS_PANEL_HEIGHT = 360;
+const FORMATION_CONTENT_X = 236;
+const FORMATION_HEADER_X = FORMATION_CONTENT_X;
 const FORMATION_HEADER_Y = 42;
 const COMMAND_LEVEL_BOX_WIDTH = 430;
 const COMMAND_LEVEL_BOX_HEIGHT = 54;
@@ -407,7 +413,7 @@ const COMMAND_LEVEL_MINUS_BUTTON_X = COMMAND_LEVEL_BOX_X + 14;
 const COMMAND_LEVEL_TEXT_X = COMMAND_LEVEL_MINUS_BUTTON_X + COMMAND_LEVEL_CONTROL_SIZE + COMMAND_LEVEL_CONTROL_GAP;
 const COMMAND_LEVEL_ICON_X = COMMAND_LEVEL_BOX_X + COMMAND_LEVEL_BOX_WIDTH - COMMAND_LEVEL_CONTROL_SIZE - COMMAND_LEVEL_CONTROL_GAP - 32;
 const COMMAND_LEVEL_PLUS_BUTTON_X = COMMAND_LEVEL_BOX_X + COMMAND_LEVEL_BOX_WIDTH - COMMAND_LEVEL_CONTROL_SIZE - 14;
-const SQUAD_VIEWPORT_X = 236;
+const SQUAD_VIEWPORT_X = 390;
 const SQUAD_VIEWPORT_Y = 124;
 const SQUAD_VISIBLE_CARDS_PER_PAGE = 3;
 const SQUAD_CARD_WIDTH = 430;
@@ -419,10 +425,11 @@ const SQUAD_CARD_STEP = SQUAD_CARD_WIDTH + SQUAD_CARD_GAP;
 const SQUAD_VIEWPORT_WIDTH = SQUAD_CARD_WIDTH * SQUAD_VISIBLE_CARDS_PER_PAGE + SQUAD_CARD_GAP * (SQUAD_VISIBLE_CARDS_PER_PAGE - 1);
 const SQUAD_VIEWPORT_HEIGHT = SQUAD_CARD_HEIGHT + 18;
 const SQUAD_PAGE_SCROLL_DISTANCE = SQUAD_CARD_STEP * SQUAD_VISIBLE_CARDS_PER_PAGE;
-const SQUAD_ARROW_BUTTON_Y = SQUAD_VIEWPORT_Y + SQUAD_CARD_HEIGHT / 2 - SETUP_BUTTON_HEIGHT / 2;
-const SQUAD_LEFT_ARROW_BUTTON_X = SQUAD_VIEWPORT_X - 76;
-const SQUAD_RIGHT_ARROW_BUTTON_X = SQUAD_VIEWPORT_X + SQUAD_VIEWPORT_WIDTH + 32;
-const SQUAD_ARROW_BUTTON_WIDTH = 44;
+const SQUAD_SCROLLBAR_HEIGHT = 12;
+const SQUAD_SCROLLBAR_BOTTOM_PADDING = 8;
+const SQUAD_SCROLLBAR_X = SQUAD_VIEWPORT_X;
+const SQUAD_SCROLLBAR_Y = SQUAD_VIEWPORT_Y + SQUAD_CARD_HEIGHT + SQUAD_SCROLLBAR_BOTTOM_PADDING;
+const SQUAD_SCROLLBAR_WIDTH = SQUAD_VIEWPORT_WIDTH;
 const SQUAD_ACTIVE_BORDER_COLOR = SELECTED_SQUAD_HIGHLIGHT;
 const SQUAD_INACTIVE_BORDER_COLOR = COLORS.panelBorder;
 const SQUAD_PANEL_X = SQUAD_VIEWPORT_X;
@@ -444,13 +451,13 @@ const FORMATION_BG_COLOR = 0x2f3434;
 const FORMATION_BG_DEPTH = DEPTH_GRID + 5;
 const ASSIGNED_CARD_ALPHA = 0.48;
 const ASSIGNED_CARD_FILL_COLOR = '#2b2d31';
-const PICKER_X_START = 64;
+const PICKER_X_START = FORMATION_CONTENT_X;
 const PICKER_BOTTOM_ANCHOR_Y = 1012;
-const AVAILABLE_UNITS_CELL_GAP = 20;
+const AVAILABLE_UNITS_CELL_GAP = 16;
 const AVAILABLE_UNITS_SCROLLBAR_WIDTH = 12;
 const AVAILABLE_UNITS_SCROLL_SPEED = 1;
 const ROSTER_X = PICKER_X_START;
-const ROSTER_CARD_WIDTH = 262;
+const ROSTER_CARD_WIDTH = 240;
 const ROSTER_CARD_HEIGHT = 164;
 const ROSTER_CARD_GAP = AVAILABLE_UNITS_CELL_GAP;
 const ROSTER_COLUMNS = AVAILABLE_UNITS_COLUMNS;
@@ -475,7 +482,7 @@ const AVAILABLE_UNIT_ART_CENTER_Y_OFFSET = 80;
 const AVAILABLE_UNIT_STATS_FONT_SIZE = 12;
 const AVAILABLE_UNIT_STATS_Y_OFFSET = 126;
 const AVAILABLE_UNIT_STATS_ROW_GAP = 18;
-const AVAILABLE_UNIT_STATS_COLUMN_GAP = 96;
+const AVAILABLE_UNIT_STATS_COLUMN_GAP = 88;
 const FORMATION_ACTION_BUTTON_X = GAME_WIDTH - 292;
 const FORMATION_ACTION_BUTTON_Y = GAME_HEIGHT - 106;
 const FORMATION_ACTION_BUTTON_WIDTH = 228;
@@ -893,6 +900,7 @@ let selectedArmyRosterUnitId = null;
 let selectedArmySquadIndex = 0;
 let squadScrollOffset = 0;
 let availableUnitsScrollRow = 0;
+let lastArmyRosterClick = { unitId: null, time: 0 };
 let draggedArmyRosterUnitId = null;
 let draggedArmyRosterGhost = null;
 let setupNodes = [];
@@ -1633,6 +1641,7 @@ function renderArmyManagementScreen() {
   }).setDepth(SETUP_UI_DEPTH + 1));
   renderCommandLevelControls();
 
+  renderFormationSelectedUnitStatsPanel();
   renderArmySquads();
   renderArmyRoster();
 
@@ -1657,8 +1666,79 @@ function renderArmySquads() {
 }
 
 function renderSquadPageControls() {
-  createSetupButton('<', SQUAD_LEFT_ARROW_BUTTON_X, SQUAD_ARROW_BUTTON_Y, SQUAD_ARROW_BUTTON_WIDTH, () => changeSquadPage(-1), squadScrollOffset > 0);
-  createSetupButton('>', SQUAD_RIGHT_ARROW_BUTTON_X, SQUAD_ARROW_BUTTON_Y, SQUAD_ARROW_BUTTON_WIDTH, () => changeSquadPage(1), squadScrollOffset < getMaxSquadScrollOffset());
+  const track = addSetupNode(sceneRef.add.rectangle(
+    SQUAD_SCROLLBAR_X,
+    SQUAD_SCROLLBAR_Y,
+    SQUAD_SCROLLBAR_WIDTH,
+    SQUAD_SCROLLBAR_HEIGHT,
+    PHASER_COLORS.panel
+  )
+    .setOrigin(0)
+    .setAlpha(0.8)
+    .setInteractive({ useHandCursor: true })
+    .setDepth(SETUP_UI_DEPTH + 1));
+
+  const maxScrollOffset = getMaxSquadScrollOffset();
+  const thumbWidth = maxScrollOffset === 0
+    ? SQUAD_SCROLLBAR_WIDTH
+    : SQUAD_SCROLLBAR_WIDTH * (SQUAD_VISIBLE_CARDS_PER_PAGE / MAX_SQUADS);
+  const thumbTravel = SQUAD_SCROLLBAR_WIDTH - thumbWidth;
+  const thumbX = SQUAD_SCROLLBAR_X + (maxScrollOffset === 0 ? 0 : thumbTravel * (squadScrollOffset / maxScrollOffset));
+  addSetupNode(sceneRef.add.rectangle(
+    thumbX,
+    SQUAD_SCROLLBAR_Y,
+    thumbWidth,
+    SQUAD_SCROLLBAR_HEIGHT,
+    cssHexToNumber(SELECTED_SQUAD_HIGHLIGHT)
+  )
+    .setOrigin(0)
+    .setAlpha(0.9)
+    .setDepth(SETUP_UI_DEPTH + 2));
+
+  track.on('pointerdown', (pointer) => {
+    if (maxScrollOffset === 0) {
+      return;
+    }
+    const localX = Math.max(0, Math.min(SQUAD_SCROLLBAR_WIDTH, pointer.worldX - SQUAD_SCROLLBAR_X));
+    const rawOffset = (localX / SQUAD_SCROLLBAR_WIDTH) * maxScrollOffset;
+    setSquadScrollOffset(Math.round(rawOffset / SQUAD_CARD_STEP) * SQUAD_CARD_STEP);
+    renderSetupUi();
+  });
+}
+
+function renderFormationSelectedUnitStatsPanel() {
+  const unit = getArmyRosterUnit(selectedArmyRosterUnitId);
+  if (!unit) {
+    return;
+  }
+
+  const rect = addSetupNode(sceneRef.add.rectangle(
+    FORMATION_LEFT_STATS_PANEL_X,
+    FORMATION_LEFT_STATS_PANEL_Y,
+    FORMATION_LEFT_STATS_PANEL_WIDTH,
+    FORMATION_LEFT_STATS_PANEL_HEIGHT,
+    PHASER_COLORS.infoPanel
+  )
+    .setOrigin(0)
+    .setAlpha(SETUP_PANEL_ALPHA)
+    .setStrokeStyle(2, PHASER_COLORS.panelBorder)
+    .setDepth(SETUP_UI_DEPTH + 1));
+  const classDefinition = getClassDefinition(unit.unitType);
+  addSetupNode(sceneRef.add.text(FORMATION_LEFT_STATS_PANEL_X + 14, FORMATION_LEFT_STATS_PANEL_Y + 14, unit.name, {
+    ...headerTextStyle(),
+    fontSize: '22px'
+  }).setDepth(SETUP_UI_DEPTH + 2));
+  addSetupNode(sceneRef.add.text(FORMATION_LEFT_STATS_PANEL_X + 14, FORMATION_LEFT_STATS_PANEL_Y + 44, classDefinition.name, smallTextStyle())
+    .setDepth(SETUP_UI_DEPTH + 2));
+  addSetupNode(sceneRef.add.sprite(
+    FORMATION_LEFT_STATS_PANEL_X + FORMATION_LEFT_STATS_PANEL_WIDTH / 2,
+    FORMATION_LEFT_STATS_PANEL_Y + 118,
+    getUnitIdleTextureKey(unit.unitType),
+    getUnitIdleDefaultFrame(unit.unitType)
+  )
+    .setScale(3)
+    .setDepth(SETUP_UI_DEPTH + 2));
+  renderArmyRosterStats(unit.unitType, FORMATION_LEFT_STATS_PANEL_X + 18, FORMATION_LEFT_STATS_PANEL_Y + 178, 1, SETUP_UI_DEPTH + 2);
 }
 
 function renderCommandLevelControls() {
@@ -1978,10 +2058,10 @@ function renderArmyRosterCard(unit, x, y) {
     check.on('pointerdown', (pointer) => handleArmyRosterCardPointerDown(unit.id, pointer));
   }
 
-  renderArmyRosterStats(unit.unitType, x + 14, y + AVAILABLE_UNIT_STATS_Y_OFFSET, contentAlpha);
+  renderArmyRosterStats(unit.unitType, x + 14, y + AVAILABLE_UNIT_STATS_Y_OFFSET, contentAlpha, SETUP_UI_DEPTH + 2);
 }
 
-function renderArmyRosterStats(unitType, x, y, alpha = 1) {
+function renderArmyRosterStats(unitType, x, y, alpha = 1, depth = SETUP_UI_DEPTH + 2) {
   const stats = calculateClassStats(unitType);
   const pairs = [
     ['HP', 'hp', stats.maxHp],
@@ -1993,13 +2073,13 @@ function renderArmyRosterStats(unitType, x, y, alpha = 1) {
   pairs.forEach(([label, resourceKey, max], index) => {
     const rowX = x + (index % 2) * AVAILABLE_UNIT_STATS_COLUMN_GAP;
     const rowY = y + Math.floor(index / 2) * AVAILABLE_UNIT_STATS_ROW_GAP;
-    const text = addSetupNode(sceneRef.add.text(rowX, rowY, `${label} ${max}`, {
+    const text = addSetupNode(sceneRef.add.text(rowX, rowY, `${RESOURCE_ICONS[resourceKey]} ${max}`, {
       fontFamily: 'monospace',
       fontSize: `${AVAILABLE_UNIT_STATS_FONT_SIZE}px`,
       color: getResourceIconColor(resourceKey)
     })
       .setAlpha(alpha)
-      .setDepth(SETUP_UI_DEPTH + 2));
+      .setDepth(depth));
   });
 }
 
@@ -2010,8 +2090,49 @@ function handleArmyRosterCardPointerDown(unitId, pointer) {
   }
 
   if (pointer.leftButtonDown()) {
+    if (isArmyRosterDoubleClick(unitId, pointer)) {
+      draggedArmyRosterUnitId = null;
+      clearArmyRosterDragGhost();
+      quickAssignArmyRosterUnit(unitId);
+      return;
+    }
     beginArmyRosterDrag(unitId, pointer);
   }
+}
+
+function isArmyRosterDoubleClick(unitId, pointer) {
+  const now = pointer.event?.timeStamp ?? Date.now();
+  const isDoubleClick = lastArmyRosterClick.unitId === unitId &&
+    now - lastArmyRosterClick.time <= DOUBLE_CLICK_MS;
+  lastArmyRosterClick = { unitId, time: now };
+  return isDoubleClick;
+}
+
+function quickAssignArmyRosterUnit(unitId) {
+  selectedArmyRosterUnitId = unitId;
+  const squad = armySquads[selectedArmySquadIndex];
+  const currentAssignment = getArmyUnitAssignment(unitId);
+  if (!squad || currentAssignment?.squadIndex === selectedArmySquadIndex) {
+    renderSetupUi();
+    return;
+  }
+
+  if (getSquadAssignedCount(squad) >= getSquadCommandPoints(squad)) {
+    renderSetupUi();
+    return;
+  }
+
+  for (let row = 0; row < SQUAD_BOARD_ROWS; row += 1) {
+    for (let col = 0; col < SQUAD_BOARD_COLS; col += 1) {
+      if (!squad.cells[row][col]) {
+        placeSelectedArmyUnitInCell(selectedArmySquadIndex, row, col);
+        renderSetupUi();
+        return;
+      }
+    }
+  }
+
+  renderSetupUi();
 }
 
 function removeArmyRosterUnitAssignment(unitId) {
@@ -2099,7 +2220,8 @@ function handleSetupSquadWheel(pointer, over, dx, dy) {
   }
 
   if (delta !== 0) {
-    changeSquadPage(Math.sign(delta));
+    setSquadScrollOffset(squadScrollOffset + Math.sign(delta) * SQUAD_CARD_STEP);
+    renderSetupUi();
   }
 }
 
@@ -2168,15 +2290,13 @@ function handleArmyCellClick(squadIndex, row, col) {
   const squad = armySquads[squadIndex];
   const targetUnitId = squad.cells[row][col];
 
-  if (!selectedArmyRosterUnitId) {
-    if (targetUnitId) {
-      selectedArmyRosterUnitId = targetUnitId;
-    }
+  if (targetUnitId) {
+    selectedArmyRosterUnitId = targetUnitId;
     renderSetupUi();
     return;
   }
 
-  if (targetUnitId === selectedArmyRosterUnitId) {
+  if (!selectedArmyRosterUnitId) {
     renderSetupUi();
     return;
   }
