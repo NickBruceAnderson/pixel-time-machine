@@ -203,6 +203,7 @@ const LOG_MAX_LINES = 16;
 const LOG_LINE_HEIGHT = 20;
 
 // Text
+const UI_FONT_FAMILY = 'Arial, Helvetica, sans-serif';
 const FONT_SIZE_HEADER = 24;
 const FONT_SIZE_BODY = 12;
 const FONT_SIZE_SMALL = 12;
@@ -2401,8 +2402,9 @@ function renderArmyRosterStats(unitType, cardX, cardWidth, y, alpha = 1, depth =
     const rowX = startX + (index % 2) * colStep;
     const rowY = y + Math.floor(index / 2) * AVAILABLE_UNIT_STATS_ROW_GAP;
     addSetupNode(sceneRef.add.text(rowX, rowY, RESOURCE_ICONS[resourceKey].repeat(max), {
-      fontFamily: 'monospace',
+      fontFamily: UI_FONT_FAMILY,
       fontSize: `${AVAILABLE_UNIT_STATS_FONT_SIZE}px`,
+      resolution: getUiTextResolution(),
       color: getResourceIconColor(resourceKey)
     })
       .setAlpha(alpha)
@@ -2999,8 +3001,9 @@ function getUnitSpritePosition(unitType, teamKey, cellX, baseY) {
 
 function drawResourceRow(x, y, label, resourceKey, current, max, depth, addNode) {
   const labelNode = sceneRef.add.text(x, y, `${label}:`, {
-    fontFamily: 'monospace',
+    fontFamily: UI_FONT_FAMILY,
     fontSize: `${RESOURCE_ROW_LABEL_FONT_SIZE}px`,
+    resolution: getUiTextResolution(),
     color: COLORS.text
   }).setOrigin(0, 0.5).setDepth(depth);
   addNode(labelNode);
@@ -3008,8 +3011,9 @@ function drawResourceRow(x, y, label, resourceKey, current, max, depth, addNode)
   const iconX = x + RESOURCE_ROW_LABEL_WIDTH;
   if (max <= 0) {
     const noneNode = sceneRef.add.text(iconX, y, '0', {
-      fontFamily: 'monospace',
+      fontFamily: UI_FONT_FAMILY,
       fontSize: `${RESOURCE_ROW_ICON_FONT_SIZE}px`,
+      resolution: getUiTextResolution(),
       color: getResourceIconColor(resourceKey)
     }).setOrigin(0, 0.5).setAlpha(RESOURCE_ROW_EMPTY_ALPHA).setDepth(depth);
     addNode(noneNode);
@@ -3018,8 +3022,9 @@ function drawResourceRow(x, y, label, resourceKey, current, max, depth, addNode)
 
   for (let i = 0; i < max; i++) {
     const iconNode = sceneRef.add.text(iconX + i * RESOURCE_ROW_ICON_SPACING, y, RESOURCE_ICONS[resourceKey], {
-      fontFamily: 'monospace',
+      fontFamily: UI_FONT_FAMILY,
       fontSize: `${RESOURCE_ROW_ICON_FONT_SIZE}px`,
+      resolution: getUiTextResolution(),
       color: getResourceIconColor(resourceKey)
     }).setOrigin(0, 0.5).setAlpha(i < current ? 1 : RESOURCE_ROW_EMPTY_ALPHA).setDepth(depth);
     addNode(iconNode);
@@ -3322,8 +3327,9 @@ function createCharacter(name, characterClass, color, teamKey, row, col) {
   rect.setInteractive({ useHandCursor: true });
 
   const label = sceneRef.add.text(baseSpriteX, baseY, name, {
-    fontFamily: 'monospace',
+    fontFamily: UI_FONT_FAMILY,
     fontSize: '20px',
+    resolution: getUiTextResolution(),
     color: COLORS.text
   })
     .setOrigin(0.5)
@@ -3515,8 +3521,9 @@ function getCurrentIconRowWidth(entries, iconSpacing, groupGap) {
 
 function addBattleHudIcon(unit, groupKey, x, y, resourceKey, fontSize, alpha = BATTLE_STATE_FULL_ALPHA) {
   const node = sceneRef.add.text(x, y, RESOURCE_ICONS[resourceKey], {
-    fontFamily: 'Arial',
+    fontFamily: UI_FONT_FAMILY,
     fontSize: `${fontSize}px`,
+    resolution: getUiTextResolution(),
     color: getResourceIconColor(resourceKey)
   }).setOrigin(0.5, 0.5);
 
@@ -4221,7 +4228,12 @@ function renderCharacterPanel(unit, x, y, width, height, showHeader = true) {
         x + STATS_CP_ICON_X_OFFSET + i * STATS_CP_FLAG_SPACING,
         cursorY,
         SETUP_COMMAND_ICON,
-        { fontFamily: 'monospace', fontSize: `${STATS_CP_FLAG_FONT_SIZE}px`, color: COLORS.text }
+        {
+          fontFamily: UI_FONT_FAMILY,
+          fontSize: `${STATS_CP_FLAG_FONT_SIZE}px`,
+          resolution: getUiTextResolution(),
+          color: COLORS.text
+        }
       ).setOrigin(0, 0.5).setDepth(POPUP_DEPTH + 1);
       infoPanelNodes.push(flagNode);
     }
@@ -4631,8 +4643,9 @@ function showRoundStartBanner(roundNumber) {
     .setStrokeStyle(2, cssHexToNumber(ROUND_START_BANNER_BORDER_COLOR))
     .setDepth(ROUND_START_BANNER_DEPTH);
   const title = sceneRef.add.text(x, y - 36, `ROUND ${roundNumber} START`, {
-    fontFamily: 'monospace',
+    fontFamily: UI_FONT_FAMILY,
     fontSize: `${ROUND_START_BANNER_TITLE_FONT_SIZE}px`,
+    resolution: getUiTextResolution(),
     color: ROUND_START_BANNER_TITLE_COLOR
   })
     .setOrigin(0.5)
@@ -4649,8 +4662,9 @@ function showRoundStartBanner(roundNumber) {
   }
   const subtitleText = subtitleParts.join(' ');
   const subtitle = sceneRef.add.text(x, y + 34, subtitleText, {
-    fontFamily: 'monospace',
+    fontFamily: UI_FONT_FAMILY,
     fontSize: `${ROUND_START_BANNER_SUBTITLE_FONT_SIZE}px`,
+    resolution: getUiTextResolution(),
     color: ROUND_START_BANNER_SUBTITLE_COLOR
   })
     .setOrigin(0.5)
@@ -4699,15 +4713,17 @@ function showBattleOverBanner(winningTeamKey, cxpGained) {
     .setStrokeStyle(2, cssHexToNumber(ROUND_START_BANNER_BORDER_COLOR))
     .setDepth(ROUND_START_BANNER_DEPTH);
   const title = sceneRef.add.text(x, y - 36, titleText, {
-    fontFamily: 'monospace',
+    fontFamily: UI_FONT_FAMILY,
     fontSize: `${ROUND_START_BANNER_TITLE_FONT_SIZE}px`,
+    resolution: getUiTextResolution(),
     color: ROUND_START_BANNER_TITLE_COLOR
   })
     .setOrigin(0.5)
     .setDepth(ROUND_START_BANNER_DEPTH + 1);
   const subtitle = sceneRef.add.text(x, y + 34, subtitleText, {
-    fontFamily: 'monospace',
+    fontFamily: UI_FONT_FAMILY,
     fontSize: `${ROUND_START_BANNER_SUBTITLE_FONT_SIZE}px`,
+    resolution: getUiTextResolution(),
     color: ROUND_START_BANNER_SUBTITLE_COLOR
   })
     .setOrigin(0.5)
@@ -4736,8 +4752,9 @@ function createCombatCallout({ unit, segments, yOffset }) {
 
   const segmentNodes = segments.map((seg) =>
     sceneRef.add.text(0, textY, seg.text, {
-      fontFamily: 'monospace',
+      fontFamily: UI_FONT_FAMILY,
       fontSize: `${CAST_TITLE_FONT_SIZE}px`,
+      resolution: getUiTextResolution(),
       color: seg.color
     })
       .setOrigin(0, 0)
@@ -4779,8 +4796,9 @@ function showDamageNumberEffect(effect) {
     effect.unit.rect.y - DAMAGE_NUMBER_Y_OFFSET,
     `-${Math.max(0, lostAmount)}${RESOURCE_ICONS[effect.resourceKey]}`,
     {
-      fontFamily: 'Arial',
+      fontFamily: UI_FONT_FAMILY,
       fontSize: `${DAMAGE_NUMBER_FONT_SIZE}px`,
+      resolution: getUiTextResolution(),
       color: COLORS.text,
       stroke: COLORS.background,
       strokeThickness: 4
@@ -5381,8 +5399,9 @@ function refreshInitiativeOrderNumbers() {
       unit.slotY + INITIATIVE_ORDER_Y_OFFSET,
       String(unit.initiativeOrderNumber),
       {
-        fontFamily: 'monospace',
+        fontFamily: UI_FONT_FAMILY,
         fontSize: `${INITIATIVE_ORDER_FONT_SIZE}px`,
+        resolution: getUiTextResolution(),
         color: INITIATIVE_ORDER_COLOR,
         stroke: INITIATIVE_ORDER_STROKE_COLOR,
         strokeThickness: INITIATIVE_ORDER_STROKE_THICKNESS
@@ -6292,26 +6311,33 @@ function livingUnits() {
   return units.filter((unit) => unit.hp > 0);
 }
 
+function getUiTextResolution() {
+  return Math.min(window.devicePixelRatio || 1, 2);
+}
+
 function headerTextStyle() {
   return {
-    fontFamily: 'monospace',
+    fontFamily: UI_FONT_FAMILY,
     fontSize: `${FONT_SIZE_HEADER}px`,
+    resolution: getUiTextResolution(),
     color: COLORS.text
   };
 }
 
 function bodyTextStyle() {
   return {
-    fontFamily: 'monospace',
+    fontFamily: UI_FONT_FAMILY,
     fontSize: `${FONT_SIZE_BODY}px`,
+    resolution: getUiTextResolution(),
     color: COLORS.mutedText
   };
 }
 
 function smallTextStyle() {
   return {
-    fontFamily: 'monospace',
+    fontFamily: UI_FONT_FAMILY,
     fontSize: `${FONT_SIZE_SMALL}px`,
+    resolution: getUiTextResolution(),
     color: COLORS.text,
     lineSpacing: 4
   };
@@ -6319,8 +6345,9 @@ function smallTextStyle() {
 
 function combatLogToggleTextStyle() {
   return {
-    fontFamily: 'monospace',
+    fontFamily: UI_FONT_FAMILY,
     fontSize: `${COMBAT_LOG_TOGGLE_FONT_SIZE}px`,
+    resolution: getUiTextResolution(),
     color: COMBAT_LOG_TOGGLE_TEXT_COLOR
   };
 }
