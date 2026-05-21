@@ -226,7 +226,7 @@ const COMBAT_LOG_TOGGLE_Y_OFFSET = 0;
 const COMBAT_LOG_TOGGLE_WIDTH = 48;
 const COMBAT_LOG_TOGGLE_HEIGHT = 28;
 const COMBAT_LOG_TOGGLE_PADDING = 8;
-const COMBAT_LOG_TOGGLE_FONT_SIZE = 12;
+const COMBAT_LOG_TOGGLE_FONT_SIZE = 22;
 const COMBAT_LOG_TOGGLE_VISIBLE_LABEL = 'X';
 const COMBAT_LOG_TOGGLE_HIDDEN_LABEL = 'LOG';
 const COMBAT_LOG_TOGGLE_FILL_COLOR = COLORS.infoPanel;
@@ -237,19 +237,24 @@ const LOG_MAX_LINES = 16;
 const LOG_LINE_HEIGHT = 20;
 
 // Text
-const UI_WEB_FONT_FAMILY = 'Pixelify Sans';
+const UI_WEB_FONT_FAMILY = 'Silver';
 const UI_FONT_FAMILY = `"${UI_WEB_FONT_FAMILY}", system-ui, sans-serif`;
 const UI_FONT_LOAD_TIMEOUT_MS = 1200;
-const FONT_SIZE_HEADER = 24;
-const FONT_SIZE_BODY = 12;
-const FONT_SIZE_SMALL = 12;
+const FONT_SIZE_HEADER = 30;
+const FONT_SIZE_BODY = 16;
+const FONT_SIZE_SMALL = 14;
+const CHARACTER_PANEL_LINE_HEIGHT = 23;
+const FORMATION_SELECTED_UNIT_CLASS_FONT_SIZE = 16;
+const FORMATION_TOOLTIP_TITLE_FONT_SIZE = 28;
+const FORMATION_TOOLTIP_BODY_FONT_SIZE = 16;
+const FORMATION_TOOLTIP_BODY_Y_OFFSET = 62;
 
 // Resource rows (setup cards and stats popup)
-const RESOURCE_ROW_LABEL_FONT_SIZE = 14;
-const RESOURCE_ROW_ICON_FONT_SIZE = 13;
+const RESOURCE_ROW_LABEL_FONT_SIZE = 16;
+const RESOURCE_ROW_ICON_FONT_SIZE = 15;
 const RESOURCE_ROW_LABEL_TEXT_PADDING_Y = 2;
 const RESOURCE_ROW_ICON_TEXT_PADDING_Y = 4;
-const STATS_POPUP_RESOURCE_ROW_LABEL_FONT_SIZE = 12;
+const STATS_POPUP_RESOURCE_ROW_LABEL_FONT_SIZE = 14;
 const RESOURCE_ROW_LABEL_WIDTH = 34;
 const RESOURCE_ROW_ICON_SPACING = 14;
 const RESOURCE_ROW_PAIR_GAP = 82;
@@ -552,11 +557,11 @@ const FORMATION_TOOLTIP_PANEL_HEIGHT = ROSTER_PANEL_Y + ROSTER_PANEL_HEIGHT - FO
 const ROSTER_SCROLLBAR_X = ROSTER_PANEL_X + ROSTER_PANEL_WIDTH - ROSTER_PANEL_PADDING - AVAILABLE_UNITS_SCROLLBAR_WIDTH;
 const ROSTER_SCROLLBAR_Y = ROSTER_Y;
 const ROSTER_SCROLLBAR_HEIGHT = ROSTER_VISIBLE_HEIGHT;
-const AVAILABLE_UNIT_NAME_FONT_SIZE = 20;
-const AVAILABLE_UNIT_CLASS_FONT_SIZE = 13;
+const AVAILABLE_UNIT_NAME_FONT_SIZE = 24;
+const AVAILABLE_UNIT_CLASS_FONT_SIZE = 15;
 const AVAILABLE_UNIT_ART_SCALE = 5.5;
 const AVAILABLE_UNIT_ART_CENTER_Y_OFFSET = 74;
-const AVAILABLE_UNIT_STATS_FONT_SIZE = 12;
+const AVAILABLE_UNIT_STATS_FONT_SIZE = 14;
 const AVAILABLE_UNIT_STATS_Y_OFFSET = 126;
 const AVAILABLE_UNIT_STATS_ROW_GAP = 18;
 const AVAILABLE_UNIT_STATS_GROUP_RESERVED_WIDTH = 52; // fits up to 4 icons
@@ -2043,7 +2048,7 @@ function renderFormationSelectedUnitStatsPanel() {
     .setDepth(POPUP_DEPTH + 1));
   addSetupNode(sceneRef.add.text(rect.x + POPUP_PANEL_PADDING, rect.y + 36, detailUnit.className, {
     ...smallTextStyle(),
-    fontSize: '13px'
+    fontSize: `${FORMATION_SELECTED_UNIT_CLASS_FONT_SIZE}px`
   }).setDepth(POPUP_DEPTH + 1));
   registerDynamicHoverTooltip(
     `selected-unit-header:${unit.id}`,
@@ -2097,13 +2102,19 @@ function renderFormationTooltipPanel(tooltipKey = formationHoveredTooltipKey) {
     FORMATION_TOOLTIP_PANEL_X + POPUP_PANEL_PADDING,
     FORMATION_TOOLTIP_PANEL_Y + 16,
     title,
-    headerTextStyle()
+    {
+      ...headerTextStyle(),
+      fontSize: `${FORMATION_TOOLTIP_TITLE_FONT_SIZE}px`
+    }
   ).setDepth(POPUP_DEPTH + 1));
   const bodyNode = addSetupNode(sceneRef.add.text(
     FORMATION_TOOLTIP_PANEL_X + POPUP_PANEL_PADDING,
-    FORMATION_TOOLTIP_PANEL_Y + 54,
+    FORMATION_TOOLTIP_PANEL_Y + FORMATION_TOOLTIP_BODY_Y_OFFSET,
     description,
-    smallTextStyle()
+    {
+      ...smallTextStyle(),
+      fontSize: `${FORMATION_TOOLTIP_BODY_FONT_SIZE}px`
+    }
   )
     .setWordWrapWidth(FORMATION_TOOLTIP_PANEL_WIDTH - POPUP_PANEL_PADDING * 2)
     .setDepth(POPUP_DEPTH + 1));
@@ -4283,7 +4294,7 @@ function renderActiveCombatPanel(attacker, defender, leftX, rightX, y, columnWid
 }
 
 function renderCharacterPanel(unit, x, y, width, height, showHeader = true) {
-  const lineHeight = 19;
+  const lineHeight = CHARACTER_PANEL_LINE_HEIGHT;
   const skillDetailOffset = 120;
   let cursorY = y;
 
