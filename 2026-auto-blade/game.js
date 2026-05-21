@@ -1,13 +1,11 @@
 import { ACTIONS, REACTIONS, LIMITS, TRAITS } from './data/skills.js';
 import { BASE_UNIT_STATS, PROMOTION_STAT_BONUSES, CHARACTER_CLASSES } from './data/characters.js';
 import { EQUIPMENT } from './data/equipment.js';
+import { CONFIG } from './config.js';
 
-const DISPLAY_SIZE_STORAGE_KEY = 'autoBladeDisplaySize';
-const DEFAULT_DISPLAY_SIZE_KEY = '1080p';
-const DISPLAY_SIZES = {
-  '720p': { width: 1280, height: 720 },
-  '1080p': { width: 1920, height: 1080 }
-};
+const DISPLAY_SIZE_STORAGE_KEY = CONFIG.display.storageKey;
+const DEFAULT_DISPLAY_SIZE_KEY = CONFIG.display.defaultSizeKey;
+const DISPLAY_SIZES = CONFIG.display.sizes;
 
 function getSavedDisplaySizeKey() {
   try {
@@ -22,65 +20,28 @@ const activeDisplaySizeKey = getSavedDisplaySizeKey();
 const activeDisplaySize = DISPLAY_SIZES[activeDisplaySizeKey];
 const RENDER_WIDTH = activeDisplaySize.width;
 const RENDER_HEIGHT = activeDisplaySize.height;
-const GAME_WIDTH = 1920;
-const GAME_HEIGHT = 1080;
+const GAME_WIDTH = CONFIG.display.gameWidth;
+const GAME_HEIGHT = CONFIG.display.gameHeight;
 const GAME_VIEW_SCALE = Math.min(RENDER_WIDTH / GAME_WIDTH, RENDER_HEIGHT / GAME_HEIGHT);
 
 function cssHexToNumber(hex) {
   return Number(hex.replace('#', '0x'));
 }
 
-const COLORS = {
-  background: '#050506',
-  panel: '#111116',
-  panelBorder: '#2e2e38',
-  sky: '#0e3b58',
-  grass: '#358f3d',
-  formationGrid: '#a7a7a7',
-  formationGridLine: '#4d4d4d',
-  infoPanel: '#16161d',
-  text: '#f5f5f5',
-  mutedText: '#b9bbc8',
-  redKnight: '#d84343',
-  blueKnight: '#3f6fd9',
-  spent: '#555862',
-  sp: '#2e8fe8',
-  hp: '#e04444',
-  ap: '#d83535',
-  rp: '#1a53a8',
-  lp: '#f2cf45',
-  emptyLp: '#5f5524',
-  unitBorder: '#161616'
-};
+const COLORS = CONFIG.theme.colors;
 
 const PHASER_COLORS = Object.fromEntries(
   Object.entries(COLORS).map(([key, value]) => [key, cssHexToNumber(value)])
 );
 
-const RESOURCE_ICONS = {
-  hp: '❤️',
-  sp: '🛡️',
-  ap: '🔶',
-  rp: '🔷',
-  lp: '⭐',
-  ip: '🚩',
-  mv: '🥾',
-  rn: '⏹️'
-};
+const RESOURCE_ICONS = CONFIG.theme.resourceIcons;
 
-const RESOURCE_COLORS = {
-  hp: COLORS.hp,
-  sp: COLORS.sp,
-  ap: COLORS.ap,
-  rp: COLORS.rp,
-  lp: COLORS.lp,
-  ip: COLORS.emptyLp
-};
+const RESOURCE_COLORS = CONFIG.theme.resourceColors;
 
 const ms = (value) => Math.round(value);
 
-let battleSpeedMultiplier = 2;
-const BATTLE_SPEED_OPTIONS = [1, 2, 4, 8, 16, 32, 64];
+let battleSpeedMultiplier = CONFIG.battle.defaultSpeedMultiplier;
+const BATTLE_SPEED_OPTIONS = CONFIG.battle.speedOptions;
 
 // Layout
 const LEFT_PANEL_WIDTH_RATIO = 0.29;
@@ -114,10 +75,10 @@ const KNIGHT_PARRY_SYNC_LEAD_MS = ms(
 const SHOW_BATTLE_UNIT_NAME_LABELS = false;
 
 // Formation
-const FORMATION_ROWS = ['front', 'middle', 'back'];
-const FORMATION_COLS = [0, 1, 2];
-const FORMATION_ROW_ORDER_RED = ['back', 'middle', 'front'];
-const FORMATION_ROW_ORDER_BLUE = ['front', 'middle', 'back'];
+const FORMATION_ROWS = CONFIG.formation.rows;
+const FORMATION_COLS = CONFIG.formation.cols;
+const FORMATION_ROW_ORDER_RED = CONFIG.formation.rowOrderRed;
+const FORMATION_ROW_ORDER_BLUE = CONFIG.formation.rowOrderBlue;
 
 // Battlefield presentation
 const BATTLE_HORIZON_RATIO = 0.50;
@@ -237,40 +198,40 @@ const LOG_MAX_LINES = 16;
 const LOG_LINE_HEIGHT = 20;
 
 // Text
-const UI_WEB_FONT_FAMILY = 'Silver';
-const UI_FONT_FAMILY = `"${UI_WEB_FONT_FAMILY}", system-ui, sans-serif`;
-const UI_FONT_LOAD_TIMEOUT_MS = 1200;
-const FONT_SIZE_HEADER = 40;
-const FONT_SIZE_BODY = 20;
-const FONT_SIZE_SMALL = 20;
-const INLINE_EMOJI_FONT_SIZE = 15;
-const CHARACTER_PANEL_LINE_HEIGHT = 23;
-const FORMATION_SELECTED_UNIT_CLASS_FONT_SIZE = 16;
-const FORMATION_TOOLTIP_TITLE_FONT_SIZE = 28;
-const FORMATION_TOOLTIP_BODY_FONT_SIZE = 16;
-const FORMATION_TOOLTIP_BODY_Y_OFFSET = 62;
+const UI_WEB_FONT_FAMILY = CONFIG.theme.font.webFamily;
+const UI_FONT_FAMILY = CONFIG.theme.font.family;
+const UI_FONT_LOAD_TIMEOUT_MS = CONFIG.theme.font.loadTimeoutMs;
+const FONT_SIZE_HEADER = CONFIG.theme.textSize.header;
+const FONT_SIZE_BODY = CONFIG.theme.textSize.body;
+const FONT_SIZE_SMALL = CONFIG.theme.textSize.small;
+const INLINE_EMOJI_FONT_SIZE = CONFIG.theme.textSize.inlineEmoji;
+const CHARACTER_PANEL_LINE_HEIGHT = CONFIG.theme.textSize.characterPanelLineHeight;
+const FORMATION_SELECTED_UNIT_CLASS_FONT_SIZE = CONFIG.theme.textSize.formationSelectedUnitClass;
+const FORMATION_TOOLTIP_TITLE_FONT_SIZE = CONFIG.theme.textSize.formationTooltipTitle;
+const FORMATION_TOOLTIP_BODY_FONT_SIZE = CONFIG.theme.textSize.formationTooltipBody;
+const FORMATION_TOOLTIP_BODY_Y_OFFSET = CONFIG.ui.tooltip.formationBodyYOffset;
 
 // Resource rows (setup cards and stats popup)
-const RESOURCE_ROW_LABEL_FONT_SIZE = 20;
-const RESOURCE_ROW_ICON_FONT_SIZE = 15;
-const RESOURCE_ROW_LABEL_TEXT_PADDING_Y = 2;
-const RESOURCE_ROW_ICON_TEXT_PADDING_Y = 4;
-const STATS_POPUP_RESOURCE_ROW_LABEL_FONT_SIZE = 20;
-const RESOURCE_ROW_LABEL_WIDTH = 34;
-const RESOURCE_ROW_ICON_SPACING = 14;
-const RESOURCE_ROW_PAIR_GAP = 82;
-const RESOURCE_ROW_GAP = 22;
-const RESOURCE_ROW_EMPTY_ALPHA = 0.10;
+const RESOURCE_ROW_LABEL_FONT_SIZE = CONFIG.theme.textSize.resourceRowLabel;
+const RESOURCE_ROW_ICON_FONT_SIZE = CONFIG.theme.textSize.resourceRowIcon;
+const RESOURCE_ROW_LABEL_TEXT_PADDING_Y = CONFIG.ui.resourceRow.labelTextPaddingY;
+const RESOURCE_ROW_ICON_TEXT_PADDING_Y = CONFIG.ui.resourceRow.iconTextPaddingY;
+const STATS_POPUP_RESOURCE_ROW_LABEL_FONT_SIZE = CONFIG.theme.textSize.statsPopupResourceRowLabel;
+const RESOURCE_ROW_LABEL_WIDTH = CONFIG.ui.resourceRow.labelWidth;
+const RESOURCE_ROW_ICON_SPACING = CONFIG.ui.resourceRow.iconSpacing;
+const RESOURCE_ROW_PAIR_GAP = CONFIG.ui.resourceRow.pairGap;
+const RESOURCE_ROW_GAP = CONFIG.ui.resourceRow.gap;
+const RESOURCE_ROW_EMPTY_ALPHA = CONFIG.ui.resourceRow.emptyAlpha;
 
 // Stats popup CP row
-const STATS_CP_FLAG_FONT_SIZE = 18;
-const STATS_CP_FLAG_SPACING = 18;
-const STATS_CP_ICON_X_OFFSET = 34;
-const STATS_CP_FLAG_TEXT_PADDING_Y = 4;
+const STATS_CP_FLAG_FONT_SIZE = CONFIG.theme.textSize.statsCpFlag;
+const STATS_CP_FLAG_SPACING = CONFIG.ui.statsCpRow.flagSpacing;
+const STATS_CP_ICON_X_OFFSET = CONFIG.ui.statsCpRow.iconXOffset;
+const STATS_CP_FLAG_TEXT_PADDING_Y = CONFIG.ui.statsCpRow.flagTextPaddingY;
 
 // Setup card cost row
-const SETUP_UNIT_CARD_COST_ICON_FONT_SIZE = 18;
-const SETUP_UNIT_CARD_COST_ICON_X_OFFSET = 82;
+const SETUP_UNIT_CARD_COST_ICON_FONT_SIZE = CONFIG.theme.textSize.setupUnitCardCostIcon;
+const SETUP_UNIT_CARD_COST_ICON_X_OFFSET = CONFIG.ui.setupCardCostRow.iconXOffset;
 
 // HUD: CAST
 const CAST_TITLE_FONT_SIZE = 20;
@@ -372,14 +333,14 @@ const INITIATIVE_ORDER_ACTED_ALPHA = 0.20;
 const INITIATIVE_ORDER_INELIGIBLE_ALPHA = 0.10;
 
 // Command progression
-const COMMAND_LEVEL_MIN = 1;
-const COMMAND_LEVEL_MAX = 9;
-const COMMAND_LEVEL_DEFAULT = 2;
-const STARTING_COMMAND_LEVEL = COMMAND_LEVEL_DEFAULT;
-const STARTING_COMMAND_XP = 0;
-const COMMAND_XP_TO_LEVEL = 10;
-const STARTING_ENEMY_COMMAND_LEVEL = 6;
-const STARTING_ENEMY_COMMAND_XP = 0;
+const COMMAND_LEVEL_MIN = CONFIG.command.levelMin;
+const COMMAND_LEVEL_MAX = CONFIG.command.levelMax;
+const COMMAND_LEVEL_DEFAULT = CONFIG.command.levelDefault;
+const STARTING_COMMAND_LEVEL = CONFIG.command.startingLevel;
+const STARTING_COMMAND_XP = CONFIG.command.startingXp;
+const COMMAND_XP_TO_LEVEL = CONFIG.command.xpToLevel;
+const STARTING_ENEMY_COMMAND_LEVEL = CONFIG.command.startingEnemyLevel;
+const STARTING_ENEMY_COMMAND_XP = CONFIG.command.startingEnemyXp;
 const BATTLE_OVER_BANNER_HOLD_MS = ms(1400);
 const BATTLE_OVER_RETURN_TO_SETUP_DELAY_MS = BATTLE_OVER_BANNER_HOLD_MS + ROUND_START_BANNER_FADE_MS;
 
@@ -437,12 +398,7 @@ const MAX_SQUADS = 6;
 const COMMAND_POINTS_PER_SQUAD = COMMAND_LEVEL_DEFAULT;
 const AVAILABLE_UNITS_COLUMNS = 6;
 const AVAILABLE_UNITS_VISIBLE_ROWS = 2;
-const DEMO_AVAILABLE_UNIT_CLASSES = [
-  'squire', 'squire', 'squire', 'squire',
-  'thief', 'thief', 'thief', 'thief',
-  'archer', 'archer', 'archer', 'archer',
-  'knight', 'knight', 'knight', 'knight', 'knight', 'knight'
-];
+const DEMO_AVAILABLE_UNIT_CLASSES = CONFIG.practice.demoAvailableUnitClasses;
 const DOUBLE_CLICK_MS = 280;
 const SQUAD_UNIT_DRAG_THRESHOLD = 8;
 const FORMATION_COMMAND_ICON = '👑';
@@ -674,18 +630,10 @@ const UNIT_QUIPS = {
 
 const UNIT_QUIP_FALLBACK = 'Still waiting for their legend to begin.';
 
-const PRACTICE_ENEMY_COUNT = 2;
-const PRACTICE_ENEMY_ALLOWED_CLASSES = ['squire', 'thief', 'archer'];
-const PRACTICE_ENEMY_FORMATION_SLOTS = [
-  { row: 'front', col: 1 },
-  { row: 'back', col: 1 }
-];
-const ARMY_ROSTER_NAME_POOL = [
-  'Alden', 'Bria', 'Cedric', 'Dara', 'Emery', 'Faye',
-  'Garrick', 'Hale', 'Iris', 'Jory', 'Kael', 'Lena',
-  'Mira', 'Nolan', 'Orin', 'Petra', 'Quinn', 'Rhea',
-  'Silas', 'Tessa', 'Ulric', 'Vera', 'Wren', 'Yara'
-];
+const PRACTICE_ENEMY_COUNT = CONFIG.practice.enemyCount;
+const PRACTICE_ENEMY_ALLOWED_CLASSES = CONFIG.practice.enemyAllowedClasses;
+const PRACTICE_ENEMY_FORMATION_SLOTS = CONFIG.practice.enemyFormationSlots;
+const ARMY_ROSTER_NAME_POOL = CONFIG.practice.armyRosterNamePool;
 
 function createArmyTestRoster() {
   const unitTypeCounts = {};
@@ -703,31 +651,31 @@ function createArmyTestRoster() {
 
 // Battle start
 // Action timing
-const ATTACK_RESOURCE_PREVIEW_DURATION_MS = ms(650);
-const ATTACK_RESOURCE_COMMIT_DURATION_MS = ms(200);
-const POST_ATTACK_RESOURCE_PAUSE_MS = ms(150);
+const ATTACK_RESOURCE_PREVIEW_DURATION_MS = ms(CONFIG.battle.timing.attackResourcePreviewMs);
+const ATTACK_RESOURCE_COMMIT_DURATION_MS = ms(CONFIG.battle.timing.attackResourceCommitMs);
+const POST_ATTACK_RESOURCE_PAUSE_MS = ms(CONFIG.battle.timing.postAttackResourcePauseMs);
 
 const DEFENDER_RESOURCE_PREVIEW_DURATION_MS = ATTACK_RESOURCE_PREVIEW_DURATION_MS;
 const DEFENDER_RESOURCE_COMMIT_DURATION_MS = ATTACK_RESOURCE_COMMIT_DURATION_MS;
-const DEFENDER_LP_GAIN_STAGGER_MS = ms(250);
+const DEFENDER_LP_GAIN_STAGGER_MS = ms(CONFIG.battle.timing.defenderLpGainStaggerMs);
 
 // Movement timing
-const LUNGE_DURATION_MS = ms(450);
-const FREEZE_DURATION_MS = ms(300);
-const RETURN_DURATION_MS = ms(450);
-const MOVE_ANIMATION_DURATION_MS = ms(450);
-const MOVE_ANIMATION_EASE = 'Sine.easeInOut';
+const LUNGE_DURATION_MS = ms(CONFIG.battle.timing.lungeMs);
+const FREEZE_DURATION_MS = ms(CONFIG.battle.timing.freezeMs);
+const RETURN_DURATION_MS = ms(CONFIG.battle.timing.returnMs);
+const MOVE_ANIMATION_DURATION_MS = ms(CONFIG.battle.timing.moveAnimationMs);
+const MOVE_ANIMATION_EASE = CONFIG.battle.timing.moveAnimationEase;
 
-const ATTACK_LUNGE_STOP_DISTANCE = 132;
+const ATTACK_LUNGE_STOP_DISTANCE = CONFIG.battle.timing.attackLungeStopDistance;
 
 // Result timing
-const ATTACKER_COUNTER_RESOURCE_DURATION_MS = ms(450);
-const FINAL_STATS_DURATION_MS = ms(750);
-const CLEANUP_BUFFER_MS = ms(300);
+const ATTACKER_COUNTER_RESOURCE_DURATION_MS = ms(CONFIG.battle.timing.attackerCounterResourceMs);
+const FINAL_STATS_DURATION_MS = ms(CONFIG.battle.timing.finalStatsMs);
+const CLEANUP_BUFFER_MS = ms(CONFIG.battle.timing.cleanupBufferMs);
 
-const FLOATING_EFFECT_DURATION_MS = ms(300);
-const COUNTER_RESOURCE_PREVIEW_DURATION_MS = ms(500);
-const SECONDARY_RESOURCE_COMMIT_STAGGER_MS = ms(250);
+const FLOATING_EFFECT_DURATION_MS = ms(CONFIG.battle.timing.floatingEffectMs);
+const COUNTER_RESOURCE_PREVIEW_DURATION_MS = ms(CONFIG.battle.timing.counterResourcePreviewMs);
+const SECONDARY_RESOURCE_COMMIT_STAGGER_MS = ms(CONFIG.battle.timing.secondaryResourceCommitStaggerMs);
 
 const DAMAGE_BLINK_ALPHA = 0.4;
 const DAMAGE_BLINK_DURATION_MS = ms(160);
@@ -809,9 +757,9 @@ const NO_REACTION_RETURN_DELAY_MS =
 const ACTION_DELAY_MS =
   DEFENSE_RESULT_DELAY_MS + FINAL_STATS_DURATION_MS + CLEANUP_BUFFER_MS;
 
-const COMBAT_ZOOM_KEY = 'F';
-const COMBAT_ZOOM_PADDING = 0;
-const COMBAT_ZOOM_DURATION_MS = ms(250);
+const COMBAT_ZOOM_KEY = CONFIG.battle.timing.combatZoomKey;
+const COMBAT_ZOOM_PADDING = CONFIG.battle.timing.combatZoomPadding;
+const COMBAT_ZOOM_DURATION_MS = ms(CONFIG.battle.timing.combatZoomMs);
 
 const RESOURCE_EFFECT_COMMIT_DELAY_MS =
   ms(400);
