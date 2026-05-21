@@ -2,8 +2,29 @@ import { ACTIONS, REACTIONS, LIMITS, TRAITS } from './data/skills.js';
 import { BASE_UNIT_STATS, PROMOTION_STAT_BONUSES, CHARACTER_CLASSES } from './data/characters.js';
 import { EQUIPMENT } from './data/equipment.js';
 
+const DISPLAY_SIZE_STORAGE_KEY = 'autoBladeDisplaySize';
+const DEFAULT_DISPLAY_SIZE_KEY = '1080p';
+const DISPLAY_SIZES = {
+  '720p': { width: 1280, height: 720 },
+  '1080p': { width: 1920, height: 1080 }
+};
+
+function getSavedDisplaySizeKey() {
+  try {
+    const saved = globalThis.localStorage?.getItem(DISPLAY_SIZE_STORAGE_KEY);
+    return DISPLAY_SIZES[saved] ? saved : DEFAULT_DISPLAY_SIZE_KEY;
+  } catch {
+    return DEFAULT_DISPLAY_SIZE_KEY;
+  }
+}
+
+const activeDisplaySizeKey = getSavedDisplaySizeKey();
+const activeDisplaySize = DISPLAY_SIZES[activeDisplaySizeKey];
+const RENDER_WIDTH = activeDisplaySize.width;
+const RENDER_HEIGHT = activeDisplaySize.height;
 const GAME_WIDTH = 1920;
 const GAME_HEIGHT = 1080;
+const GAME_VIEW_SCALE = Math.min(RENDER_WIDTH / GAME_WIDTH, RENDER_HEIGHT / GAME_HEIGHT);
 
 function cssHexToNumber(hex) {
   return Number(hex.replace('#', '0x'));
@@ -160,6 +181,19 @@ const UTILITY_MENU_DROPDOWN_WIDTH = 128;
 const UTILITY_MENU_ITEM_HEIGHT = 32;
 const UTILITY_MENU_GAP = 4;
 const UTILITY_MENU_LABEL = '☰';
+const FORMATION_MENU_BUTTON_X = 24;
+const FORMATION_MENU_BUTTON_Y = 42;
+const FORMATION_MENU_BUTTON_SIZE = 34;
+const FORMATION_MENU_PANEL_X = FORMATION_MENU_BUTTON_X;
+const FORMATION_MENU_PANEL_Y = FORMATION_MENU_BUTTON_Y + FORMATION_MENU_BUTTON_SIZE + 8;
+const FORMATION_MENU_PANEL_WIDTH = 150;
+const FORMATION_MENU_PANEL_HEIGHT = 128;
+const FORMATION_MENU_TITLE_Y_OFFSET = 16;
+const FORMATION_MENU_OPTION_HEIGHT = 32;
+const FORMATION_MENU_OPTION_GAP = 6;
+const FORMATION_MENU_OPTION_X_OFFSET = 12;
+const FORMATION_MENU_OPTION_Y_OFFSET = 44;
+const FORMATION_MENU_SELECTED_MARK = '•';
 const POPUP_PANEL_MARGIN = 24;
 const POPUP_PANEL_TOP = 64;
 const POPUP_SIDE_PANEL_WIDTH = 420;
@@ -203,7 +237,9 @@ const LOG_MAX_LINES = 16;
 const LOG_LINE_HEIGHT = 20;
 
 // Text
-const UI_FONT_FAMILY = 'Arial, Helvetica, sans-serif';
+const UI_WEB_FONT_FAMILY = 'Pixelify Sans';
+const UI_FONT_FAMILY = `"${UI_WEB_FONT_FAMILY}", system-ui, sans-serif`;
+const UI_FONT_LOAD_TIMEOUT_MS = 1200;
 const FONT_SIZE_HEADER = 24;
 const FONT_SIZE_BODY = 12;
 const FONT_SIZE_SMALL = 12;
@@ -1062,6 +1098,7 @@ let dynamicTooltipDefinitions = {};
 let formationTooltipPanelNodes = [];
 let formationHoveredTooltipKey = null;
 let formationBackgroundNode = null;
+let isFormationDisplayMenuOpen = false;
 let utilityMenuButtonNodes = [];
 let commandLevel = STARTING_COMMAND_LEVEL;
 let commandXp = STARTING_COMMAND_XP;
@@ -1104,8 +1141,8 @@ let activePopupKey = null;
 
 const config = {
   type: Phaser.AUTO,
-  width: GAME_WIDTH,
-  height: GAME_HEIGHT,
+  width: RENDER_WIDTH,
+  height: RENDER_HEIGHT,
   backgroundColor: PHASER_COLORS.background,
   render: {
     antialias: false,
@@ -1122,6 +1159,19 @@ const config = {
   }
 };
 
+async function waitForUiFont() {
+  try {
+    const fontLoad = globalThis.document?.fonts?.load(`16px "${UI_WEB_FONT_FAMILY}"`) ?? Promise.resolve();
+    const timeout = new Promise((resolve) => {
+      globalThis.setTimeout(resolve, UI_FONT_LOAD_TIMEOUT_MS);
+    });
+    await Promise.race([fontLoad, timeout]);
+  } catch {
+    // Fallback fonts keep the game usable if the web font fails.
+  }
+}
+
+await waitForUiFont();
 new Phaser.Game(config);
 
 function preloadClassVisuals(scene) {
@@ -1222,18 +1272,25 @@ function applyCombatZoomMode(animate = true) {
 
   if (!combatZoomMode) {
     camera.pan(GAME_WIDTH / 2, GAME_HEIGHT / 2, duration, ease);
-    camera.zoomTo(1, duration, ease);
+    camera.zoomTo(GAME_VIEW_SCALE, duration, ease);
     return;
   }
 
   const targetW = layout.battle.w + COMBAT_ZOOM_PADDING * 2;
   const targetH = layout.battle.h + COMBAT_ZOOM_PADDING * 2;
-  const zoom = Math.min(GAME_WIDTH / targetW, GAME_HEIGHT / targetH);
+  const zoom = Math.min(RENDER_WIDTH / targetW, RENDER_HEIGHT / targetH);
   const centerX = layout.battle.x + layout.battle.w / 2;
   const centerY = layout.battle.y + layout.battle.h / 2;
 
   camera.pan(centerX, centerY, duration, ease);
   camera.zoomTo(zoom, duration, ease);
+}
+
+function showFullGameView() {
+  const camera = sceneRef.cameras.main;
+  camera.stopFollow();
+  camera.setZoom(GAME_VIEW_SCALE);
+  camera.centerOn(GAME_WIDTH / 2, GAME_HEIGHT / 2);
 }
 
 function createLayout() {
@@ -1675,6 +1732,7 @@ function renderPopupPanel(key) {
 
 function enterSetupPhase() {
   gamePhase = 'setup';
+  showFullGameView();
   setFormationScreenVisible(true);
   initializeArmyManagement();
   redFormation = [];
@@ -1784,6 +1842,8 @@ function renderSetupUi() {
 }
 
 function renderArmyManagementScreen() {
+  renderFormationDisplayButton();
+
   addSetupNode(sceneRef.add.rectangle(
     SETUP_PANEL_X,
     SETUP_PANEL_Y,
@@ -1815,6 +1875,113 @@ function renderArmyManagementScreen() {
     startBattle,
     isSetupReady()
   );
+}
+
+function renderFormationDisplayButton() {
+  const button = addSetupNode(sceneRef.add.rectangle(
+    FORMATION_MENU_BUTTON_X,
+    FORMATION_MENU_BUTTON_Y,
+    FORMATION_MENU_BUTTON_SIZE,
+    FORMATION_MENU_BUTTON_SIZE,
+    PHASER_COLORS.infoPanel
+  )
+    .setOrigin(0)
+    .setStrokeStyle(1, PHASER_COLORS.panelBorder)
+    .setInteractive({ useHandCursor: true })
+    .setDepth(SETUP_UI_DEPTH + 3));
+
+  const label = addSetupNode(sceneRef.add.text(
+    FORMATION_MENU_BUTTON_X + FORMATION_MENU_BUTTON_SIZE / 2,
+    FORMATION_MENU_BUTTON_Y + FORMATION_MENU_BUTTON_SIZE / 2,
+    UTILITY_MENU_LABEL,
+    combatLogToggleTextStyle()
+  )
+    .setOrigin(0.5)
+    .setInteractive({ useHandCursor: true })
+    .setDepth(SETUP_UI_DEPTH + 4));
+
+  button.on('pointerdown', toggleFormationDisplayMenu);
+  label.on('pointerdown', toggleFormationDisplayMenu);
+
+  if (isFormationDisplayMenuOpen) {
+    renderFormationDisplayMenu();
+  }
+}
+
+function toggleFormationDisplayMenu() {
+  isFormationDisplayMenuOpen = !isFormationDisplayMenuOpen;
+  renderSetupUi();
+}
+
+function renderFormationDisplayMenu() {
+  addSetupNode(sceneRef.add.rectangle(
+    FORMATION_MENU_PANEL_X,
+    FORMATION_MENU_PANEL_Y,
+    FORMATION_MENU_PANEL_WIDTH,
+    FORMATION_MENU_PANEL_HEIGHT,
+    PHASER_COLORS.infoPanel
+  )
+    .setOrigin(0)
+    .setAlpha(0.96)
+    .setStrokeStyle(1, PHASER_COLORS.panelBorder)
+    .setDepth(SETUP_UI_DEPTH + 3));
+
+  addSetupNode(sceneRef.add.text(
+    FORMATION_MENU_PANEL_X + FORMATION_MENU_OPTION_X_OFFSET,
+    FORMATION_MENU_PANEL_Y + FORMATION_MENU_TITLE_Y_OFFSET,
+    'Display',
+    bodyTextStyle()
+  ).setDepth(SETUP_UI_DEPTH + 4));
+
+  Object.keys(DISPLAY_SIZES).forEach((key, index) => {
+    const optionY = FORMATION_MENU_PANEL_Y + FORMATION_MENU_OPTION_Y_OFFSET +
+      index * (FORMATION_MENU_OPTION_HEIGHT + FORMATION_MENU_OPTION_GAP);
+    const isSelected = key === activeDisplaySizeKey;
+    const option = addSetupNode(sceneRef.add.rectangle(
+      FORMATION_MENU_PANEL_X + FORMATION_MENU_OPTION_X_OFFSET,
+      optionY,
+      FORMATION_MENU_PANEL_WIDTH - FORMATION_MENU_OPTION_X_OFFSET * 2,
+      FORMATION_MENU_OPTION_HEIGHT,
+      isSelected ? PHASER_COLORS.sp : PHASER_COLORS.panel
+    )
+      .setOrigin(0)
+      .setAlpha(isSelected ? 0.90 : 0.78)
+      .setStrokeStyle(1, PHASER_COLORS.panelBorder)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(SETUP_UI_DEPTH + 4));
+    const text = addSetupNode(sceneRef.add.text(
+      FORMATION_MENU_PANEL_X + FORMATION_MENU_OPTION_X_OFFSET + 10,
+      optionY + FORMATION_MENU_OPTION_HEIGHT / 2,
+      `${isSelected ? FORMATION_MENU_SELECTED_MARK : ' '} ${key}`,
+      combatLogToggleTextStyle()
+    )
+      .setOrigin(0, 0.5)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(SETUP_UI_DEPTH + 5));
+
+    option.on('pointerdown', () => selectDisplaySize(key));
+    text.on('pointerdown', () => selectDisplaySize(key));
+  });
+}
+
+function selectDisplaySize(key) {
+  if (!DISPLAY_SIZES[key]) {
+    return;
+  }
+
+  try {
+    globalThis.localStorage?.setItem(DISPLAY_SIZE_STORAGE_KEY, key);
+  } catch {
+    // Ignore storage failures. The current session still continues.
+  }
+
+  if (key !== activeDisplaySizeKey) {
+    globalThis.location?.reload();
+    return;
+  }
+
+  isFormationDisplayMenuOpen = false;
+  renderSetupUi();
 }
 
 function renderArmySquads() {
@@ -5270,6 +5437,7 @@ function startBattle() {
   battleRewardsGranted = false;
   clearAllResourceDisplayOverrides();
   createUnits();
+  applyCombatZoomMode(false);
   startRound();
 
   sceneRef.time.delayedCall(ROUND_START_BANNER_ACTION_START_DELAY_MS, () => {
