@@ -211,6 +211,7 @@ const FONT_SIZE_SMALL = 12;
 // Resource rows (setup cards and stats popup)
 const RESOURCE_ROW_LABEL_FONT_SIZE = 14;
 const RESOURCE_ROW_ICON_FONT_SIZE = 13;
+const RESOURCE_ROW_ICON_TEXT_PADDING_Y = 4;
 const RESOURCE_ROW_LABEL_WIDTH = 34;
 const RESOURCE_ROW_ICON_SPACING = 14;
 const RESOURCE_ROW_PAIR_GAP = 82;
@@ -221,6 +222,7 @@ const RESOURCE_ROW_EMPTY_ALPHA = 0.10;
 const STATS_CP_FLAG_FONT_SIZE = 18;
 const STATS_CP_FLAG_SPACING = 18;
 const STATS_CP_ICON_X_OFFSET = 34;
+const STATS_CP_FLAG_TEXT_PADDING_Y = 4;
 
 // Setup card cost row
 const SETUP_UNIT_CARD_COST_ICON_FONT_SIZE = 18;
@@ -3015,7 +3017,7 @@ function drawResourceRow(x, y, label, resourceKey, current, max, depth, addNode)
       fontSize: `${RESOURCE_ROW_ICON_FONT_SIZE}px`,
       resolution: getUiTextResolution(),
       color: getResourceIconColor(resourceKey)
-    }).setOrigin(0, 0.5).setAlpha(RESOURCE_ROW_EMPTY_ALPHA).setDepth(depth);
+    }).setPadding(0, RESOURCE_ROW_ICON_TEXT_PADDING_Y).setOrigin(0, 0.5).setAlpha(RESOURCE_ROW_EMPTY_ALPHA).setDepth(depth);
     addNode(noneNode);
     return;
   }
@@ -3026,7 +3028,7 @@ function drawResourceRow(x, y, label, resourceKey, current, max, depth, addNode)
       fontSize: `${RESOURCE_ROW_ICON_FONT_SIZE}px`,
       resolution: getUiTextResolution(),
       color: getResourceIconColor(resourceKey)
-    }).setOrigin(0, 0.5).setAlpha(i < current ? 1 : RESOURCE_ROW_EMPTY_ALPHA).setDepth(depth);
+    }).setPadding(0, RESOURCE_ROW_ICON_TEXT_PADDING_Y).setOrigin(0, 0.5).setAlpha(i < current ? 1 : RESOURCE_ROW_EMPTY_ALPHA).setDepth(depth);
     addNode(iconNode);
   }
 }
@@ -4234,7 +4236,7 @@ function renderCharacterPanel(unit, x, y, width, height, showHeader = true) {
           resolution: getUiTextResolution(),
           color: COLORS.text
         }
-      ).setOrigin(0, 0.5).setDepth(POPUP_DEPTH + 1);
+      ).setPadding(0, STATS_CP_FLAG_TEXT_PADDING_Y).setOrigin(0, 0.5).setDepth(POPUP_DEPTH + 1);
       infoPanelNodes.push(flagNode);
     }
     cursorY += lineHeight;
