@@ -211,7 +211,9 @@ const FONT_SIZE_SMALL = 12;
 // Resource rows (setup cards and stats popup)
 const RESOURCE_ROW_LABEL_FONT_SIZE = 14;
 const RESOURCE_ROW_ICON_FONT_SIZE = 13;
+const RESOURCE_ROW_LABEL_TEXT_PADDING_Y = 2;
 const RESOURCE_ROW_ICON_TEXT_PADDING_Y = 4;
+const STATS_POPUP_RESOURCE_ROW_LABEL_FONT_SIZE = 12;
 const RESOURCE_ROW_LABEL_WIDTH = 34;
 const RESOURCE_ROW_ICON_SPACING = 14;
 const RESOURCE_ROW_PAIR_GAP = 82;
@@ -3001,13 +3003,13 @@ function getUnitSpritePosition(unitType, teamKey, cellX, baseY) {
   };
 }
 
-function drawResourceRow(x, y, label, resourceKey, current, max, depth, addNode) {
+function drawResourceRow(x, y, label, resourceKey, current, max, depth, addNode, labelFontSize = RESOURCE_ROW_LABEL_FONT_SIZE) {
   const labelNode = sceneRef.add.text(x, y, `${label}:`, {
     fontFamily: UI_FONT_FAMILY,
-    fontSize: `${RESOURCE_ROW_LABEL_FONT_SIZE}px`,
+    fontSize: `${labelFontSize}px`,
     resolution: getUiTextResolution(),
     color: COLORS.text
-  }).setOrigin(0, 0.5).setDepth(depth);
+  }).setPadding(0, RESOURCE_ROW_LABEL_TEXT_PADDING_Y).setOrigin(0, 0.5).setDepth(depth);
   addNode(labelNode);
 
   const iconX = x + RESOURCE_ROW_LABEL_WIDTH;
@@ -4166,8 +4168,8 @@ function renderCharacterPanel(unit, x, y, width, height, showHeader = true) {
       return unit[maxKey];
     }
 
-    drawResourceRow(x, cursorY, leftLabel, leftKey, unit[leftKey], getMax(leftKey), depth, addNode);
-    drawResourceRow(rightColumnX, cursorY, rightLabel, rightKey, unit[rightKey], getMax(rightKey), depth, addNode);
+    drawResourceRow(x, cursorY, leftLabel, leftKey, unit[leftKey], getMax(leftKey), depth, addNode, STATS_POPUP_RESOURCE_ROW_LABEL_FONT_SIZE);
+    drawResourceRow(rightColumnX, cursorY, rightLabel, rightKey, unit[rightKey], getMax(rightKey), depth, addNode, STATS_POPUP_RESOURCE_ROW_LABEL_FONT_SIZE);
     registerHoverTooltip(leftKey, {
       x: x + RESOURCE_ROW_LABEL_WIDTH,
       y: cursorY - 8,
@@ -4254,8 +4256,8 @@ function renderCharacterPanel(unit, x, y, width, height, showHeader = true) {
       .filter((a) => a.key !== 'move' && Number.isFinite(a.range))
       .reduce((max, a) => Math.max(max, a.range), 0);
     const addNode = (node) => { infoPanelNodes.push(node); };
-    drawResourceRow(x, cursorY, 'MV', 'mv', mv, mv, POPUP_DEPTH + 1, addNode);
-    drawResourceRow(x + RESOURCE_ROW_PAIR_GAP, cursorY, 'RN', 'rn', rn, rn, POPUP_DEPTH + 1, addNode);
+    drawResourceRow(x, cursorY, 'MV', 'mv', mv, mv, POPUP_DEPTH + 1, addNode, STATS_POPUP_RESOURCE_ROW_LABEL_FONT_SIZE);
+    drawResourceRow(x + RESOURCE_ROW_PAIR_GAP, cursorY, 'RN', 'rn', rn, rn, POPUP_DEPTH + 1, addNode, STATS_POPUP_RESOURCE_ROW_LABEL_FONT_SIZE);
     registerHoverTooltip('mv', {
       x: x + RESOURCE_ROW_LABEL_WIDTH,
       y: cursorY - 8,
