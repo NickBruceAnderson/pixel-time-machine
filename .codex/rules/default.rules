@@ -11,6 +11,42 @@ prefix_rule(
 )
 
 prefix_rule(
+    pattern = ["git", "diff", "--cached"],
+    decision = "allow",
+    justification = "Safe staged diff check"
+)
+
+prefix_rule(
+    pattern = ["git", "log"],
+    decision = "allow",
+    justification = "Safe repo history check"
+)
+
+prefix_rule(
+    pattern = ["git", "show"],
+    decision = "allow",
+    justification = "Safe git object/file inspection"
+)
+
+prefix_rule(
+    pattern = ["git", "ls-files"],
+    decision = "allow",
+    justification = "Safe tracked file listing"
+)
+
+prefix_rule(
+    pattern = ["git", "rev-parse"],
+    decision = "allow",
+    justification = "Safe git repo metadata check"
+)
+
+prefix_rule(
+    pattern = ["git", "branch"],
+    decision = "allow",
+    justification = "Safe branch inspection"
+)
+
+prefix_rule(
     pattern = ["git", "add"],
     decision = "allow",
     justification = "Allow staging requested files"
@@ -32,6 +68,42 @@ prefix_rule(
     pattern = ["py", "-m", "http.server"],
     decision = "allow",
     justification = "Allow Windows local static server"
+)
+
+prefix_rule(
+    pattern = ["Get-Content"],
+    decision = "allow",
+    justification = "Allow safe file reads for inspecting project files"
+)
+
+prefix_rule(
+    pattern = ["Select-Object"],
+    decision = "allow",
+    justification = "Allow safe line-range inspection output"
+)
+
+prefix_rule(
+    pattern = ["Select-String"],
+    decision = "allow",
+    justification = "Allow safe text search inside inspected files"
+)
+
+prefix_rule(
+    pattern = ["Test-Path"],
+    decision = "allow",
+    justification = "Allow safe file existence checks"
+)
+
+prefix_rule(
+    pattern = ["Resolve-Path"],
+    decision = "allow",
+    justification = "Allow safe path resolution checks"
+)
+
+prefix_rule(
+    pattern = ["where.exe"],
+    decision = "allow",
+    justification = "Allow safe executable lookup on Windows"
 )
 
 prefix_rule(
