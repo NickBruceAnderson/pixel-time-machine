@@ -240,9 +240,10 @@ const LOG_LINE_HEIGHT = 20;
 const UI_WEB_FONT_FAMILY = 'Silver';
 const UI_FONT_FAMILY = `"${UI_WEB_FONT_FAMILY}", system-ui, sans-serif`;
 const UI_FONT_LOAD_TIMEOUT_MS = 1200;
-const FONT_SIZE_HEADER = 30;
-const FONT_SIZE_BODY = 16;
-const FONT_SIZE_SMALL = 14;
+const FONT_SIZE_HEADER = 40;
+const FONT_SIZE_BODY = 20;
+const FONT_SIZE_SMALL = 20;
+const INLINE_EMOJI_FONT_SIZE = 15;
 const CHARACTER_PANEL_LINE_HEIGHT = 23;
 const FORMATION_SELECTED_UNIT_CLASS_FONT_SIZE = 16;
 const FORMATION_TOOLTIP_TITLE_FONT_SIZE = 28;
@@ -250,11 +251,11 @@ const FORMATION_TOOLTIP_BODY_FONT_SIZE = 16;
 const FORMATION_TOOLTIP_BODY_Y_OFFSET = 62;
 
 // Resource rows (setup cards and stats popup)
-const RESOURCE_ROW_LABEL_FONT_SIZE = 16;
+const RESOURCE_ROW_LABEL_FONT_SIZE = 20;
 const RESOURCE_ROW_ICON_FONT_SIZE = 15;
 const RESOURCE_ROW_LABEL_TEXT_PADDING_Y = 2;
 const RESOURCE_ROW_ICON_TEXT_PADDING_Y = 4;
-const STATS_POPUP_RESOURCE_ROW_LABEL_FONT_SIZE = 14;
+const STATS_POPUP_RESOURCE_ROW_LABEL_FONT_SIZE = 20;
 const RESOURCE_ROW_LABEL_WIDTH = 34;
 const RESOURCE_ROW_ICON_SPACING = 14;
 const RESOURCE_ROW_PAIR_GAP = 82;
@@ -3722,7 +3723,8 @@ function getResourceIconColor(resourceKey) {
 function resourceTextSegment(resourceKey, count = 1) {
   return {
     text: RESOURCE_ICONS[resourceKey].repeat(count),
-    color: getResourceIconColor(resourceKey)
+    color: getResourceIconColor(resourceKey),
+    fontSize: `${INLINE_EMOJI_FONT_SIZE}px`
   };
 }
 
@@ -3731,6 +3733,7 @@ function addInlineTextSegments(segments, x, y, depth, alpha = 1) {
   return segments.map((segment) => {
     const node = sceneRef.add.text(cursorX, y, segment.text, {
       ...smallTextStyle(),
+      fontSize: segment.fontSize || `${FONT_SIZE_SMALL}px`,
       color: segment.color || COLORS.text
     })
       .setAlpha(alpha)
@@ -3816,7 +3819,12 @@ function buildActionDetailSegments(unit, actionData) {
     const steps = getMoveStepCount(unit);
     return [
       resourceTextSegment('ap', actionData.apCost),
-      { text: ' -> ' + '🥾'.repeat(steps) }
+      { text: ' -> ' },
+      {
+        text: '🥾'.repeat(steps),
+        fontSize: `${INLINE_EMOJI_FONT_SIZE}px`,
+        color: getResourceIconColor('mv')
+      }
     ];
   }
 
