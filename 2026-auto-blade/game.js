@@ -10,10 +10,12 @@ const DISPLAY_SIZES = CONFIG.display.sizes;
 function getSavedDisplaySizeKey() {
   try {
     const saved = globalThis.localStorage?.getItem(DISPLAY_SIZE_STORAGE_KEY);
-    return DISPLAY_SIZES[saved] ? saved : DEFAULT_DISPLAY_SIZE_KEY;
-  } catch {
-    return DEFAULT_DISPLAY_SIZE_KEY;
-  }
+    if (DISPLAY_SIZES[saved]) {
+      globalThis.localStorage?.removeItem(DISPLAY_SIZE_STORAGE_KEY);
+      return saved;
+    }
+  } catch {}
+  return DEFAULT_DISPLAY_SIZE_KEY;
 }
 
 const activeDisplaySizeKey = getSavedDisplaySizeKey();
@@ -23,6 +25,7 @@ const RENDER_HEIGHT = activeDisplaySize.height;
 const GAME_WIDTH = CONFIG.display.gameWidth;
 const GAME_HEIGHT = CONFIG.display.gameHeight;
 const GAME_VIEW_SCALE = Math.min(RENDER_WIDTH / GAME_WIDTH, RENDER_HEIGHT / GAME_HEIGHT);
+const SHOW_CANVAS_RENDER_DEBUG = true;
 
 function cssHexToNumber(hex) {
   return Number(hex.replace('#', '0x'));
@@ -148,7 +151,7 @@ const FORMATION_MENU_BUTTON_SIZE = 34;
 const FORMATION_MENU_PANEL_X = FORMATION_MENU_BUTTON_X;
 const FORMATION_MENU_PANEL_Y = FORMATION_MENU_BUTTON_Y + FORMATION_MENU_BUTTON_SIZE + 8;
 const FORMATION_MENU_PANEL_WIDTH = 150;
-const FORMATION_MENU_PANEL_HEIGHT = 128;
+const FORMATION_MENU_PANEL_HEIGHT = 204;
 const FORMATION_MENU_TITLE_Y_OFFSET = 16;
 const FORMATION_MENU_OPTION_HEIGHT = 32;
 const FORMATION_MENU_OPTION_GAP = 6;
@@ -187,7 +190,7 @@ const COMBAT_LOG_TOGGLE_Y_OFFSET = 0;
 const COMBAT_LOG_TOGGLE_WIDTH = 48;
 const COMBAT_LOG_TOGGLE_HEIGHT = 28;
 const COMBAT_LOG_TOGGLE_PADDING = 8;
-const COMBAT_LOG_TOGGLE_FONT_SIZE = 22;
+const COMBAT_LOG_TOGGLE_FONT_SIZE = CONFIG.theme.textSize.combatLogToggle;
 const COMBAT_LOG_TOGGLE_VISIBLE_LABEL = 'X';
 const COMBAT_LOG_TOGGLE_HIDDEN_LABEL = 'LOG';
 const COMBAT_LOG_TOGGLE_FILL_COLOR = COLORS.infoPanel;
@@ -234,7 +237,7 @@ const SETUP_UNIT_CARD_COST_ICON_FONT_SIZE = CONFIG.theme.textSize.setupUnitCardC
 const SETUP_UNIT_CARD_COST_ICON_X_OFFSET = CONFIG.ui.setupCardCostRow.iconXOffset;
 
 // HUD: CAST
-const CAST_TITLE_FONT_SIZE = 20;
+const CAST_TITLE_FONT_SIZE = CONFIG.theme.textSize.castTitle;
 const CAST_CALLOUT_Y_OFFSET = 0;
 const CAST_CALLOUT_WIDTH = 160;
 const CAST_CALLOUT_HEIGHT = 35;
@@ -247,7 +250,7 @@ const SHOW_BATTLE_UNIT_HUD = true;
 
 // HUD: Main resources
 const BATTLE_MAIN_RESOURCE_STATIC_SLOTS = true;
-const BATTLE_MAIN_RESOURCE_FONT_SIZE = 12;
+const BATTLE_MAIN_RESOURCE_FONT_SIZE = CONFIG.theme.textSize.battleMainResource;
 const BATTLE_MAIN_RESOURCE_ROW_Y_OFFSET = 78;
 const BATTLE_MAIN_RESOURCE_ICON_SPACING = 8;
 const BATTLE_MAIN_RESOURCE_GROUP_GAP = 0;
@@ -283,7 +286,7 @@ const BATTLE_HUD_BACKPLATE_DEPTH = DEPTH_UNIT_HUD - 1;
 const BATTLE_LP_SHOW = true;
 const BATTLE_LP_X_OFFSET = 30;
 const BATTLE_LP_Y_OFFSET = 54;
-const BATTLE_LP_FONT_SIZE = 14;
+const BATTLE_LP_FONT_SIZE = CONFIG.theme.textSize.battleLp;
 const BATTLE_LP_CORNER_X_INSET = 8;
 const BATTLE_LP_CORNER_Y_INSET = 8;
 
@@ -291,15 +294,15 @@ const BATTLE_LP_CORNER_Y_INSET = 8;
 const DAMAGE_POPUP_Y_OFFSET = 80;
 const DAMAGE_NUMBER_X_OFFSET = 0;
 const DAMAGE_NUMBER_Y_OFFSET = 60;
-const DAMAGE_NUMBER_FONT_SIZE = 28;
+const DAMAGE_NUMBER_FONT_SIZE = CONFIG.theme.textSize.damageNumber;
 const DAMAGE_NUMBER_DURATION_MS = ms(1000);
 const DAMAGE_NUMBER_FLOAT_Y = 20;
 const DAMAGE_NUMBER_HOLD_MS = ms(1000);
 
 // Round banner
 const ROUND_START_BANNER_ENABLED = true;
-const ROUND_START_BANNER_TITLE_FONT_SIZE = 54;
-const ROUND_START_BANNER_SUBTITLE_FONT_SIZE = 22;
+const ROUND_START_BANNER_TITLE_FONT_SIZE = CONFIG.theme.textSize.roundStartBannerTitle;
+const ROUND_START_BANNER_SUBTITLE_FONT_SIZE = CONFIG.theme.textSize.roundStartBannerSubtitle;
 const ROUND_START_BANNER_WIDTH = 560;
 const ROUND_START_BANNER_HEIGHT = 150;
 const ROUND_START_BANNER_Y = GAME_HEIGHT * 0.26;
@@ -321,7 +324,7 @@ const EXHAUSTION_RP_DRAIN = 1;
 
 // Initiative order
 const INITIATIVE_ORDER_NUMBER_SHOW = true;
-const INITIATIVE_ORDER_FONT_SIZE = 18;
+const INITIATIVE_ORDER_FONT_SIZE = CONFIG.theme.textSize.initiativeOrder;
 const INITIATIVE_ORDER_CENTER_X_OFFSET = 5;
 const INITIATIVE_ORDER_Y_OFFSET = 65;
 const INITIATIVE_ORDER_COLOR = '#ffffff';
@@ -344,14 +347,21 @@ const STARTING_ENEMY_COMMAND_XP = CONFIG.command.startingEnemyXp;
 const BATTLE_OVER_BANNER_HOLD_MS = ms(1400);
 const BATTLE_OVER_RETURN_TO_SETUP_DELAY_MS = BATTLE_OVER_BANNER_HOLD_MS + ROUND_START_BANNER_FADE_MS;
 
+// Formation layout: central anchors
+const FORMATION_LEFT_COLUMN_WIDTH = 440;
+const FORMATION_LEFT_MAIN_GAP = 16;
+const FORMATION_MAIN_X = 24 + FORMATION_LEFT_COLUMN_WIDTH + FORMATION_LEFT_MAIN_GAP;
+const FORMATION_MAIN_RIGHT = GAME_WIDTH - 60;
+const FORMATION_MAIN_WIDTH = FORMATION_MAIN_RIGHT - FORMATION_MAIN_X;
+
 // Setup phase
 const SETUP_MIN_UNITS_TO_START = 1;
 const SETUP_FORMATION_CP_CAP = COMMAND_LEVEL_DEFAULT;
 const SETUP_AI_DEFAULT_COMMAND_SPEND = 6;
 const SETUP_UI_DEPTH = 150;
-const SETUP_PANEL_X = 390;
+const SETUP_PANEL_X = FORMATION_MAIN_X;
 const SETUP_PANEL_Y = 124;
-const SETUP_PANEL_WIDTH = 1470;
+const SETUP_PANEL_WIDTH = FORMATION_MAIN_WIDTH;
 const SETUP_PANEL_HEIGHT = 470;
 const SETUP_PANEL_ALPHA = 0.88;
 const SETUP_BUTTON_HEIGHT = 34;
@@ -405,12 +415,10 @@ const FORMATION_COMMAND_ICON = '👑';
 const SELECTED_SQUAD_HIGHLIGHT = '#58a6ff';
 const SELECTED_UNIT_HIGHLIGHT = '#f2cf45';
 const FORMATION_COLUMN_GAP = 16;
-const FORMATION_MAIN_X = SETUP_PANEL_X;
-const FORMATION_MAIN_WIDTH = SETUP_PANEL_WIDTH;
 const FORMATION_SECTION_PADDING = 16;
 const FORMATION_SCROLLBAR_WIDTH = 12;
 const FORMATION_LEFT_STATS_PANEL_X = 24;
-const FORMATION_LEFT_STATS_PANEL_WIDTH = POPUP_STATS_PANEL_WIDTH;
+const FORMATION_LEFT_STATS_PANEL_WIDTH = FORMATION_LEFT_COLUMN_WIDTH;
 const FORMATION_LEFT_STATS_PANEL_Y = SETUP_PANEL_Y + 55;
 const FORMATION_LEFT_STATS_PANEL_HEIGHT = 655;
 const FORMATION_LEFT_PANEL_GAP = 14;
@@ -430,7 +438,7 @@ const COMMAND_LEVEL_MINUS_BUTTON_X = COMMAND_LEVEL_BOX_X + 14;
 const COMMAND_LEVEL_TEXT_X = COMMAND_LEVEL_MINUS_BUTTON_X + COMMAND_LEVEL_CONTROL_SIZE + COMMAND_LEVEL_CONTROL_GAP;
 const COMMAND_LEVEL_ICON_X = COMMAND_LEVEL_BOX_X + COMMAND_LEVEL_BOX_WIDTH - COMMAND_LEVEL_CONTROL_SIZE - COMMAND_LEVEL_CONTROL_GAP - 32;
 const COMMAND_LEVEL_PLUS_BUTTON_X = COMMAND_LEVEL_BOX_X + COMMAND_LEVEL_BOX_WIDTH - COMMAND_LEVEL_CONTROL_SIZE - 14;
-const SQUAD_VIEWPORT_X = SETUP_PANEL_X + 56;
+const SQUAD_VIEWPORT_X = FORMATION_MAIN_X + FORMATION_SECTION_PADDING;
 const SQUAD_SECTION_PADDING_TOP = 55;
 const SQUAD_SECTION_PADDING_BOTTOM = 28;
 const SQUAD_VIEWPORT_Y = SETUP_PANEL_Y + SQUAD_SECTION_PADDING_TOP;
@@ -438,8 +446,8 @@ const SQUAD_VISIBLE_CARDS_PER_PAGE = 3;
 const SQUAD_VISIBLE_COLUMNS = 3;
 const SQUAD_VISIBLE_ROWS = 1;
 const SQUAD_TOTAL_ROWS = 2;
-const SQUAD_CARD_WIDTH = 430;
-const SQUAD_CARD_HEIGHT = 360;
+const SQUAD_CARD_WIDTH = 432;
+const SQUAD_CARD_HEIGHT = 340;
 const SQUAD_CARD_HEADER_HEIGHT = 64;
 const SQUAD_CARD_BODY_BOTTOM_PADDING = 16;
 const SQUAD_CARD_GAP = 20;
@@ -456,8 +464,8 @@ const SQUAD_ACTIVE_BORDER_COLOR = SELECTED_SQUAD_HIGHLIGHT;
 const SQUAD_INACTIVE_BORDER_COLOR = COLORS.panelBorder;
 const SQUAD_PANEL_X = SQUAD_VIEWPORT_X;
 const SQUAD_PANEL_Y = SQUAD_VIEWPORT_Y;
-const SQUAD_BOARD_X_OFFSET = 78;
-const SQUAD_BOARD_CELL_SIZE = 86;
+const SQUAD_BOARD_X_OFFSET = 88;
+const SQUAD_BOARD_CELL_SIZE = 80;
 const SQUAD_BOARD_CELL_WIDTH = SQUAD_BOARD_CELL_SIZE;
 const SQUAD_BOARD_CELL_HEIGHT = SQUAD_BOARD_CELL_SIZE;
 const SQUAD_BOARD_CELL_GAP = 8;
@@ -492,8 +500,8 @@ const AVAILABLE_UNITS_CELL_GAP = 14;
 const AVAILABLE_UNITS_SCROLLBAR_WIDTH = FORMATION_SCROLLBAR_WIDTH;
 const AVAILABLE_UNITS_SCROLL_SPEED = 1;
 const ROSTER_X = PICKER_X_START;
-const ROSTER_CARD_WIDTH = 224;
-const ROSTER_CARD_HEIGHT = 164;
+const ROSTER_CARD_WIDTH = 209;
+const ROSTER_CARD_HEIGHT = 209;
 const ROSTER_CARD_GAP = AVAILABLE_UNITS_CELL_GAP;
 const ROSTER_COLUMNS = AVAILABLE_UNITS_COLUMNS;
 const ROSTER_VISIBLE_ROWS = AVAILABLE_UNITS_VISIBLE_ROWS;
@@ -514,11 +522,11 @@ const FORMATION_TOOLTIP_PANEL_HEIGHT = ROSTER_PANEL_Y + ROSTER_PANEL_HEIGHT - FO
 const ROSTER_SCROLLBAR_X = ROSTER_PANEL_X + ROSTER_PANEL_WIDTH - ROSTER_PANEL_PADDING - AVAILABLE_UNITS_SCROLLBAR_WIDTH;
 const ROSTER_SCROLLBAR_Y = ROSTER_Y;
 const ROSTER_SCROLLBAR_HEIGHT = ROSTER_VISIBLE_HEIGHT;
-const AVAILABLE_UNIT_NAME_FONT_SIZE = 24;
-const AVAILABLE_UNIT_CLASS_FONT_SIZE = 15;
+const AVAILABLE_UNIT_NAME_FONT_SIZE = CONFIG.theme.textSize.availableUnitName;
+const AVAILABLE_UNIT_CLASS_FONT_SIZE = CONFIG.theme.textSize.availableUnitClass;
 const AVAILABLE_UNIT_ART_SCALE = 5.5;
 const AVAILABLE_UNIT_ART_CENTER_Y_OFFSET = 74;
-const AVAILABLE_UNIT_STATS_FONT_SIZE = 14;
+const AVAILABLE_UNIT_STATS_FONT_SIZE = CONFIG.theme.textSize.availableUnitStats;
 const AVAILABLE_UNIT_STATS_Y_OFFSET = 126;
 const AVAILABLE_UNIT_STATS_ROW_GAP = 18;
 const AVAILABLE_UNIT_STATS_GROUP_RESERVED_WIDTH = 52; // fits up to 4 icons
@@ -1099,12 +1107,12 @@ const config = {
   height: RENDER_HEIGHT,
   backgroundColor: PHASER_COLORS.background,
   render: {
-    antialias: false,
-    pixelArt: true,
+    antialias: true,
+    pixelArt: false,
     roundPixels: true
   },
   scale: {
-    mode: Phaser.Scale.FIT,
+    mode: Phaser.Scale.NONE,
     autoCenter: Phaser.Scale.CENTER_BOTH
   },
   scene: {
@@ -1152,10 +1160,39 @@ function preload() {
   preloadClassVisuals(this);
 }
 
+function applyPixelTextureFilters() {
+  const seen = new Set();
+  for (const classDef of Object.values(CHARACTER_CLASSES)) {
+    const v = classDef.visual;
+    const keys = [v.idle.textureKey, ...Object.values(v.animations).map((a) => a.textureKey)];
+    keys.forEach((key) => {
+      if (!seen.has(key)) {
+        seen.add(key);
+        sceneRef.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST);
+      }
+    });
+  }
+}
+
 function create() {
   sceneRef = this;
+  if (SHOW_CANVAS_RENDER_DEBUG) {
+    const canvas = this.sys.game.canvas;
+    const rect = canvas.getBoundingClientRect();
+    console.log('[AutoBlade Render Debug]', {
+      devicePixelRatio: window.devicePixelRatio,
+      canvasWidth: canvas.width,
+      canvasHeight: canvas.height,
+      cssWidth: rect.width,
+      cssHeight: rect.height,
+      activeDisplaySizeKey,
+      RENDER_WIDTH,
+      RENDER_HEIGHT
+    });
+  }
   sceneRef.input.mouse.disableContextMenu();
   createClassAnimations();
+  applyPixelTextureFilters();
   createLayout();
   applyCombatZoomMode(false);
 
@@ -4251,7 +4288,10 @@ function renderActiveCombatPanel(attacker, defender, leftX, rightX, y, columnWid
 
 function renderCharacterPanel(unit, x, y, width, height, showHeader = true) {
   const lineHeight = CHARACTER_PANEL_LINE_HEIGHT;
-  const skillDetailOffset = 120;
+  const labelColumnWidth = Math.floor(width * 0.34);
+  const splitGap = 8;
+  const detailColumnX = x + labelColumnWidth + splitGap;
+  const detailColumnWidth = width - labelColumnWidth - splitGap;
   let cursorY = y;
 
   function addPanelLine(text, alpha = 1) {
@@ -4292,8 +4332,8 @@ function renderCharacterPanel(unit, x, y, width, height, showHeader = true) {
     cursorY += lineHeight;
   }
 
-  function addResourcePairLine(leftLabel, leftKey, rightLabel, rightKey) {
-    const rightColumnX = x + RESOURCE_ROW_PAIR_GAP;
+  function renderCharacterResourceGrid() {
+    const colW = Math.floor(width / 4);
     const depth = POPUP_DEPTH + 1;
     const addNode = (node) => { infoPanelNodes.push(node); };
 
@@ -4302,50 +4342,61 @@ function renderCharacterPanel(unit, x, y, width, height, showHeader = true) {
       return unit[maxKey];
     }
 
-    drawResourceRow(x, cursorY, leftLabel, leftKey, unit[leftKey], getMax(leftKey), depth, addNode, STATS_POPUP_RESOURCE_ROW_LABEL_FONT_SIZE);
-    drawResourceRow(rightColumnX, cursorY, rightLabel, rightKey, unit[rightKey], getMax(rightKey), depth, addNode, STATS_POPUP_RESOURCE_ROW_LABEL_FONT_SIZE);
-    registerHoverTooltip(leftKey, {
-      x: x + RESOURCE_ROW_LABEL_WIDTH,
-      y: cursorY - 8,
-      w: 96,
-      h: 18
+    const mv = getEffectiveMoveDistance(unit);
+    const rn = Object.values(unit.actions || {})
+      .filter((a) => a.key !== 'move' && Number.isFinite(a.range))
+      .reduce((acc, a) => Math.max(acc, a.range), 0);
+
+    const row1 = [
+      { label: 'HP', key: 'hp', current: unit.hp, max: getMax('hp') },
+      { label: 'AP', key: 'ap', current: unit.ap, max: getMax('ap') },
+      { label: 'LP', key: 'lp', current: unit.lp, max: getMax('lp') },
+      { label: 'MV', key: 'mv', current: mv, max: mv }
+    ];
+    const row2 = [
+      { label: 'SP', key: 'sp', current: unit.sp, max: getMax('sp') },
+      { label: 'RP', key: 'rp', current: unit.rp, max: getMax('rp') },
+      { label: 'IP', key: 'ip', current: unit.ip, max: getMax('ip') },
+      { label: 'RN', key: 'rn', current: rn, max: rn }
+    ];
+
+    [row1, row2].forEach((row, rowIndex) => {
+      const rowY = cursorY + rowIndex * lineHeight;
+      row.forEach(({ label, key, current, max }, colIndex) => {
+        const cellX = x + colIndex * colW;
+        drawResourceRow(cellX, rowY, label, key, current, max, depth, addNode, STATS_POPUP_RESOURCE_ROW_LABEL_FONT_SIZE);
+        registerHoverTooltip(key, {
+          x: cellX + RESOURCE_ROW_LABEL_WIDTH,
+          y: rowY - 8,
+          w: colW - RESOURCE_ROW_LABEL_WIDTH,
+          h: 18
+        });
+      });
     });
-    registerHoverTooltip(rightKey, {
-      x: rightColumnX + RESOURCE_ROW_LABEL_WIDTH,
-      y: cursorY - 8,
-      w: 96,
-      h: 18
-    });
-    cursorY += lineHeight;
+
+    cursorY += lineHeight * 2;
   }
 
   function addSplitLine(label, detail) {
-    const labelNode = sceneRef.add.text(x, cursorY, label.padEnd(12), smallTextStyle());
-    const detailNode = sceneRef.add.text(x + skillDetailOffset, cursorY, detail, smallTextStyle());
+    const labelNode = sceneRef.add.text(x, cursorY, label, smallTextStyle());
+    const detailNode = sceneRef.add.text(detailColumnX, cursorY, detail, smallTextStyle());
     detailNode.setAlpha(0.40);
     labelNode.setDepth(POPUP_DEPTH + 1);
     detailNode.setDepth(POPUP_DEPTH + 1);
-
-    labelNode.setWordWrapWidth(width);
-    detailNode.setWordWrapWidth(width - skillDetailOffset);
-
+    labelNode.setWordWrapWidth(labelColumnWidth);
+    detailNode.setWordWrapWidth(detailColumnWidth);
     infoPanelNodes.push(labelNode, detailNode);
     cursorY += lineHeight;
   }
-  function addRichSplitLine(label, segments, tooltipKey = null) {
-    const labelNode = sceneRef.add.text(x, cursorY, label.padEnd(12), smallTextStyle());
-    labelNode.setDepth(POPUP_DEPTH + 1);
-    labelNode.setWordWrapWidth(width);
 
-    const detailNodes = addInlineTextSegments(segments, x + skillDetailOffset, cursorY, POPUP_DEPTH + 1, POPUP_DETAIL_TEXT_ALPHA);
+  function addRichSplitLine(label, segments, tooltipKey = null) {
+    const labelNode = sceneRef.add.text(x, cursorY, label, smallTextStyle());
+    labelNode.setDepth(POPUP_DEPTH + 1);
+    labelNode.setWordWrapWidth(labelColumnWidth);
+    const detailNodes = addInlineTextSegments(segments, detailColumnX, cursorY, POPUP_DEPTH + 1, POPUP_DETAIL_TEXT_ALPHA);
     infoPanelNodes.push(labelNode, ...detailNodes);
     if (tooltipKey) {
-      registerHoverTooltip(tooltipKey, {
-        x,
-        y: cursorY - 8,
-        w: width,
-        h: 18
-      });
+      registerHoverTooltip(tooltipKey, { x, y: cursorY - 8, w: width, h: 18 });
     }
     cursorY += lineHeight;
   }
@@ -4381,31 +4432,7 @@ function renderCharacterPanel(unit, x, y, width, height, showHeader = true) {
   if (showHeader) {
     addCommandPointLine(unitCpCost);
   }
-  addResourcePairLine('HP', 'hp', 'SP', 'sp');
-  addResourcePairLine('AP', 'ap', 'RP', 'rp');
-  addResourcePairLine('LP', 'lp', 'IP', 'ip');
-  {
-    const mv = getEffectiveMoveDistance(unit);
-    const rn = Object.values(unit.actions || {})
-      .filter((a) => a.key !== 'move' && Number.isFinite(a.range))
-      .reduce((max, a) => Math.max(max, a.range), 0);
-    const addNode = (node) => { infoPanelNodes.push(node); };
-    drawResourceRow(x, cursorY, 'MV', 'mv', mv, mv, POPUP_DEPTH + 1, addNode, STATS_POPUP_RESOURCE_ROW_LABEL_FONT_SIZE);
-    drawResourceRow(x + RESOURCE_ROW_PAIR_GAP, cursorY, 'RN', 'rn', rn, rn, POPUP_DEPTH + 1, addNode, STATS_POPUP_RESOURCE_ROW_LABEL_FONT_SIZE);
-    registerHoverTooltip('mv', {
-      x: x + RESOURCE_ROW_LABEL_WIDTH,
-      y: cursorY - 8,
-      w: 96,
-      h: 18
-    });
-    registerHoverTooltip('rn', {
-      x: x + RESOURCE_ROW_PAIR_GAP + RESOURCE_ROW_LABEL_WIDTH,
-      y: cursorY - 8,
-      w: 96,
-      h: 18
-    });
-    cursorY += lineHeight;
-  }
+  renderCharacterResourceGrid();
   addBlankLine();
 
   addPanelLine('Equipment:');

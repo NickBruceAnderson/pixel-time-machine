@@ -4,7 +4,9 @@ export const CONFIG = {
     defaultSizeKey: '1080p',
     sizes: {
       '720p': { width: 1280, height: 720 },
-      '1080p': { width: 1920, height: 1080 }
+      '1080p': { width: 1920, height: 1080 },
+      '1440p': { width: 2560, height: 1440 },
+      '4k': { width: 3840, height: 2160 }
     },
     gameWidth: 1920,
     gameHeight: 1080
@@ -12,35 +14,46 @@ export const CONFIG = {
 
   theme: {
     font: {
-      webFamily: 'Silver',
-      family: '"Silver", system-ui, sans-serif',
+      webFamily: 'Oxanium',
+      family: '"Oxanium", system-ui, sans-serif',
       loadTimeoutMs: 1200
-    },
+    }
+    ,
     textSize: {
-      header: 40,
-      body: 20,
-      small: 20,
-      inlineEmoji: 15,
-      characterPanelLineHeight: 23,
-      formationSelectedUnitClass: 16,
-      formationTooltipTitle: 28,
-      formationTooltipBody: 16,
-      combatLogToggle: 22,
-      resourceRowLabel: 20,
-      resourceRowIcon: 15,
-      statsPopupResourceRowLabel: 20,
-      statsCpFlag: 18,
-      setupUnitCardCostIcon: 18,
-      castTitle: 20,
-      battleMainResource: 12,
-      battleLp: 14,
-      damageNumber: 28,
-      roundStartBannerTitle: 54,
-      roundStartBannerSubtitle: 22,
-      initiativeOrder: 18,
-      availableUnitName: 24,
-      availableUnitClass: 15,
-      availableUnitStats: 14
+      header                         : 20,
+      body                           : 14,
+      small                          : 14,
+
+      inlineEmoji                    : 14,
+
+      characterPanelLineHeight       : 20,
+
+      formationSelectedUnitClass     : 14,
+      formationTooltipTitle          : 20,
+      formationTooltipBody           : 14,
+
+      combatLogToggle                : 14,
+
+      resourceRowLabel               : 14,
+      resourceRowIcon                : 14,
+      statsPopupResourceRowLabel     : 14,
+
+      statsCpFlag                    : 14,
+      setupUnitCardCostIcon          : 14,
+
+      castTitle                      : 20,
+      battleMainResource             : 14,
+      battleLp                       : 14,
+      damageNumber                   : 28,
+
+      roundStartBannerTitle          : 28,
+      roundStartBannerSubtitle       : 14,
+
+      initiativeOrder                : 14,
+
+      availableUnitName              : 20,
+      availableUnitClass             : 14,
+      availableUnitStats             : 14
     },
     colors: {
       background: '#050506',
@@ -189,7 +202,7 @@ export const CONFIG = {
       buttonY: 42,
       buttonSize: 34,
       panelWidth: 150,
-      panelHeight: 128,
+      panelHeight: 204,
       titleYOffset: 16,
       optionHeight: 32,
       optionGap: 6,
@@ -212,9 +225,9 @@ export const CONFIG = {
     setup: {
       minUnitsToStart: 1,
       aiDefaultCommandSpend: 6,
-      panelX: 390,
+      panelX: 480,
       panelY: 124,
-      panelWidth: 1470,
+      panelWidth: 1380,
       panelHeight: 470,
       panelAlpha: 0.88,
       buttonHeight: 34,
@@ -269,20 +282,20 @@ export const CONFIG = {
       commandLevelBoxHeight: 54,
       commandLevelControlSize: 24,
       commandLevelControlGap: 14,
-      viewportXOffset: 56,
+      viewportXOffset: 16,
       sectionPaddingTop: 55,
       sectionPaddingBottom: 28,
       visibleCardsPerPage: 3,
       visibleColumns: 3,
       visibleRows: 1,
       totalRows: 2,
-      cardWidth: 430,
-      cardHeight: 360,
+      cardWidth: 432,
+      cardHeight: 340,
       cardHeaderHeight: 64,
       cardBodyBottomPadding: 16,
       cardGap: 20,
-      boardXOffset: 78,
-      boardCellSize: 86,
+      boardXOffset: 88,
+      boardCellSize: 80,
       boardCellGap: 8,
       boardCols: 3,
       boardRows: 3,
@@ -306,8 +319,8 @@ export const CONFIG = {
       pickerBottomAnchorY: 1012,
       availableUnitsCellGap: 14,
       availableUnitsScrollSpeed: 1,
-      cardWidth: 224,
-      cardHeight: 164,
+      cardWidth: 209,
+      cardHeight: 209,
       panelHeaderHeight: 42,
       panelExtraWidth: 12,
       unitArtScale: 5.5,
