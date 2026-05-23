@@ -104,7 +104,19 @@ export const CHARACTER_CLASSES = {
         spriteOffsetX: -20,
         spriteOffsetY: 0
       },
-      animations: {}
+      animations: {
+        attack: {
+          textureKey: 'thief-attack',
+          assetPath: 'assets/thief/thief-attack.png',
+          frameWidth: 16,
+          frameHeight: 16,
+          startFrame: 0,
+          endFrame: 4,
+          frameRate: 14,
+          animationKey: 'thief-attack',
+          finalPoseHoldMs: 100
+        }
+      }
     }
   },
   knight: {

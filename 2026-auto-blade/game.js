@@ -643,18 +643,27 @@ const PRACTICE_ENEMY_ALLOWED_CLASSES = CONFIG.practice.enemyAllowedClasses;
 const PRACTICE_ENEMY_FORMATION_SLOTS = CONFIG.practice.enemyFormationSlots;
 const ARMY_ROSTER_NAME_POOL = CONFIG.practice.armyRosterNamePool;
 
+const NAMED_ROSTER_UNITS = [
+  { id: 'squire-alden',  name: 'Alden',  unitType: 'squire', equipment: { sword: 'broadsword', shield: 'buckler', armor: 'chainmail' } },
+  { id: 'squire-bria',   name: 'Bria',   unitType: 'squire', equipment: { sword: 'broadsword', armor: 'chainmail' } },
+  { id: 'squire-cedric', name: 'Cedric', unitType: 'squire', equipment: { sword: 'broadsword', shield: 'buckler' } },
+  { id: 'squire-dara',   name: 'Dara',   unitType: 'squire', equipment: { sword: 'broadsword' } }
+];
+
 function createArmyTestRoster() {
   const unitTypeCounts = {};
+  const nonSquireClasses = DEMO_AVAILABLE_UNIT_CLASSES.filter((c) => c !== 'squire');
 
-  return DEMO_AVAILABLE_UNIT_CLASSES.map((unitType, index) => {
+  const rest = nonSquireClasses.map((unitType, index) => {
     unitTypeCounts[unitType] = (unitTypeCounts[unitType] || 0) + 1;
-
     return {
       id: `${unitType}-${unitTypeCounts[unitType]}`,
-      name: ARMY_ROSTER_NAME_POOL[index % ARMY_ROSTER_NAME_POOL.length],
+      name: ARMY_ROSTER_NAME_POOL[(NAMED_ROSTER_UNITS.length + index) % ARMY_ROSTER_NAME_POOL.length],
       unitType
     };
   });
+
+  return [...NAMED_ROSTER_UNITS, ...rest];
 }
 
 // Battle start
@@ -866,8 +875,9 @@ function getEquipmentStatBonuses(unitOrClassDefinition) {
   return statBonuses;
 }
 
-function calculateClassStats(characterClass) {
-  const classDefinition = getClassDefinition(characterClass);
+function calculateClassStats(characterClass, equipment = null) {
+  const baseDef = getClassDefinition(characterClass);
+  const classDefinition = equipment ? { ...baseDef, equipment } : baseDef;
   const stats = cloneStats(BASE_UNIT_STATS);
 
   if (classDefinition.promoted) {
@@ -890,8 +900,9 @@ function calculateClassStats(characterClass) {
   return stats;
 }
 
-function calculateClassActions(characterClass) {
-  const classDefinition = getClassDefinition(characterClass);
+function calculateClassActions(characterClass, equipment = null) {
+  const baseDef = getClassDefinition(characterClass);
+  const classDefinition = equipment ? { ...baseDef, equipment } : baseDef;
   const actions = {};
   const equipmentItems = getClassEquipmentItems(classDefinition);
   const grantedActionKeys = getEffectiveActions(classDefinition);
@@ -950,8 +961,9 @@ function getEffectiveActions(unitOrClassDefinition) {
   return actions;
 }
 
-function calculateClassReactions(characterClass) {
-  const classDefinition = getClassDefinition(characterClass);
+function calculateClassReactions(characterClass, equipment = null) {
+  const baseDef = getClassDefinition(characterClass);
+  const classDefinition = equipment ? { ...baseDef, equipment } : baseDef;
   const reactions = {};
   const equipmentItems = getClassEquipmentItems(classDefinition);
   const grantedReactionKeys = getEffectiveReactions(classDefinition);
@@ -975,8 +987,9 @@ function calculateClassReactions(characterClass) {
   return reactions;
 }
 
-function calculateClassLimits(characterClass) {
-  const classDefinition = getClassDefinition(characterClass);
+function calculateClassLimits(characterClass, equipment = null) {
+  const baseDef = getClassDefinition(characterClass);
+  const classDefinition = equipment ? { ...baseDef, equipment } : baseDef;
   const limits = {};
 
   (classDefinition.limits || []).forEach((limitKey) => {
@@ -1732,7 +1745,7 @@ function enterSetupPhase() {
   renderSetupUi();
 }
 
-function createPlacement(team, row, col, isPlayerControlled, unitType = 'knight', unitName = null) {
+function createPlacement(team, row, col, isPlayerControlled, unitType = 'knight', unitName = null, equipment = null) {
   return {
     team,
     unitType,
@@ -1740,7 +1753,8 @@ function createPlacement(team, row, col, isPlayerControlled, unitType = 'knight'
     row,
     col,
     cost: getUnitCommandCost(unitType),
-    isPlayerControlled
+    isPlayerControlled,
+    equipment
   };
 }
 
@@ -2155,7 +2169,8 @@ function updateFormationHoverTooltip(pointer) {
 
 function createFormationRosterStatsUnit(rosterUnit) {
   const classDefinition = getClassDefinition(rosterUnit.unitType);
-  const classStats = calculateClassStats(rosterUnit.unitType);
+  const equipment = rosterUnit.equipment || null;
+  const classStats = calculateClassStats(rosterUnit.unitType, equipment);
   return {
     name: rosterUnit.name,
     class: rosterUnit.unitType,
@@ -2163,17 +2178,19 @@ function createFormationRosterStatsUnit(rosterUnit) {
     cpCost: classDefinition.cpCost,
     promoted: classDefinition.promoted,
     traits: [...(classDefinition.traits || [])],
-    equipment: { ...(classDefinition.equipment || {}) },
-    actions: calculateClassActions(rosterUnit.unitType),
-    reactions: calculateClassReactions(rosterUnit.unitType),
-    limits: calculateClassLimits(rosterUnit.unitType),
+    equipment: equipment ? { ...equipment } : { ...(classDefinition.equipment || {}) },
+    actions: calculateClassActions(rosterUnit.unitType, equipment),
+    reactions: calculateClassReactions(rosterUnit.unitType, equipment),
+    limits: calculateClassLimits(rosterUnit.unitType, equipment),
     teamKey: 'red',
     row: 'front',
     col: 0,
-    hp: classStats.hp,
+    hp: rosterUnit.currentHp ?? classStats.hp,
     maxHp: classStats.maxHp,
-    sp: classStats.sp,
+    currentHp: rosterUnit.currentHp ?? classStats.hp,
+    sp: rosterUnit.currentSp ?? classStats.sp,
     maxSp: classStats.maxSp,
+    currentSp: rosterUnit.currentSp ?? classStats.sp,
     ap: classStats.ap,
     maxAp: classStats.maxAp,
     rp: classStats.rp,
@@ -2545,7 +2562,7 @@ function renderArmyRosterCard(unit, x, y) {
     check.on('pointerdown', (pointer) => handleArmyRosterCardPointerDown(unit.id, pointer));
   }
 
-  renderArmyRosterStats(unit.unitType, x, ROSTER_CARD_WIDTH, y + AVAILABLE_UNIT_STATS_Y_OFFSET, contentAlpha, SETUP_UI_DEPTH + 2);
+  renderArmyRosterStats(unit.unitType, x, ROSTER_CARD_WIDTH, y + AVAILABLE_UNIT_STATS_Y_OFFSET, contentAlpha, SETUP_UI_DEPTH + 2, unit.equipment || null);
   registerDynamicHoverTooltip(
     `unit-card:${unit.id}`,
     { x, y, w: ROSTER_CARD_WIDTH, h: ROSTER_CARD_HEIGHT },
@@ -2553,8 +2570,8 @@ function renderArmyRosterCard(unit, x, y) {
   );
 }
 
-function renderArmyRosterStats(unitType, cardX, cardWidth, y, alpha = 1, depth = SETUP_UI_DEPTH + 2) {
-  const stats = calculateClassStats(unitType);
+function renderArmyRosterStats(unitType, cardX, cardWidth, y, alpha = 1, depth = SETUP_UI_DEPTH + 2, equipment = null) {
+  const stats = calculateClassStats(unitType, equipment);
   const pairs = [
     ['HP', 'hp', stats.maxHp],
     ['SP', 'sp', stats.maxSp],
@@ -2995,6 +3012,25 @@ function getArmyRosterUnit(unitId) {
   return armyRoster.find((unit) => unit.id === unitId) || null;
 }
 
+function initializeUnitCurrentState(rosterUnit) {
+  const classStats = calculateClassStats(rosterUnit.unitType, rosterUnit.equipment || null);
+  if (rosterUnit.currentHp == null) rosterUnit.currentHp = classStats.hp;
+  if (rosterUnit.currentSp == null) rosterUnit.currentSp = classStats.sp;
+  rosterUnit.currentHp = Math.max(0, Math.min(classStats.maxHp, rosterUnit.currentHp));
+  rosterUnit.currentSp = Math.max(0, Math.min(classStats.maxSp, rosterUnit.currentSp));
+}
+
+function writeBackBattleStateToRoster() {
+  units.forEach((unit) => {
+    if (!unit.rosterUnitId) return;
+    const rosterUnit = getArmyRosterUnit(unit.rosterUnitId);
+    if (!rosterUnit) return;
+    const classStats = calculateClassStats(rosterUnit.unitType, rosterUnit.equipment || null);
+    rosterUnit.currentHp = Math.max(0, Math.min(classStats.maxHp, unit.hp));
+    rosterUnit.currentSp = Math.max(0, Math.min(classStats.maxSp, unit.sp));
+  });
+}
+
 function getArmyUnitAssignment(unitId) {
   for (let squadIndex = 0; squadIndex < armySquads.length; squadIndex += 1) {
     const squad = armySquads[squadIndex];
@@ -3027,14 +3063,17 @@ function getSelectedArmySquadUnits() {
 function buildPracticeCombatFormations() {
   redFormation = getSelectedArmySquadUnits().map((unit) => {
     const combatCell = getCombatCellForSquadBoardCell(unit.formationRow, unit.formationCol);
-    return createPlacement(
+    const placement = createPlacement(
       'red',
       combatCell.row,
       combatCell.col,
       true,
       unit.unitType,
-      unit.name
+      unit.name,
+      unit.equipment || null
     );
+    placement.rosterUnitId = unit.id;
+    return placement;
   });
 
   blueFormation = createRandomPracticeEnemyFormation();
@@ -3411,7 +3450,8 @@ function openSetupPlacementStats(placement) {
 
 function createSetupStatsUnit(placement) {
   const classDefinition = getClassDefinition(placement.unitType);
-  const classStats = calculateClassStats(placement.unitType);
+  const equipment = placement.equipment || null;
+  const classStats = calculateClassStats(placement.unitType, equipment);
   const displayName = placement.team === 'red' ? 'Red' : 'Blue';
 
   return {
@@ -3421,10 +3461,10 @@ function createSetupStatsUnit(placement) {
     cpCost: classDefinition.cpCost,
     promoted: classDefinition.promoted,
     traits: [...(classDefinition.traits || [])],
-    equipment: { ...(classDefinition.equipment || {}) },
-    actions: calculateClassActions(placement.unitType),
-    reactions: calculateClassReactions(placement.unitType),
-    limits: calculateClassLimits(placement.unitType),
+    equipment: equipment ? { ...equipment } : { ...(classDefinition.equipment || {}) },
+    actions: calculateClassActions(placement.unitType, equipment),
+    reactions: calculateClassReactions(placement.unitType, equipment),
+    limits: calculateClassLimits(placement.unitType, equipment),
     teamKey: placement.team,
     row: placement.row,
     col: placement.col,
@@ -3456,19 +3496,29 @@ function createUnits() {
       color,
       placement.team,
       placement.row,
-      placement.col
+      placement.col,
+      placement.equipment || null
     );
     unit.isPlayerControlled = placement.isPlayerControlled;
     unit.cost = placement.cost;
+    if (placement.rosterUnitId) {
+      unit.rosterUnitId = placement.rosterUnitId;
+      const rosterUnit = getArmyRosterUnit(placement.rosterUnitId);
+      if (rosterUnit) {
+        initializeUnitCurrentState(rosterUnit);
+        unit.hp = rosterUnit.currentHp;
+        unit.sp = rosterUnit.currentSp;
+      }
+    }
     return unit;
   });
   setActiveCombatants(firstLivingUnit('red'), firstLivingUnit('blue'));
   refreshInfoPanel();
 }
 
-function createCharacter(name, characterClass, color, teamKey, row, col) {
+function createCharacter(name, characterClass, color, teamKey, row, col, equipment = null) {
   const classDefinition = getClassDefinition(characterClass);
-  const classStats = calculateClassStats(characterClass);
+  const classStats = calculateClassStats(characterClass, equipment);
   const { x, baseY } = getFormationPosition(teamKey, row, col);
   const baseSpriteX = getUnitBaseSpriteX(teamKey, x);
   const spritePosition = getUnitSpritePosition(characterClass, teamKey, x, baseY);
@@ -3511,18 +3561,20 @@ function createCharacter(name, characterClass, color, teamKey, row, col) {
     cpCost: classDefinition.cpCost,
     promoted: classDefinition.promoted,
     traits: [...(classDefinition.traits || [])],
-    equipment: { ...(classDefinition.equipment || {}) },
-    actions: calculateClassActions(characterClass),
-    reactions: calculateClassReactions(characterClass),
-    limits: calculateClassLimits(characterClass),
+    equipment: equipment ? { ...equipment } : { ...(classDefinition.equipment || {}) },
+    actions: calculateClassActions(characterClass, equipment),
+    reactions: calculateClassReactions(characterClass, equipment),
+    limits: calculateClassLimits(characterClass, equipment),
     color,
     teamKey,
     row,
     col,
     hp: classStats.hp,
     maxHp: classStats.maxHp,
+    currentHp: classStats.hp,
     sp: classStats.sp,
     maxSp: classStats.maxSp,
+    currentSp: classStats.sp,
     ap: classStats.ap,
     maxAp: classStats.maxAp,
     rp: classStats.rp,
@@ -4436,18 +4488,22 @@ function renderCharacterPanel(unit, x, y, width, height, showHeader = true) {
   addBlankLine();
 
   addPanelLine('Equipment:');
+  const classDef = getClassDefinition(unit.class);
+  const gearSlots = classDef.gearSlots || [];
+  const unitEquipment = unit.equipment || {};
   let equipmentRowCount = 0;
-  Object.entries(unit.equipment || getClassDefinition(unit.class).equipment || {}).filter(([, equipmentKey]) => Boolean(equipmentKey)).forEach(([slotKey, equipmentKey]) => {
-    const item = EQUIPMENT[equipmentKey];
-    if (!item) {
-      return;
+  gearSlots.forEach((slotKey) => {
+    const equipmentKey = unitEquipment[slotKey];
+    const item = equipmentKey ? EQUIPMENT[equipmentKey] : null;
+    if (item) {
+      addRichSplitLine(
+        `${getEquipmentSlotDisplay(slotKey, item)}: ${item.name}`,
+        shortTextOrFallback(item, buildEquipmentBonusSegments(item)),
+        equipmentKey
+      );
+    } else {
+      addSplitLine(`${getEquipmentSlotDisplay(slotKey, {})}:`, '—');
     }
-
-    addRichSplitLine(
-      `${getEquipmentSlotDisplay(slotKey, item)}: ${item.name}`,
-      shortTextOrFallback(item, buildEquipmentBonusSegments(item)),
-      equipmentKey
-    );
     equipmentRowCount += 1;
   });
   while (equipmentRowCount < 3) {
@@ -6376,6 +6432,7 @@ function endBattle(losingTeamKey) {
 
   gamePhase = 'battleOver';
   battleEnded = true;
+  writeBackBattleStateToRoster();
   clearAllResourceDisplayOverrides();
   if (actionTimer) {
     actionTimer.remove(false);
