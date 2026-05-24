@@ -709,100 +709,174 @@ const CMAP_EDGE_CLEARED   = 0x44aa66;   // cleared path: both nodes done
 const CMAP_DETAIL_MUTED   = '#7a8a9a';
 const CMAP_WIN_COLOR      = '#44bb44';
 const CMAP_LOSE_COLOR     = '#bb4444';
+const CMAP_DOUBLE_CLICK_MS = 300;    // max ms between clicks to count as double-click
 
-// Static campaign map: Green Road (11 layers, left to right)
-// Each node: { id, layer(0-10), pos(0-based index), of(count in layer),
-//              type, label, enemy?, recruit? }
-// Layer 5 has exactly one central Command Level node — all routes converge there.
-const CAMPAIGN_MAP_GREEN_ROAD = {
-  id: 'greenRoad',
-  name: 'Green Road',
-  nodes: {
-    // Layer 0: single start
-    L1N1:  { id: 'L1N1',  layer: 0,  pos: 0, of: 1, type: 'start',   label: 'Start' },
-    // Layer 1: two opening battles
-    L2N1:  { id: 'L2N1',  layer: 1,  pos: 0, of: 2, type: 'battle',
-             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
-    L2N2:  { id: 'L2N2',  layer: 1,  pos: 1, of: 2, type: 'battle',
-             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
-    // Layer 2: top battle, center recruit, bottom battle
-    L3N1:  { id: 'L3N1',  layer: 2,  pos: 0, of: 3, type: 'battle',
-             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
-    L3N2:  { id: 'L3N2',  layer: 2,  pos: 1, of: 3, type: 'recruit',
-             recruit: { unitType: 'archer', equipment: { bow: 'shortbow' }, name: 'Fay' }, label: 'Recruit' },
-    L3N3:  { id: 'L3N3',  layer: 2,  pos: 2, of: 3, type: 'battle',
-             enemy: [{ unitType: 'squire', equipment: { sword: 'broadsword' } }], label: 'Squire' },
-    // Layer 3: top battle, center camp, bottom battle
-    L4N1:  { id: 'L4N1',  layer: 3,  pos: 0, of: 3, type: 'battle',
-             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
-    L4N2:  { id: 'L4N2',  layer: 3,  pos: 1, of: 3, type: 'camp',   label: 'Camp' },
-    L4N3:  { id: 'L4N3',  layer: 3,  pos: 2, of: 3, type: 'battle',
-             enemy: [{ unitType: 'squire', equipment: { sword: 'broadsword' } }], label: 'Squire' },
-    // Layer 4: two nodes — top lane and bottom lane converge toward Command Level
-    L5N1:  { id: 'L5N1',  layer: 4,  pos: 0, of: 2, type: 'battle',
-             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
-    L5N2:  { id: 'L5N2',  layer: 4,  pos: 1, of: 2, type: 'battle',
-             enemy: [{ unitType: 'squire', equipment: { sword: 'broadsword' } }], label: 'Squire' },
-    // Layer 5: single central Command Level node — ALL routes merge here
-    L6N1:  { id: 'L6N1',  layer: 5,  pos: 0, of: 1, type: 'commandLevel', label: 'Lvl Up' },
-    // Layer 6: two nodes branching from Command Level
-    L7N1:  { id: 'L7N1',  layer: 6,  pos: 0, of: 2, type: 'battle',
-             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
-    L7N2:  { id: 'L7N2',  layer: 6,  pos: 1, of: 2, type: 'battle',
-             enemy: [{ unitType: 'squire', equipment: { sword: 'broadsword' } }], label: 'Squire' },
-    // Layer 7: top recruit, center battle, bottom battle
-    L8N1:  { id: 'L8N1',  layer: 7,  pos: 0, of: 3, type: 'recruit',
-             recruit: { unitType: 'archer', equipment: { bow: 'shortbow' }, name: 'Iris' }, label: 'Recruit' },
-    L8N2:  { id: 'L8N2',  layer: 7,  pos: 1, of: 3, type: 'battle',
-             enemy: [{ unitType: 'squire', equipment: { sword: 'broadsword' } }], label: 'Squire' },
-    L8N3:  { id: 'L8N3',  layer: 7,  pos: 2, of: 3, type: 'battle',
-             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
-    // Layer 8: top battle, center camp, bottom battle
-    L9N1:  { id: 'L9N1',  layer: 8,  pos: 0, of: 3, type: 'battle',
-             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
-    L9N2:  { id: 'L9N2',  layer: 8,  pos: 1, of: 3, type: 'camp',   label: 'Camp' },
-    L9N3:  { id: 'L9N3',  layer: 8,  pos: 2, of: 3, type: 'battle',
-             enemy: [{ unitType: 'squire', equipment: { sword: 'broadsword' } }], label: 'Squire' },
-    // Layer 9: two nodes converging toward boss
-    L10N1: { id: 'L10N1', layer: 9,  pos: 0, of: 2, type: 'battle',
-             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
-    L10N2: { id: 'L10N2', layer: 9,  pos: 1, of: 2, type: 'battle',
-             enemy: [{ unitType: 'squire', equipment: { sword: 'broadsword' } }], label: 'Squire' },
-    // Layer 10: single boss
-    L11N1: { id: 'L11N1', layer: 10, pos: 0, of: 1, type: 'boss',
-             enemy: [
-               { unitType: 'archer', equipment: { bow: 'shortbow' } },
-               { unitType: 'archer', equipment: { bow: 'shortbow' } }
-             ], label: 'Boss' }
-  },
-  // Forward-only connections (left to right).
-  // Edge nodes: edge lane + one step inward. Center nodes: up + center + down.
-  // Layers 4-5 fully converge at the single Command Level node (L6N1).
-  connections: {
+// ─── Green Road: seeded RNG + recruit pools + map generator ─────────────────
+
+// Mulberry32 seeded PRNG. Returns a function that yields [0, 1) floats.
+function makeSeededRng(seed) {
+  let s = seed >>> 0;
+  return function () {
+    s += 0x6d2b79f5 | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// Recruit candidates (archers and squires; no thieves on Map 1)
+const GREEN_ROAD_ARCHER_RECRUITS = [
+  { name: 'Fay',   unitType: 'archer', equipment: { bow: 'shortbow' } },
+  { name: 'Iris',  unitType: 'archer', equipment: { bow: 'shortbow' } },
+  { name: 'Vera',  unitType: 'archer', equipment: { bow: 'shortbow' } },
+  { name: 'Wren',  unitType: 'archer', equipment: { bow: 'shortbow' } },
+  { name: 'Kael',  unitType: 'archer', equipment: { bow: 'shortbow' } },
+  { name: 'Hale',  unitType: 'archer', equipment: { bow: 'shortbow' } },
+];
+const GREEN_ROAD_SQUIRE_RECRUITS = [
+  { name: 'Emery', unitType: 'squire', equipment: { sword: 'broadsword', armor: 'chainmail' } },
+  { name: 'Jory',  unitType: 'squire', equipment: { sword: 'broadsword', shield: 'buckler' } },
+  { name: 'Petra', unitType: 'squire', equipment: { sword: 'broadsword' } },
+  { name: 'Nolan', unitType: 'squire', equipment: { sword: 'broadsword', shield: 'buckler' } },
+  { name: 'Rhea',  unitType: 'squire', equipment: { sword: 'broadsword', armor: 'chainmail' } },
+  { name: 'Silas', unitType: 'squire', equipment: { sword: 'broadsword' } },
+];
+
+// Generate a Green Road map from a numeric seed. Call once per run; store result in campaignState.
+// Structure: 11 layers (0-10). Layer 5 = single CL node. Layer 9 = 3 pre-boss nodes (1 camp).
+function generateGreenRoad(seed) {
+  const rng = makeSeededRng(seed);
+  function rngPick(arr) { return arr[Math.floor(rng() * arr.length)]; }
+
+  // Recruit name deduplication per run
+  const usedNames = new Set();
+  const recruitPool = [...GREEN_ROAD_ARCHER_RECRUITS, ...GREEN_ROAD_SQUIRE_RECRUITS];
+  function pickRecruit() {
+    const avail = recruitPool.filter((r) => !usedNames.has(r.name));
+    const r = avail.length ? rngPick(avail) : rngPick(recruitPool);
+    usedNames.add(r.name);
+    return { ...r, equipment: { ...r.equipment } };
+  }
+
+  const ARCHER_ENEMY = [{ unitType: 'archer', equipment: { bow: 'shortbow' } }];
+  const SQUIRE_ENEMY = [{ unitType: 'squire', equipment: { sword: 'broadsword' } }];
+
+  function makeBattle(id, layer, pos, of, enemy) {
+    return { id, layer, pos, of, type: 'battle', enemy, label: 'Battle' };
+  }
+  function makeRecruit(id, layer, pos, of) {
+    return { id, layer, pos, of, type: 'recruit', recruit: pickRecruit(), label: 'Recruit' };
+  }
+  function makeCamp(id, layer, pos, of) {
+    return { id, layer, pos, of, type: 'camp', label: 'Camp' };
+  }
+
+  // Post-CL node: 55% battle (archer/squire mix), 45% recruit
+  function makePostCl(id, layer, pos, of) {
+    if (rng() < 0.55) {
+      return makeBattle(id, layer, pos, of, rng() < 0.55 ? ARCHER_ENEMY : SQUIRE_ENEMY);
+    }
+    return makeRecruit(id, layer, pos, of);
+  }
+
+  // Post-CL 2-node layer; guarantee ≥1 recruit
+  function postCl2(ids, layer) {
+    const ns = ids.map((id, i) => makePostCl(id, layer, i, 2));
+    if (!ns.some((n) => n.type === 'recruit')) {
+      const i = Math.floor(rng() * 2);
+      ns[i] = makeRecruit(ids[i], layer, i, 2);
+    }
+    return ns;
+  }
+
+  // Post-CL 3-node layer; guarantee ≥1 recruit
+  function postCl3(ids, layer) {
+    const ns = ids.map((id, i) => makePostCl(id, layer, i, 3));
+    if (!ns.some((n) => n.type === 'recruit')) {
+      const i = Math.floor(rng() * 3);
+      ns[i] = makeRecruit(ids[i], layer, i, 3);
+    }
+    return ns;
+  }
+
+  // Pre-boss: exactly 1 camp at a random position; other 2 are battle/recruit
+  function preBoss3(ids, layer) {
+    const campPos = Math.floor(rng() * 3);
+    return ids.map((id, i) => {
+      if (i === campPos) return makeCamp(id, layer, i, 3);
+      const enemy = rng() < 0.55 ? ARCHER_ENEMY : SQUIRE_ENEMY;
+      return rng() < 0.55 ? makeBattle(id, layer, i, 3, enemy) : makeRecruit(id, layer, i, 3);
+    });
+  }
+
+  // ─── Build nodes ───────────────────────────────────────────────────────────
+  const nodes = {};
+
+  // Layer 0: start
+  nodes.L1N1 = { id: 'L1N1', layer: 0, pos: 0, of: 1, type: 'start', label: 'Start' };
+
+  // Layers 1-4: pre-CL, archers only — no recruits, no squires
+  nodes.L2N1 = makeBattle('L2N1', 1, 0, 2, ARCHER_ENEMY);
+  nodes.L2N2 = makeBattle('L2N2', 1, 1, 2, ARCHER_ENEMY);
+  nodes.L3N1 = makeBattle('L3N1', 2, 0, 3, ARCHER_ENEMY);
+  nodes.L3N2 = makeBattle('L3N2', 2, 1, 3, ARCHER_ENEMY);
+  nodes.L3N3 = makeBattle('L3N3', 2, 2, 3, ARCHER_ENEMY);
+  nodes.L4N1 = makeBattle('L4N1', 3, 0, 3, ARCHER_ENEMY);
+  nodes.L4N2 = makeBattle('L4N2', 3, 1, 3, ARCHER_ENEMY);
+  nodes.L4N3 = makeBattle('L4N3', 3, 2, 3, ARCHER_ENEMY);
+  nodes.L5N1 = makeBattle('L5N1', 4, 0, 2, ARCHER_ENEMY);
+  nodes.L5N2 = makeBattle('L5N2', 4, 1, 2, ARCHER_ENEMY);
+
+  // Layer 5: single central Command Level node (all routes converge here)
+  nodes.L6N1 = { id: 'L6N1', layer: 5, pos: 0, of: 1, type: 'commandLevel', label: '👑 LVL UP' };
+
+  // Layers 6-8: post-CL, battle/recruit mix, ≥1 recruit per layer
+  postCl2(['L7N1', 'L7N2'], 6).forEach((n) => { nodes[n.id] = n; });
+  postCl3(['L8N1', 'L8N2', 'L8N3'], 7).forEach((n) => { nodes[n.id] = n; });
+  postCl3(['L9N1', 'L9N2', 'L9N3'], 8).forEach((n) => { nodes[n.id] = n; });
+
+  // Layer 9: pre-boss (3 nodes, exactly 1 camp)
+  preBoss3(['L10N1', 'L10N2', 'L10N3'], 9).forEach((n) => { nodes[n.id] = n; });
+
+  // Layer 10: boss
+  nodes.L11N1 = {
+    id: 'L11N1', layer: 10, pos: 0, of: 1, type: 'boss',
+    enemy: [
+      { unitType: 'archer', equipment: { bow: 'shortbow' } },
+      { unitType: 'archer', equipment: { bow: 'shortbow' } }
+    ],
+    label: 'Boss'
+  };
+
+  // ─── Connections (fixed skeleton; types are what vary) ─────────────────────
+  const connections = {
     L1N1:  ['L2N1', 'L2N2'],
     L2N1:  ['L3N1', 'L3N2'],           // top: edge + inward
     L2N2:  ['L3N2', 'L3N3'],           // bottom: inward + edge
-    L3N1:  ['L4N1', 'L4N2'],           // top: edge + inward
-    L3N2:  ['L4N1', 'L4N2', 'L4N3'],   // center: up + center + down
-    L3N3:  ['L4N2', 'L4N3'],           // bottom: inward + edge
+    L3N1:  ['L4N1', 'L4N2'],
+    L3N2:  ['L4N1', 'L4N2', 'L4N3'],   // center: all three
+    L3N3:  ['L4N2', 'L4N3'],
     L4N1:  ['L5N1', 'L5N2'],           // all layer-3 nodes converge to both layer-4 nodes
     L4N2:  ['L5N1', 'L5N2'],
     L4N3:  ['L5N1', 'L5N2'],
     L5N1:  ['L6N1'],                    // only path to Command Level
-    L5N2:  ['L6N1'],                    // only path to Command Level
+    L5N2:  ['L6N1'],
     L6N1:  ['L7N1', 'L7N2'],           // CL branches into two lanes
     L7N1:  ['L8N1', 'L8N2'],           // top: edge + inward
     L7N2:  ['L8N2', 'L8N3'],           // bottom: inward + edge
-    L8N1:  ['L9N1', 'L9N2'],           // top: edge + inward
-    L8N2:  ['L9N1', 'L9N2', 'L9N3'],   // center: up + center + down
-    L8N3:  ['L9N2', 'L9N3'],           // bottom: inward + edge
-    L9N1:  ['L10N1', 'L10N2'],         // converge: both lanes
-    L9N2:  ['L10N1', 'L10N2'],
-    L9N3:  ['L10N1', 'L10N2'],
-    L10N1: ['L11N1'],
-    L10N2: ['L11N1']
-  }
-};
+    L8N1:  ['L9N1', 'L9N2'],
+    L8N2:  ['L9N1', 'L9N2', 'L9N3'],   // center: all three
+    L8N3:  ['L9N2', 'L9N3'],
+    L9N1:  ['L10N1', 'L10N2'],         // converge toward 3-node pre-boss layer
+    L9N2:  ['L10N1', 'L10N2', 'L10N3'],
+    L9N3:  ['L10N2', 'L10N3'],
+    L10N1: ['L11N1'],                   // all 3 pre-boss nodes connect to boss
+    L10N2: ['L11N1'],
+    L10N3: ['L11N1']
+  };
+
+  return { id: 'greenRoad', name: 'Green Road', nodes, connections };
+}
 
 const PRACTICE_ENEMY_COUNT = CONFIG.practice.enemyCount;
 const PRACTICE_ENEMY_ALLOWED_CLASSES = CONFIG.practice.enemyAllowedClasses;
@@ -1284,6 +1358,8 @@ let combatMapScreenNodes = [];
 let activeCampaignBattleUnitIds = []; // roster IDs deployed in the current campaign battle
 let cmapSelectedPlayerUnitId = null;  // player unit selected on the map screen
 let cmapSelectedEnemyIdx = null;      // enemy index selected on the map screen
+let cmapLastClickNodeId  = null;      // for double-click detection on map nodes
+let cmapLastClickTime    = 0;         // timestamp of last node click
 
 let popupButtons = {};
 let popupPanelNodes = [];
@@ -6828,7 +6904,7 @@ function combatLogToggleTextStyle() {
 // ─── Campaign: state init ───────────────────────────────────────────────────
 
 function getCampaignMap() {
-  return CAMPAIGN_MAP_GREEN_ROAD;
+  return campaignState ? campaignState.mapDef : null;
 }
 
 // ─── Campaign: stance / SP recovery ─────────────────────────────────────────
@@ -6875,8 +6951,11 @@ function initCampaignState() {
   const squad1Cells = createEmptySquadCells();
   squad1Cells[1][2] = 'squire-alden';
 
+  const mapSeed = (Date.now() ^ (Math.random() * 0xffffffff | 0)) >>> 0;
   campaignState = {
     activeMapId: 'greenRoad',
+    mapSeed,
+    mapDef: generateGreenRoad(mapSeed),        // generated once; stable for entire run
     selectedNodeId: null,
     clearedNodeIds: new Set(['L1N1']),         // start node pre-cleared
     unlockedNodeIds: new Set(['L2N1', 'L2N2']),// layer-2 nodes unlocked from start
@@ -7083,7 +7162,9 @@ function showCombatMap() {
   // Sync armyRoster / armySquads / commandLevel from campaign state.
   initializeArmyManagement();
   cmapSelectedPlayerUnitId = null;
-  cmapSelectedEnemyIdx = null;
+  cmapSelectedEnemyIdx     = null;
+  cmapLastClickNodeId      = null;
+  cmapLastClickTime        = 0;
   gamePhase = 'setup';
   clearSetupUi();
   clearCombatMapScreen();
@@ -7159,12 +7240,12 @@ function renderCombatMapScreen() {
   const _gold = campaignState ? (campaignState.gold || 0) : 0;
   addCmapNode(sceneRef.add.text(
     GAME_WIDTH - 16, 14,
-    `CL: ${_cl}`,
+    `\u{1F451} ${_cl}`,
     bodyTextStyle()
   ).setOrigin(1, 0).setDepth(CMAP_UI_DEPTH + 3));
   addCmapNode(sceneRef.add.text(
     GAME_WIDTH - 16, 36,
-    `Gold: ${_gold}`,
+    `\u{1FA99} ${_gold}`,
     bodyTextStyle()
   ).setOrigin(1, 0).setDepth(CMAP_UI_DEPTH + 3));
 
@@ -7322,10 +7403,21 @@ function renderCmapSingleNode(nodeData, x, y) {
     .setDepth(CMAP_UI_DEPTH + 3));
 
   if (isUnlocked && !isCleared) {
-    circle.setInteractive({ useHandCursor: true });
-    circle.on('pointerdown', () => handleCmapNodeClick(id));
-    labelNode.setInteractive({ useHandCursor: true });
-    labelNode.on('pointerdown', () => handleCmapNodeClick(id));
+    // Single click → select; double click → perform node action immediately
+    const onPress = () => {
+      const now = Date.now();
+      if (cmapLastClickNodeId === id && now - cmapLastClickTime < CMAP_DOUBLE_CLICK_MS) {
+        cmapLastClickNodeId = null;
+        cmapLastClickTime   = 0;
+        handleCmapNodeAction(id);
+      } else {
+        cmapLastClickNodeId = id;
+        cmapLastClickTime   = now;
+        handleCmapNodeClick(id);
+      }
+    };
+    circle.setInteractive({ useHandCursor: true }).on('pointerdown', onPress);
+    labelNode.setInteractive({ useHandCursor: true }).on('pointerdown', onPress);
   }
 }
 
