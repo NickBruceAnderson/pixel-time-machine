@@ -638,6 +638,162 @@ const UNIT_QUIPS = {
 
 const UNIT_QUIP_FALLBACK = 'Still waiting for their legend to begin.';
 
+// Campaign map navigation button (top-left, right of hamburger)
+const MAP_NAV_BUTTON_X       = UTILITY_MENU_BUTTON_X + UTILITY_MENU_BUTTON_SIZE + 6;
+const MAP_NAV_BUTTON_Y       = UTILITY_MENU_BUTTON_Y;
+const MAP_NAV_BUTTON_HEIGHT  = UTILITY_MENU_BUTTON_SIZE; // 28, matches hamburger
+const MAP_NAV_BUTTON_W_MAP   = 50;  // fits 'Map'
+const MAP_NAV_BUTTON_W_FMT   = 96;  // fits 'Formation'
+const MAP_NAV_BTN_PAD        = 10;  // horizontal text padding
+
+// Combat map screen depths and layout
+const CMAP_UI_DEPTH     = POPUP_DEPTH + 20;   // above all other UI
+const CMAP_NODE_RADIUS  = 20;
+
+// Top-half: node map area
+const CMAP_MAP_X1       = 80;
+const CMAP_MAP_X2       = 1840;               // uses full width
+const CMAP_MAP_Y1       = 48;
+const CMAP_MAP_Y2       = 570;                // arena top half ~53% of screen
+const CMAP_LAYER_COUNT  = 11;
+const CMAP_LAYER_STEP   = (CMAP_MAP_X2 - CMAP_MAP_X1) / (CMAP_LAYER_COUNT - 1);
+
+// Divider between top map and bottom panels
+const CMAP_SPLIT_Y      = 588;
+
+// Bottom-half: panel shared top and height
+const CMAP_BOTTOM_Y     = 604;
+const CMAP_BOTTOM_H     = 452;               // GAME_HEIGHT(1080) - 604 - 24
+
+// Player squad preview panel (bottom-left)
+const CMAP_PLAYER_X     = 24;
+const CMAP_PLAYER_W     = 380;
+const CMAP_PLAYER_H     = CMAP_BOTTOM_H;
+
+// Enemy preview panel (bottom-right)
+const CMAP_ENEMY_X      = 1516;             // GAME_WIDTH - 24 - 380
+const CMAP_ENEMY_W      = 380;
+const CMAP_ENEMY_H      = CMAP_BOTTOM_H;
+
+// Compact node detail card (bottom-center, tooltip style)
+const CMAP_DETAIL_X     = 420;             // CMAP_PLAYER_X + CMAP_PLAYER_W + 16
+const CMAP_DETAIL_Y     = CMAP_BOTTOM_Y;
+const CMAP_DETAIL_W     = 1080;            // CMAP_ENEMY_X - CMAP_DETAIL_X - 16
+const CMAP_DETAIL_H     = 120;             // compact: map dominates screen
+
+// Action button (below detail card, centered in detail area)
+const CMAP_ACTION_W     = 240;
+const CMAP_ACTION_H     = 44;
+const CMAP_ACTION_X     = 840;             // CMAP_DETAIL_X + (CMAP_DETAIL_W - CMAP_ACTION_W) / 2
+const CMAP_ACTION_Y     = 738;             // CMAP_DETAIL_Y + CMAP_DETAIL_H + 14
+
+// Combat map node fill colors (numeric for Phaser)
+const CMAP_FILL_LOCKED   = 0x2a2a35;
+const CMAP_FILL_UNLOCKED = 0x2e3e50;
+const CMAP_FILL_SELECTED = 0x1e4a8a;
+const CMAP_FILL_CLEARED  = 0x1e4a1e;
+const CMAP_FILL_START    = 0x1a3a1a;
+const CMAP_FILL_BOSS     = 0x6a1818;
+const CMAP_FILL_RECRUIT  = 0x1a3a28;
+const CMAP_FILL_CMDLVL   = 0x3a2e10;
+const CMAP_FILL_ARMORY   = 0x1e2e3a;   // steel blue
+const CMAP_FILL_CAMP     = 0x3a2a10;   // warm amber
+const CMAP_STROKE_DEFAULT = 0x4a5a6a;
+const CMAP_STROKE_SEL     = 0x88aaff;
+const CMAP_STROKE_CLEARED = 0x44aa44;
+const CMAP_STROKE_BOSS    = 0xaa2222;
+const CMAP_STROKE_LOCKED  = 0x2e2e38;
+const CMAP_EDGE_DIM       = 0x4a4a5a;   // locked/future: visible dim gray
+const CMAP_EDGE_LIT       = 0x4a6a8a;   // available: from cleared, to unlocked
+const CMAP_EDGE_CLEARED   = 0x44aa66;   // cleared path: both nodes done
+const CMAP_DETAIL_MUTED   = '#7a8a9a';
+const CMAP_WIN_COLOR      = '#44bb44';
+const CMAP_LOSE_COLOR     = '#bb4444';
+
+// Static campaign map: Green Road (11 layers, left to right)
+// Each node: { id, layer(0-10), pos(0-based index), of(count in layer),
+//              type, label, enemy?, recruit? }
+const CAMPAIGN_MAP_GREEN_ROAD = {
+  id: 'greenRoad',
+  name: 'Green Road',
+  nodes: {
+    L1N1:  { id: 'L1N1',  layer: 0,  pos: 0, of: 1, type: 'start',        label: 'Start' },
+    L2N1:  { id: 'L2N1',  layer: 1,  pos: 0, of: 2, type: 'battle',
+             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
+    L2N2:  { id: 'L2N2',  layer: 1,  pos: 1, of: 2, type: 'battle',
+             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
+    L3N1:  { id: 'L3N1',  layer: 2,  pos: 0, of: 2, type: 'battle',
+             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
+    L3N2:  { id: 'L3N2',  layer: 2,  pos: 1, of: 2, type: 'armory', label: 'Armory' },
+    L4N1:  { id: 'L4N1',  layer: 3,  pos: 0, of: 3, type: 'armory', label: 'Armory' },
+    L4N2:  { id: 'L4N2',  layer: 3,  pos: 1, of: 3, type: 'battle',
+             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
+    L4N3:  { id: 'L4N3',  layer: 3,  pos: 2, of: 3, type: 'armory', label: 'Armory' },
+    L5N1:  { id: 'L5N1',  layer: 4,  pos: 0, of: 3, type: 'battle',
+             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
+    L5N2:  { id: 'L5N2',  layer: 4,  pos: 1, of: 3, type: 'battle',
+             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
+    L5N3:  { id: 'L5N3',  layer: 4,  pos: 2, of: 3, type: 'battle',
+             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
+    L6N1:  { id: 'L6N1',  layer: 5,  pos: 0, of: 3, type: 'commandLevel', label: 'Lvl Up' },
+    L6N2:  { id: 'L6N2',  layer: 5,  pos: 1, of: 3, type: 'commandLevel', label: 'Lvl Up' },
+    L6N3:  { id: 'L6N3',  layer: 5,  pos: 2, of: 3, type: 'commandLevel', label: 'Lvl Up' },
+    L7N1:  { id: 'L7N1',  layer: 6,  pos: 0, of: 3, type: 'battle',
+             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
+    L7N2:  { id: 'L7N2',  layer: 6,  pos: 1, of: 3, type: 'battle',
+             enemy: [{ unitType: 'squire', equipment: { sword: 'broadsword' } }], label: 'Squire' },
+    L7N3:  { id: 'L7N3',  layer: 6,  pos: 2, of: 3, type: 'battle',
+             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
+    L8N1:  { id: 'L8N1',  layer: 7,  pos: 0, of: 3, type: 'recruit',
+             recruit: { unitType: 'archer', equipment: { bow: 'shortbow' }, name: 'Fay' }, label: 'Recruit' },
+    L8N2:  { id: 'L8N2',  layer: 7,  pos: 1, of: 3, type: 'battle',
+             enemy: [{ unitType: 'squire', equipment: { sword: 'broadsword' } }], label: 'Squire' },
+    L8N3:  { id: 'L8N3',  layer: 7,  pos: 2, of: 3, type: 'recruit',
+             recruit: { unitType: 'archer', equipment: { bow: 'shortbow' }, name: 'Iris' }, label: 'Recruit' },
+    L9N1:  { id: 'L9N1',  layer: 8,  pos: 0, of: 3, type: 'battle',
+             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
+    L9N2:  { id: 'L9N2',  layer: 8,  pos: 1, of: 3, type: 'battle',
+             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
+    L9N3:  { id: 'L9N3',  layer: 8,  pos: 2, of: 3, type: 'battle',
+             enemy: [{ unitType: 'squire', equipment: { sword: 'broadsword' } }], label: 'Squire' },
+    L10N1: { id: 'L10N1', layer: 9,  pos: 0, of: 1, type: 'camp',  label: 'Camp' },
+    L11N1: { id: 'L11N1', layer: 10, pos: 0, of: 1, type: 'boss',
+             enemy: [
+               { unitType: 'archer', equipment: { bow: 'shortbow' } },
+               { unitType: 'archer', equipment: { bow: 'shortbow' } }
+             ], label: 'Boss' }
+  },
+  // Forward-only connections (left to right)
+  // Center nodes connect to all neighbors; outer nodes connect to 2.
+  // Command-level layer (L6) is a full convergence point: every L5 -> every L6 -> every L7.
+  connections: {
+    L1N1:  ['L2N1', 'L2N2'],
+    L2N1:  ['L3N1', 'L3N2'],
+    L2N2:  ['L3N1', 'L3N2'],
+    L3N1:  ['L4N1', 'L4N2', 'L4N3'],
+    L3N2:  ['L4N1', 'L4N2', 'L4N3'],
+    L4N1:  ['L5N1', 'L5N2'],
+    L4N2:  ['L5N1', 'L5N2', 'L5N3'],
+    L4N3:  ['L5N2', 'L5N3'],
+    L5N1:  ['L6N1', 'L6N2', 'L6N3'],
+    L5N2:  ['L6N1', 'L6N2', 'L6N3'],
+    L5N3:  ['L6N1', 'L6N2', 'L6N3'],
+    L6N1:  ['L7N1', 'L7N2', 'L7N3'],
+    L6N2:  ['L7N1', 'L7N2', 'L7N3'],
+    L6N3:  ['L7N1', 'L7N2', 'L7N3'],
+    L7N1:  ['L8N1', 'L8N2'],
+    L7N2:  ['L8N1', 'L8N2', 'L8N3'],
+    L7N3:  ['L8N2', 'L8N3'],
+    L8N1:  ['L9N1', 'L9N2'],
+    L8N2:  ['L9N1', 'L9N2', 'L9N3'],
+    L8N3:  ['L9N2', 'L9N3'],
+    L9N1:  ['L10N1'],
+    L9N2:  ['L10N1'],
+    L9N3:  ['L10N1'],
+    L10N1: ['L11N1']
+  }
+};
+
 const PRACTICE_ENEMY_COUNT = CONFIG.practice.enemyCount;
 const PRACTICE_ENEMY_ALLOWED_CLASSES = CONFIG.practice.enemyAllowedClasses;
 const PRACTICE_ENEMY_FORMATION_SLOTS = CONFIG.practice.enemyFormationSlots;
@@ -1110,6 +1266,15 @@ let combatZoomMode = true;
 let isBattleGridLineVisible = SHOW_BATTLE_GRID_LINES;
 let battleGridLineNodes = [];
 let isKnightRandomIdleTwitchEnabled = KNIGHT_RANDOM_IDLE_TWITCH_ENABLED;
+
+// Campaign run state (null = no active campaign)
+let battleSource = 'practice'; // 'practice' | 'combatMap'
+let campaignState = null;
+let combatMapScreenNodes = [];
+let activeCampaignBattleUnitIds = []; // roster IDs deployed in the current campaign battle
+let cmapSelectedPlayerUnitId = null;  // player unit selected on the map screen
+let cmapSelectedEnemyIdx = null;      // enemy index selected on the map screen
+
 let popupButtons = {};
 let popupPanelNodes = [];
 let activePopupKey = null;
@@ -1759,6 +1924,14 @@ function createPlacement(team, row, col, isPlayerControlled, unitType = 'knight'
 }
 
 function initializeArmyManagement() {
+  if (campaignState) {
+    // Campaign mode: always use the campaign roster and squads.
+    armyRoster = campaignState.campaignRoster;
+    armySquads = campaignState.campaignSquads;
+    commandLevel = campaignState.commandLevel;
+    return;
+  }
+
   if (armyRoster.length === 0) {
     armyRoster = createArmyTestRoster();
   }
@@ -1872,14 +2045,7 @@ function renderArmyManagementScreen() {
   renderArmySquads();
   renderArmyRoster();
 
-  createSetupButton(
-    'Practice Combat',
-    FORMATION_ACTION_BUTTON_X,
-    FORMATION_ACTION_BUTTON_Y,
-    FORMATION_ACTION_BUTTON_WIDTH,
-    startBattle,
-    isSetupReady()
-  );
+  renderFormationMapNavButton();
 }
 
 function renderFormationDisplayButton() {
@@ -2214,9 +2380,11 @@ function renderCommandLevelControls() {
     .setAlpha(0.75)
     .setStrokeStyle(1, PHASER_COLORS.panelBorder)
     .setDepth(SETUP_UI_DEPTH + 1));
-  createSetupButton('-', COMMAND_LEVEL_MINUS_BUTTON_X, COMMAND_LEVEL_BUTTON_Y, COMMAND_LEVEL_CONTROL_SIZE, () => changeCommandLevel(-1), commandLevel > COMMAND_LEVEL_MIN, null, COMMAND_LEVEL_CONTROL_SIZE);
+  if (!campaignState) {
+    createSetupButton('-', COMMAND_LEVEL_MINUS_BUTTON_X, COMMAND_LEVEL_BUTTON_Y, COMMAND_LEVEL_CONTROL_SIZE, () => changeCommandLevel(-1), commandLevel > COMMAND_LEVEL_MIN, null, COMMAND_LEVEL_CONTROL_SIZE);
+  }
   addSetupNode(sceneRef.add.text(
-    COMMAND_LEVEL_TEXT_X,
+    campaignState ? COMMAND_LEVEL_BOX_X + 14 : COMMAND_LEVEL_TEXT_X,
     COMMAND_LEVEL_BOX_Y + 13,
     `Command Level ${commandLevel}`,
     headerTextStyle()
@@ -2227,7 +2395,9 @@ function renderCommandLevelControls() {
     FORMATION_COMMAND_ICON,
     headerTextStyle()
   ).setOrigin(0.5, 0).setDepth(SETUP_UI_DEPTH + 1));
-  createSetupButton('+', COMMAND_LEVEL_PLUS_BUTTON_X, COMMAND_LEVEL_BUTTON_Y, COMMAND_LEVEL_CONTROL_SIZE, () => changeCommandLevel(1), commandLevel < COMMAND_LEVEL_MAX, null, COMMAND_LEVEL_CONTROL_SIZE);
+  if (!campaignState) {
+    createSetupButton('+', COMMAND_LEVEL_PLUS_BUTTON_X, COMMAND_LEVEL_BUTTON_Y, COMMAND_LEVEL_CONTROL_SIZE, () => changeCommandLevel(1), commandLevel < COMMAND_LEVEL_MAX, null, COMMAND_LEVEL_CONTROL_SIZE);
+  }
   registerHoverTooltip('commandLevel', {
     x: COMMAND_LEVEL_BOX_X,
     y: COMMAND_LEVEL_BOX_Y,
@@ -2419,7 +2589,7 @@ function renderArmyRoster() {
   const visibleSlotCount = ROSTER_COLUMNS * ROSTER_VISIBLE_ROWS;
   for (let visibleIndex = 0; visibleIndex < visibleSlotCount; visibleIndex += 1) {
     const index = firstVisibleIndex + visibleIndex;
-    const unit = armyRoster[index] || null;
+    const unit = getAvailableRosterUnits()[index] || null;
     const col = visibleIndex % ROSTER_COLUMNS;
     const row = Math.floor(visibleIndex / ROSTER_COLUMNS);
     const x = ROSTER_X + col * ROSTER_COLUMN_SPACING;
@@ -2477,7 +2647,7 @@ function renderSetupScrollbar({ x, y, width, height, thumbSize, scroll, maxScrol
 }
 
 function getArmyRosterRowCount() {
-  return Math.ceil(armyRoster.length / ROSTER_COLUMNS);
+  return Math.ceil(getAvailableRosterUnits().length / ROSTER_COLUMNS);
 }
 
 function getMaxAvailableUnitsScrollRow() {
@@ -2498,16 +2668,18 @@ function changeAvailableUnitsScroll(delta) {
 }
 
 function renderArmyRosterCard(unit, x, y) {
-  const isSelected = unit && selectedArmyRosterUnitId === unit.id;
-  const assignment = unit ? getArmyUnitAssignment(unit.id) : null;
+  const isKo = unit ? isUnitKo(unit) : false;
+  const isSelected = unit && !isKo && selectedArmyRosterUnitId === unit.id;
+  const assignment = unit && !isKo ? getArmyUnitAssignment(unit.id) : null;
   const isAssigned = Boolean(assignment);
   const fill = unit
-    ? cssHexToNumber(isAssigned ? ASSIGNED_CARD_FILL_COLOR : COLORS.panel)
+    ? cssHexToNumber(isKo ? COLORS.infoPanel : isAssigned ? ASSIGNED_CARD_FILL_COLOR : COLORS.panel)
     : PHASER_COLORS.infoPanel;
-  const contentAlpha = isAssigned ? ASSIGNED_CARD_ALPHA : 1;
+  const cardAlpha = isKo ? 0.45 : unit ? 1 : 0.25;
+  const contentAlpha = isKo ? 0.45 : isAssigned ? ASSIGNED_CARD_ALPHA : 1;
   const card = addSetupNode(sceneRef.add.rectangle(x, y, ROSTER_CARD_WIDTH, ROSTER_CARD_HEIGHT, fill)
     .setOrigin(0)
-    .setAlpha(unit ? 1 : 0.25)
+    .setAlpha(cardAlpha)
     .setStrokeStyle(isSelected ? 3 : 1, cssHexToNumber(isSelected ? SELECTED_UNIT_HIGHLIGHT : COLORS.panelBorder))
     .setDepth(SETUP_UI_DEPTH + 1));
 
@@ -2518,8 +2690,10 @@ function renderArmyRosterCard(unit, x, y) {
     return;
   }
 
-  card.setInteractive({ useHandCursor: true });
-  card.on('pointerdown', (pointer) => handleArmyRosterCardPointerDown(unit.id, pointer));
+  if (!isKo) {
+    card.setInteractive({ useHandCursor: true });
+    card.on('pointerdown', (pointer) => handleArmyRosterCardPointerDown(unit.id, pointer));
+  }
 
   const classDefinition = getClassDefinition(unit.unitType);
 
@@ -2528,18 +2702,19 @@ function renderArmyRosterCard(unit, x, y) {
     fontSize: `${AVAILABLE_UNIT_NAME_FONT_SIZE}px`
   })
     .setAlpha(contentAlpha)
-    .setDepth(SETUP_UI_DEPTH + 2)
-    .setInteractive({ useHandCursor: true }));
+    .setDepth(SETUP_UI_DEPTH + 2));
   const className = addSetupNode(sceneRef.add.text(x + 14, y + 34, classDefinition.name, {
     ...smallTextStyle(),
     fontSize: `${AVAILABLE_UNIT_CLASS_FONT_SIZE}px`
   })
     .setAlpha(contentAlpha)
-    .setDepth(SETUP_UI_DEPTH + 2)
-    .setInteractive({ useHandCursor: true }));
-  [name, className].forEach((node) => {
-    node.on('pointerdown', (pointer) => handleArmyRosterCardPointerDown(unit.id, pointer));
-  });
+    .setDepth(SETUP_UI_DEPTH + 2));
+  if (!isKo) {
+    [name, className].forEach((node) => {
+      node.setInteractive({ useHandCursor: true });
+      node.on('pointerdown', (pointer) => handleArmyRosterCardPointerDown(unit.id, pointer));
+    });
+  }
 
   const sprite = addSetupNode(sceneRef.add.sprite(
     x + ROSTER_CARD_WIDTH / 2,
@@ -2549,11 +2724,20 @@ function renderArmyRosterCard(unit, x, y) {
   )
     .setScale(AVAILABLE_UNIT_ART_SCALE)
     .setAlpha(contentAlpha)
-    .setDepth(SETUP_UI_DEPTH + 2)
-    .setInteractive({ useHandCursor: true }));
-  sprite.on('pointerdown', (pointer) => handleArmyRosterCardPointerDown(unit.id, pointer));
+    .setDepth(SETUP_UI_DEPTH + 2));
+  if (!isKo) {
+    sprite.setInteractive({ useHandCursor: true });
+    sprite.on('pointerdown', (pointer) => handleArmyRosterCardPointerDown(unit.id, pointer));
+  }
 
-  if (isAssigned) {
+  if (isKo) {
+    addSetupNode(sceneRef.add.text(x + ROSTER_CARD_WIDTH - 28, y + 12, 'KO', {
+      ...headerTextStyle(),
+      color: '#cc2222'
+    })
+      .setOrigin(0.5, 0)
+      .setDepth(SETUP_UI_DEPTH + 2));
+  } else if (isAssigned) {
     const check = addSetupNode(sceneRef.add.text(x + ROSTER_CARD_WIDTH - 28, y + 12, '✓', headerTextStyle())
       .setOrigin(0.5, 0)
       .setAlpha(contentAlpha)
@@ -2562,7 +2746,7 @@ function renderArmyRosterCard(unit, x, y) {
     check.on('pointerdown', (pointer) => handleArmyRosterCardPointerDown(unit.id, pointer));
   }
 
-  renderArmyRosterStats(unit.unitType, x, ROSTER_CARD_WIDTH, y + AVAILABLE_UNIT_STATS_Y_OFFSET, contentAlpha, SETUP_UI_DEPTH + 2, unit.equipment || null);
+  renderArmyRosterStats(unit.unitType, x, ROSTER_CARD_WIDTH, y + AVAILABLE_UNIT_STATS_Y_OFFSET, contentAlpha, SETUP_UI_DEPTH + 2, unit.equipment || null, unit.currentHp, unit.currentSp);
   registerDynamicHoverTooltip(
     `unit-card:${unit.id}`,
     { x, y, w: ROSTER_CARD_WIDTH, h: ROSTER_CARD_HEIGHT },
@@ -2570,30 +2754,35 @@ function renderArmyRosterCard(unit, x, y) {
   );
 }
 
-function renderArmyRosterStats(unitType, cardX, cardWidth, y, alpha = 1, depth = SETUP_UI_DEPTH + 2, equipment = null) {
+function renderArmyRosterStats(unitType, cardX, cardWidth, y, alpha = 1, depth = SETUP_UI_DEPTH + 2, equipment = null, currentHp = null, currentSp = null) {
   const stats = calculateClassStats(unitType, equipment);
+  // HP and SP show current vs max. AP and RP always show full (refill each fight).
   const pairs = [
-    ['HP', 'hp', stats.maxHp],
-    ['SP', 'sp', stats.maxSp],
-    ['AP', 'ap', stats.maxAp],
-    ['RP', 'rp', stats.maxRp]
+    ['HP', 'hp', stats.maxHp, currentHp ?? stats.maxHp],
+    ['SP', 'sp', stats.maxSp, currentSp ?? stats.maxSp],
+    ['AP', 'ap', stats.maxAp, stats.maxAp],
+    ['RP', 'rp', stats.maxRp, stats.maxRp]
   ];
 
   const blockWidth = AVAILABLE_UNIT_STATS_GROUP_RESERVED_WIDTH * 2 + AVAILABLE_UNIT_STATS_GROUP_GAP;
   const startX = cardX + cardWidth / 2 - blockWidth / 2;
   const colStep = AVAILABLE_UNIT_STATS_GROUP_RESERVED_WIDTH + AVAILABLE_UNIT_STATS_GROUP_GAP;
 
-  pairs.forEach(([label, resourceKey, max], index) => {
+  pairs.forEach(([label, resourceKey, max, current], index) => {
     const rowX = startX + (index % 2) * colStep;
     const rowY = y + Math.floor(index / 2) * AVAILABLE_UNIT_STATS_ROW_GAP;
-    addSetupNode(sceneRef.add.text(rowX, rowY, RESOURCE_ICONS[resourceKey].repeat(max), {
-      fontFamily: UI_FONT_FAMILY,
-      fontSize: `${AVAILABLE_UNIT_STATS_FONT_SIZE}px`,
-      resolution: getUiTextResolution(),
-      color: getResourceIconColor(resourceKey)
-    })
-      .setAlpha(alpha)
-      .setDepth(depth));
+    const icon = RESOURCE_ICONS[resourceKey];
+    const color = getResourceIconColor(resourceKey);
+    for (let pip = 0; pip < max; pip += 1) {
+      addSetupNode(sceneRef.add.text(rowX + pip * AVAILABLE_UNIT_STATS_ICON_SPACING, rowY, icon, {
+        fontFamily: UI_FONT_FAMILY,
+        fontSize: `${AVAILABLE_UNIT_STATS_FONT_SIZE}px`,
+        resolution: getUiTextResolution(),
+        color
+      })
+        .setAlpha(pip < current ? alpha : RESOURCE_ROW_EMPTY_ALPHA)
+        .setDepth(depth));
+    }
     registerHoverTooltip(resourceKey, {
       x: rowX,
       y: rowY - 8,
@@ -3029,6 +3218,52 @@ function writeBackBattleStateToRoster() {
     rosterUnit.currentHp = Math.max(0, Math.min(classStats.maxHp, unit.hp));
     rosterUnit.currentSp = Math.max(0, Math.min(classStats.maxSp, unit.sp));
   });
+}
+
+function isUnitKo(rosterUnit) {
+  return rosterUnit.isDefeated === true;
+}
+
+function canAssignUnitToSquad(rosterUnit) {
+  return rosterUnit && !isUnitKo(rosterUnit);
+}
+
+function getAvailableRosterUnits() {
+  // Active units first, KO units sorted to the end.
+  const active = armyRoster.filter((u) => !isUnitKo(u));
+  const ko = armyRoster.filter((u) => isUnitKo(u));
+  return [...active, ...ko];
+}
+
+function markKoUnits() {
+  armyRoster.forEach((rosterUnit) => {
+    if (rosterUnit.currentHp != null && rosterUnit.currentHp <= 0) {
+      rosterUnit.isDefeated = true;
+    }
+  });
+}
+
+function removeKoUnitsFromSquads() {
+  armySquads.forEach((squad) => {
+    squad.cells.forEach((rowCells) => {
+      rowCells.forEach((unitId, col) => {
+        if (!unitId) return;
+        const rosterUnit = getArmyRosterUnit(unitId);
+        if (rosterUnit && isUnitKo(rosterUnit)) {
+          rowCells[col] = null;
+        }
+      });
+    });
+  });
+}
+
+function cleanupFormationAfterKo() {
+  markKoUnits();
+  removeKoUnitsFromSquads();
+  const selectedUnit = getArmyRosterUnit(selectedArmyRosterUnitId);
+  if (selectedUnit && isUnitKo(selectedUnit)) {
+    selectedArmyRosterUnitId = null;
+  }
 }
 
 function getArmyUnitAssignment(unitId) {
@@ -6433,6 +6668,7 @@ function endBattle(losingTeamKey) {
   gamePhase = 'battleOver';
   battleEnded = true;
   writeBackBattleStateToRoster();
+  cleanupFormationAfterKo();
   clearAllResourceDisplayOverrides();
   if (actionTimer) {
     actionTimer.remove(false);
@@ -6447,10 +6683,10 @@ function endBattle(losingTeamKey) {
   const bannerNodes = showBattleOverBanner(winningTeamKey, cxpGained);
   const winner = winningTeamKey === 'red' ? 'Red' : 'Blue';
   appendLog(`Battle ends. ${winner} wins.`);
-  scheduleReturnToSetup(bannerNodes);
+  scheduleReturnToSetup(bannerNodes, winningTeamKey);
 }
 
-function scheduleReturnToSetup(bannerNodes) {
+function scheduleReturnToSetup(bannerNodes, winningTeamKey = 'red') {
   sceneRef.time.delayedCall(BATTLE_OVER_RETURN_TO_SETUP_DELAY_MS - ROUND_START_BANNER_FADE_MS, () => {
     sceneRef.tweens.add({
       targets: bannerNodes.filter(isLiveBattlefieldNode),
@@ -6464,7 +6700,11 @@ function scheduleReturnToSetup(bannerNodes) {
           }
         });
         resetBattlefieldForSetup();
-        enterSetupPhase();
+        if (battleSource === 'combatMap' && campaignState) {
+          afterCampaignBattleEnd(winningTeamKey === 'red');
+        } else {
+          enterSetupPhase();
+        }
       }
     });
   });
@@ -6521,9 +6761,9 @@ function addCommandXp(amount) {
 }
 
 function grantBattleRewards(winningTeamKey) {
-  if (winningTeamKey !== 'red') {
-    return 0;
-  }
+  if (winningTeamKey !== 'red') return 0;
+  // Campaign battles do not grant command XP.
+  if (battleSource === 'combatMap') return 0;
 
   const cxpGained = getTeamCommandValue('blue');
   addCommandXp(cxpGained);
@@ -6573,5 +6813,954 @@ function combatLogToggleTextStyle() {
     resolution: getUiTextResolution(),
     color: COMBAT_LOG_TOGGLE_TEXT_COLOR
   };
+}
+
+// ─── Campaign: state init ───────────────────────────────────────────────────
+
+function getCampaignMap() {
+  return CAMPAIGN_MAP_GREEN_ROAD;
+}
+
+// ─── Campaign: stance / SP recovery ─────────────────────────────────────────
+
+function getActiveCampaignBattleUnitIds() {
+  return activeCampaignBattleUnitIds;
+}
+
+function getBenchedCampaignUnitIds(activeIds) {
+  if (!campaignState) return [];
+  return campaignState.campaignRoster
+    .filter((u) => !activeIds.includes(u.id))
+    .map((u) => u.id);
+}
+
+// Restore SP to max for each listed unit that is not KO.
+// HP is not touched. KO units are skipped.
+function restoreCampaignStanceForLivingUnits(unitIds) {
+  if (!campaignState) return;
+  unitIds.forEach((unitId) => {
+    const unit = campaignState.campaignRoster.find((u) => u.id === unitId);
+    if (!unit || isUnitKo(unit)) return;
+    const stats = calculateClassStats(unit.unitType, unit.equipment || null);
+    unit.currentSp = stats.maxSp;
+  });
+}
+
+// After a campaign battle: fighters keep SP damage; living benched units restore SP.
+function applyPostCampaignBattleRecovery(activeIds) {
+  const benchedIds = getBenchedCampaignUnitIds(activeIds);
+  restoreCampaignStanceForLivingUnits(benchedIds);
+}
+
+// After any non-battle campaign node: all living units restore SP.
+// HP does not recover unless the node is a camp/recovery node.
+function applyNonBattleNodeRecovery() {
+  if (!campaignState) return;
+  const allIds = campaignState.campaignRoster.map((u) => u.id);
+  restoreCampaignStanceForLivingUnits(allIds);
+}
+
+function initCampaignState() {
+  // Squad 1: auto-slot Alden at front-center position (boardRow=1, boardCol=2 → front row, col 1)
+  const squad1Cells = createEmptySquadCells();
+  squad1Cells[1][2] = 'squire-alden';
+
+  campaignState = {
+    activeMapId: 'greenRoad',
+    selectedNodeId: null,
+    clearedNodeIds: new Set(['L1N1']),         // start node pre-cleared
+    unlockedNodeIds: new Set(['L2N1', 'L2N2']),// layer-2 nodes unlocked from start
+    activeEncounterNodeId: null,
+    commandLevel: 1,                           // starts at 1 for Map 1
+    maxSquads: 1,                              // only Squad 1 for Map 1
+    campaignRoster: [
+      {
+        id: 'squire-alden',
+        name: 'Alden',
+        unitType: 'squire',
+        equipment: { sword: 'broadsword', shield: 'buckler', armor: 'chainmail' }
+      }
+    ],
+    campaignSquads: [
+      { id: 'squad-1', name: 'Squad 1', cells: squad1Cells }
+    ],
+    runStatus: 'active'
+  };
+}
+
+function resetCampaignRun() {
+  campaignState = null;
+  armyRoster = [];
+  armySquads = [];
+  showCombatMap();
+}
+
+// ─── Campaign: node resolution ──────────────────────────────────────────────
+
+function unlockNodeOutgoing(nodeId) {
+  const mapDef = getCampaignMap();
+  const outgoing = mapDef.connections[nodeId] || [];
+  outgoing.forEach((nextId) => {
+    if (!campaignState.clearedNodeIds.has(nextId)) {
+      campaignState.unlockedNodeIds.add(nextId);
+    }
+  });
+}
+
+function claimRecruitNode(nodeId) {
+  const mapDef = getCampaignMap();
+  const node = mapDef.nodes[nodeId];
+  if (!node || node.type !== 'recruit') return;
+
+  const r = node.recruit;
+  const unitId = `campaign-${r.unitType}-${r.name.toLowerCase()}`;
+  if (!campaignState.campaignRoster.find((u) => u.id === unitId)) {
+    campaignState.campaignRoster.push({
+      id: unitId,
+      name: r.name,
+      unitType: r.unitType,
+      equipment: { ...r.equipment }
+    });
+    armyRoster = campaignState.campaignRoster;
+  }
+
+  campaignState.clearedNodeIds.add(nodeId);
+  unlockNodeOutgoing(nodeId);
+  applyNonBattleNodeRecovery();
+  renderCombatMapScreen();
+}
+
+function claimCommandLevelNode(nodeId) {
+  if (campaignState.commandLevel < 2) {
+    campaignState.commandLevel = 2;
+    commandLevel = 2;
+  }
+  campaignState.clearedNodeIds.add(nodeId);
+  unlockNodeOutgoing(nodeId);
+  applyNonBattleNodeRecovery();
+  renderCombatMapScreen();
+}
+
+function claimArmoryNode(nodeId) {
+  // No equipment inventory yet — show placeholder and mark cleared.
+  campaignState.clearedNodeIds.add(nodeId);
+  unlockNodeOutgoing(nodeId);
+  applyNonBattleNodeRecovery();
+  renderCombatMapScreen();
+}
+
+function claimCampNode(nodeId) {
+  // Fully restore HP and SP for all living units (camp rest).
+  // KO units stay KO; they are not revived here.
+  if (campaignState) {
+    campaignState.campaignRoster.forEach((unit) => {
+      if (isUnitKo(unit)) return;
+      const stats = calculateClassStats(unit.unitType, unit.equipment || null);
+      unit.currentHp = stats.maxHp;
+      unit.currentSp = stats.maxSp;
+    });
+  }
+  campaignState.clearedNodeIds.add(nodeId);
+  unlockNodeOutgoing(nodeId);
+  renderCombatMapScreen();
+}
+
+// ─── Campaign: battle start / end ───────────────────────────────────────────
+
+function startCampaignBattle(nodeId) {
+  const mapDef = getCampaignMap();
+  const node = mapDef.nodes[nodeId];
+  if (!node) return;
+
+  // Build player side from selected squad
+  buildPracticeCombatFormations();
+  if (!isSetupReady()) return; // player must have at least one unit placed
+
+  // Store active unit IDs before battle for post-battle recovery
+  activeCampaignBattleUnitIds = redFormation
+    .filter((p) => p.rosterUnitId)
+    .map((p) => p.rosterUnitId);
+
+  // Override enemy side from node config
+  blueFormation = node.enemy.map((cfg, i) => {
+    const pos = PRACTICE_ENEMY_FORMATION_SLOTS[i % PRACTICE_ENEMY_FORMATION_SLOTS.length];
+    return createPlacement('blue', pos.row, pos.col, false, cfg.unitType, null, cfg.equipment);
+  });
+
+  campaignState.activeEncounterNodeId = nodeId;
+  battleSource = 'combatMap';
+
+  clearCombatMapScreen();
+  clearSetupUi();
+  clearAllStatsPanels();
+  setFormationScreenVisible(false);
+  gamePhase = 'battle';
+  round = 0;
+  turn = 1;
+  action = 1;
+  turnQueue = [];
+  roundInitiativeOrder = [];
+  currentTurnActedUnits = new Set();
+  battleEnded = false;
+  battleRewardsGranted = false;
+  clearAllResourceDisplayOverrides();
+  createUnits();
+  applyCombatZoomMode(false);
+  startRound();
+
+  sceneRef.time.delayedCall(ROUND_START_BANNER_ACTION_START_DELAY_MS, () => {
+    takeNextAction();
+    actionTimer = sceneRef.time.addEvent({
+      delay: ACTION_DELAY_MS,
+      callback: takeNextAction,
+      callbackScope: sceneRef,
+      loop: true
+    });
+  });
+}
+
+function afterCampaignBattleEnd(playerWon) {
+  battleSource = 'practice';
+  const nodeId = campaignState.activeEncounterNodeId;
+  campaignState.activeEncounterNodeId = null;
+
+  if (playerWon) {
+    campaignState.clearedNodeIds.add(nodeId);
+    unlockNodeOutgoing(nodeId);
+    const node = getCampaignMap().nodes[nodeId];
+    if (node && node.type === 'boss') {
+      campaignState.runStatus = 'victory';
+    }
+  } else {
+    campaignState.runStatus = 'defeat';
+  }
+
+  // Fighters keep SP damage; living benched units restore SP.
+  const activeIds = getActiveCampaignBattleUnitIds();
+  applyPostCampaignBattleRecovery(activeIds);
+  activeCampaignBattleUnitIds = [];
+
+  gamePhase = 'setup';
+  redFormation = [];
+  blueFormation = [];
+  initializeArmyManagement();
+  showCombatMap();
+}
+
+// ─── Combat Map: screen management ──────────────────────────────────────────
+
+function addCmapNode(node) {
+  combatMapScreenNodes.push(node);
+  return node;
+}
+
+function clearCombatMapScreen() {
+  combatMapScreenNodes.forEach((node) => {
+    if (node && node.scene) node.destroy();
+  });
+  combatMapScreenNodes = [];
+}
+
+function showCombatMap() {
+  if (!campaignState) {
+    initCampaignState();
+  }
+  // Sync armyRoster / armySquads / commandLevel from campaign state.
+  initializeArmyManagement();
+  cmapSelectedPlayerUnitId = null;
+  cmapSelectedEnemyIdx = null;
+  gamePhase = 'setup';
+  clearSetupUi();
+  clearCombatMapScreen();
+  showFullGameView();
+  setFormationScreenVisible(true);
+  renderCombatMapScreen();
+}
+
+function showFormationFromMap() {
+  clearCombatMapScreen();
+  enterSetupPhase();
+}
+
+// ─── Combat Map: rendering ───────────────────────────────────────────────────
+
+function getCmapNodeX(layer) {
+  return Math.round(CMAP_MAP_X1 + layer * CMAP_LAYER_STEP);
+}
+
+function getCmapNodeY(posIndex, posCount) {
+  const margin = 48;   // tight but readable in the compressed top half
+  const usable = CMAP_MAP_Y2 - CMAP_MAP_Y1 - margin * 2;
+  if (posCount === 1) return Math.round((CMAP_MAP_Y1 + CMAP_MAP_Y2) / 2);
+  return Math.round(CMAP_MAP_Y1 + margin + posIndex * (usable / (posCount - 1)));
+}
+
+function getCmapNodeColors(nodeData) {
+  const id = nodeData.id;
+  const isCleared  = campaignState.clearedNodeIds.has(id);
+  const isUnlocked = campaignState.unlockedNodeIds.has(id);
+  const isSelected = campaignState.selectedNodeId === id;
+
+  if (isCleared) return { fill: CMAP_FILL_CLEARED, stroke: CMAP_STROKE_CLEARED };
+  if (isSelected) return { fill: CMAP_FILL_SELECTED, stroke: CMAP_STROKE_SEL };
+  if (!isUnlocked) return { fill: CMAP_FILL_LOCKED, stroke: CMAP_STROKE_LOCKED };
+
+  const typeColor = {
+    start:        CMAP_FILL_START,
+    boss:         CMAP_FILL_BOSS,
+    recruit:      CMAP_FILL_RECRUIT,
+    commandLevel: CMAP_FILL_CMDLVL,
+    armory:       CMAP_FILL_ARMORY,
+    camp:         CMAP_FILL_CAMP
+  };
+  const strokeColor = nodeData.type === 'boss' ? CMAP_STROKE_BOSS : CMAP_STROKE_DEFAULT;
+  return { fill: typeColor[nodeData.type] ?? CMAP_FILL_UNLOCKED, stroke: strokeColor };
+}
+
+function renderCombatMapScreen() {
+  clearCombatMapScreen();
+  const mapDef = getCampaignMap();
+
+  // Arena-style backgrounds, drawn first so nodes sit on top.
+  // Top half: sky, matching the combat battlefield.
+  addCmapNode(sceneRef.add.rectangle(0, 0, GAME_WIDTH, CMAP_SPLIT_Y, PHASER_COLORS.sky)
+    .setOrigin(0).setAlpha(0.82).setDepth(CMAP_UI_DEPTH));
+  // Ground strip at the bottom of the map area (echoes the grass horizon).
+  addCmapNode(sceneRef.add.rectangle(0, CMAP_MAP_Y2 - 38, GAME_WIDTH, 38, PHASER_COLORS.grass)
+    .setOrigin(0).setAlpha(0.50).setDepth(CMAP_UI_DEPTH));
+  // Bottom panel fill (panel tone matches combat info panels).
+  addCmapNode(sceneRef.add.rectangle(0, CMAP_SPLIT_Y, GAME_WIDTH, GAME_HEIGHT - CMAP_SPLIT_Y, PHASER_COLORS.panel)
+    .setOrigin(0).setDepth(CMAP_UI_DEPTH));
+
+  // Map title: chunky pixel RPG header
+  addCmapNode(sceneRef.add.text(
+    GAME_WIDTH / 2, CMAP_MAP_Y1 + 6,
+    mapDef.name,
+    { ...headerTextStyle(), fontSize: '30px' }
+  ).setOrigin(0.5, 0).setDepth(CMAP_UI_DEPTH + 3));
+
+  // Top-left: hamburger square + Formation nav button
+  renderCmapNavButton();
+
+  // Divider: thicker line to frame the two halves
+  addCmapNode(sceneRef.add.rectangle(
+    0, CMAP_SPLIT_Y, GAME_WIDTH, 3, PHASER_COLORS.panelBorder
+  ).setOrigin(0, 0.5).setDepth(CMAP_UI_DEPTH + 1));
+
+  // Edges (drawn below nodes)
+  renderCmapEdges(mapDef);
+
+  // Nodes (in top half)
+  Object.values(mapDef.nodes).forEach((nodeData) => {
+    const x = getCmapNodeX(nodeData.layer);
+    const y = getCmapNodeY(nodeData.pos, nodeData.of);
+    renderCmapSingleNode(nodeData, x, y);
+  });
+
+  // Bottom: compact node detail card (center)
+  renderCmapDetailPanel(campaignState.selectedNodeId);
+
+  // Bottom: action button (below detail card)
+  renderCmapActionButton(campaignState.selectedNodeId);
+
+  // Bottom: player squad preview (left)
+  renderCmapPlayerSquadPanel();
+
+  // Bottom: enemy preview (right)
+  renderCmapEnemyPanel(campaignState.selectedNodeId);
+
+  // End-state overlays
+  if (campaignState.runStatus === 'victory') renderCmapEndOverlay(true);
+  else if (campaignState.runStatus === 'defeat') renderCmapEndOverlay(false);
+}
+
+function renderCmapNavButton() {
+  // Hamburger square (visual, matches formation screen)
+  addCmapNode(sceneRef.add.rectangle(
+    UTILITY_MENU_BUTTON_X, UTILITY_MENU_BUTTON_Y,
+    UTILITY_MENU_BUTTON_SIZE, UTILITY_MENU_BUTTON_SIZE,
+    PHASER_COLORS.infoPanel
+  ).setOrigin(0)
+    .setStrokeStyle(1, PHASER_COLORS.panelBorder)
+    .setDepth(CMAP_UI_DEPTH + 4));
+
+  addCmapNode(sceneRef.add.text(
+    UTILITY_MENU_BUTTON_X + UTILITY_MENU_BUTTON_SIZE / 2,
+    UTILITY_MENU_BUTTON_Y + UTILITY_MENU_BUTTON_SIZE / 2,
+    UTILITY_MENU_LABEL,
+    combatLogToggleTextStyle()
+  ).setOrigin(0.5).setDepth(CMAP_UI_DEPTH + 5));
+
+  // Formation nav button (right of hamburger)
+  const btn = addCmapNode(sceneRef.add.rectangle(
+    MAP_NAV_BUTTON_X, MAP_NAV_BUTTON_Y,
+    MAP_NAV_BUTTON_W_FMT, MAP_NAV_BUTTON_HEIGHT,
+    PHASER_COLORS.infoPanel
+  ).setOrigin(0)
+    .setStrokeStyle(1, PHASER_COLORS.panelBorder)
+    .setInteractive({ useHandCursor: true })
+    .setDepth(CMAP_UI_DEPTH + 4));
+
+  const txt = addCmapNode(sceneRef.add.text(
+    MAP_NAV_BUTTON_X + MAP_NAV_BUTTON_W_FMT / 2,
+    MAP_NAV_BUTTON_Y + MAP_NAV_BUTTON_HEIGHT / 2,
+    'Formation',
+    combatLogToggleTextStyle()
+  ).setOrigin(0.5)
+    .setInteractive({ useHandCursor: true })
+    .setDepth(CMAP_UI_DEPTH + 5));
+
+  btn.on('pointerdown', showFormationFromMap);
+  txt.on('pointerdown', showFormationFromMap);
+}
+
+function renderFormationMapNavButton() {
+  const label = 'Map';
+  const btn = addSetupNode(sceneRef.add.rectangle(
+    MAP_NAV_BUTTON_X, MAP_NAV_BUTTON_Y,
+    MAP_NAV_BUTTON_W_MAP, MAP_NAV_BUTTON_HEIGHT,
+    PHASER_COLORS.infoPanel
+  ).setOrigin(0)
+    .setStrokeStyle(1, PHASER_COLORS.panelBorder)
+    .setInteractive({ useHandCursor: true })
+    .setDepth(SETUP_UI_DEPTH + 3));
+
+  const txt = addSetupNode(sceneRef.add.text(
+    MAP_NAV_BUTTON_X + MAP_NAV_BUTTON_W_MAP / 2,
+    MAP_NAV_BUTTON_Y + MAP_NAV_BUTTON_HEIGHT / 2,
+    label,
+    combatLogToggleTextStyle()
+  ).setOrigin(0.5)
+    .setInteractive({ useHandCursor: true })
+    .setDepth(SETUP_UI_DEPTH + 4));
+
+  btn.on('pointerdown', showCombatMap);
+  txt.on('pointerdown', showCombatMap);
+}
+
+function renderCmapEdges(mapDef) {
+  Object.entries(mapDef.connections).forEach(([fromId, toIds]) => {
+    const fromNode = mapDef.nodes[fromId];
+    const fromX = getCmapNodeX(fromNode.layer);
+    const fromY = getCmapNodeY(fromNode.pos, fromNode.of);
+    const fromCleared = campaignState.clearedNodeIds.has(fromId);
+
+    toIds.forEach((toId) => {
+      const toNode = mapDef.nodes[toId];
+      const toX = getCmapNodeX(toNode.layer);
+      const toY = getCmapNodeY(toNode.pos, toNode.of);
+      const toCleared   = campaignState.clearedNodeIds.has(toId);
+      const toUnlocked  = campaignState.unlockedNodeIds.has(toId);
+
+      // Three-state edge: cleared path > available > locked/future
+      let color, width, alpha;
+      if (fromCleared && toCleared) {
+        color = CMAP_EDGE_CLEARED; width = 3; alpha = 0.90; // walked path
+      } else if (fromCleared && (toUnlocked || toCleared)) {
+        color = CMAP_EDGE_LIT;     width = 2; alpha = 0.80; // next step available
+      } else {
+        color = CMAP_EDGE_DIM;     width = 1; alpha = 0.55; // locked future path
+      }
+
+      const g = addCmapNode(sceneRef.add.graphics());
+      g.lineStyle(width, color, alpha);
+      g.beginPath();
+      g.moveTo(fromX, fromY);
+      g.lineTo(toX, toY);
+      g.strokePath();
+      g.setDepth(CMAP_UI_DEPTH + 1);
+    });
+  });
+}
+
+function renderCmapSingleNode(nodeData, x, y) {
+  const id = nodeData.id;
+  const isCleared  = campaignState.clearedNodeIds.has(id);
+  const isUnlocked = campaignState.unlockedNodeIds.has(id);
+  const { fill, stroke } = getCmapNodeColors(nodeData);
+  const labelAlpha = (isUnlocked || isCleared) ? 1 : 0.35;
+
+  const circle = addCmapNode(sceneRef.add.circle(x, y, CMAP_NODE_RADIUS, fill)
+    .setStrokeStyle(isUnlocked || isCleared ? 2 : 1, stroke)
+    .setDepth(CMAP_UI_DEPTH + 2));
+
+  const labelNode = addCmapNode(sceneRef.add.text(
+    x, y + CMAP_NODE_RADIUS + 6,
+    nodeData.label,
+    combatLogToggleTextStyle()
+  ).setOrigin(0.5, 0)
+    .setAlpha(labelAlpha)
+    .setDepth(CMAP_UI_DEPTH + 3));
+
+  if (isUnlocked && !isCleared) {
+    circle.setInteractive({ useHandCursor: true });
+    circle.on('pointerdown', () => handleCmapNodeClick(id));
+    labelNode.setInteractive({ useHandCursor: true });
+    labelNode.on('pointerdown', () => handleCmapNodeClick(id));
+  }
+}
+
+function renderCmapDetailPanel(nodeId) {
+  const mapDef = getCampaignMap();
+
+  // Panel background
+  addCmapNode(sceneRef.add.rectangle(
+    CMAP_DETAIL_X, CMAP_DETAIL_Y, CMAP_DETAIL_W, CMAP_DETAIL_H,
+    PHASER_COLORS.infoPanel
+  ).setOrigin(0)
+    .setAlpha(0.90)
+    .setStrokeStyle(1, PHASER_COLORS.panelBorder)
+    .setDepth(CMAP_UI_DEPTH + 1));
+
+  const px = CMAP_DETAIL_X + 20;
+  let py = CMAP_DETAIL_Y + 16;
+
+  if (!nodeId) {
+    addCmapNode(sceneRef.add.text(px, py, mapDef.name, headerTextStyle())
+      .setDepth(CMAP_UI_DEPTH + 2));
+    addCmapNode(sceneRef.add.text(px, py + 30, 'Select a node to see details.', bodyTextStyle())
+      .setDepth(CMAP_UI_DEPTH + 2));
+    return;
+  }
+
+  const node = mapDef.nodes[nodeId];
+  if (!node) return;
+
+  const isCleared  = campaignState.clearedNodeIds.has(nodeId);
+  const isUnlocked = campaignState.unlockedNodeIds.has(nodeId);
+
+  const typeLabels = {
+    start: 'Start', battle: 'Battle', recruit: 'Recruit',
+    commandLevel: 'Command Level Up', boss: 'Boss Battle',
+    armory: 'Armory', camp: 'Camp'
+  };
+  const typeDescs = {
+    start:        'The beginning of the road.',
+    battle:       'Defeat the enemy to proceed.',
+    recruit:      'Add a unit to your roster. Restores stance.',
+    commandLevel: 'Command Level 1 → 2. Restores stance.',
+    boss:         'The final challenge. Two Archers.',
+    armory:       'Salvage gear from the field. Restores stance.',
+    camp:         'Rest before the boss. Full HP and SP recovery.'
+  };
+
+  // Row 1: map name  •  node type
+  addCmapNode(sceneRef.add.text(
+    px, py,
+    `${mapDef.name}  •  ${typeLabels[node.type] || node.type}`,
+    headerTextStyle()
+  ).setDepth(CMAP_UI_DEPTH + 2));
+  py += 32;
+
+  // Row 2: enemy / recruit / reward info
+  if ((node.type === 'battle' || node.type === 'boss') && node.enemy) {
+    const names = node.enemy.map((e) => getClassDefinition(e.unitType).name).join(', ');
+    addCmapNode(sceneRef.add.text(px, py, `Enemy: ${names}`, bodyTextStyle())
+      .setDepth(CMAP_UI_DEPTH + 2));
+    py += 24;
+  } else if (node.type === 'recruit' && node.recruit) {
+    const r = node.recruit;
+    const className = getClassDefinition(r.unitType).name;
+    addCmapNode(sceneRef.add.text(px, py, `Recruit: ${r.name} the ${className}`, bodyTextStyle())
+      .setDepth(CMAP_UI_DEPTH + 2));
+    py += 24;
+  }
+
+  // Row 3: description
+  addCmapNode(sceneRef.add.text(px, py, typeDescs[node.type] || '', {
+    ...bodyTextStyle(),
+    wordWrap: { width: CMAP_DETAIL_W - 40 }
+  }).setDepth(CMAP_UI_DEPTH + 2));
+  py += 28;
+
+  // Row 4: status
+  const statusText = isCleared ? 'Cleared' : (isUnlocked ? 'Ready' : 'Locked');
+  const statusColor = isCleared ? CMAP_WIN_COLOR : (isUnlocked ? COLORS.text : CMAP_DETAIL_MUTED);
+  addCmapNode(sceneRef.add.text(px, py, `Status: ${statusText}`, {
+    ...bodyTextStyle(),
+    color: statusColor
+  }).setDepth(CMAP_UI_DEPTH + 2));
+}
+
+function renderCmapActionButton(nodeId) {
+  const mapDef = getCampaignMap();
+  let label = 'Select a node';
+  let isActive = false;
+
+  if (nodeId) {
+    const node = mapDef.nodes[nodeId];
+    const isCleared  = campaignState.clearedNodeIds.has(nodeId);
+    const isUnlocked = campaignState.unlockedNodeIds.has(nodeId);
+
+    if (isCleared) {
+      label = 'Cleared';
+    } else if (!isUnlocked) {
+      label = 'Locked';
+    } else {
+      isActive = true;
+      const actionLabels = {
+        battle:       'Enter Battle',
+        boss:         'Enter Boss',
+        recruit:      'Recruit',
+        commandLevel: 'Claim',
+        armory:       'Claim',
+        camp:         'Rest'
+      };
+      label = actionLabels[node.type] || 'Enter';
+    }
+  }
+
+  const fill = isActive ? PHASER_COLORS.sp : PHASER_COLORS.panel;
+  const btn = addCmapNode(sceneRef.add.rectangle(
+    CMAP_ACTION_X, CMAP_ACTION_Y, CMAP_ACTION_W, CMAP_ACTION_H, fill
+  ).setOrigin(0)
+    .setAlpha(isActive ? 0.88 : 0.40)
+    .setStrokeStyle(1, PHASER_COLORS.panelBorder)
+    .setInteractive({ useHandCursor: isActive })
+    .setDepth(CMAP_UI_DEPTH + 1));
+
+  const txt = addCmapNode(sceneRef.add.text(
+    CMAP_ACTION_X + CMAP_ACTION_W / 2,
+    CMAP_ACTION_Y + CMAP_ACTION_H / 2,
+    label,
+    combatLogToggleTextStyle()
+  ).setOrigin(0.5)
+    .setAlpha(isActive ? 1 : 0.45)
+    .setDepth(CMAP_UI_DEPTH + 2));
+
+  if (isActive) {
+    btn.on('pointerdown', () => handleCmapNodeAction(nodeId));
+    txt.on('pointerdown', () => handleCmapNodeAction(nodeId));
+  }
+}
+
+function renderCmapEndOverlay(isVictory) {
+  const ow = 620, oh = 320;
+  const ox = GAME_WIDTH / 2 - ow / 2;
+  const oy = GAME_HEIGHT / 2 - oh / 2;
+
+  addCmapNode(sceneRef.add.rectangle(ox, oy, ow, oh, PHASER_COLORS.panel)
+    .setOrigin(0)
+    .setAlpha(0.96)
+    .setStrokeStyle(2, PHASER_COLORS.panelBorder)
+    .setDepth(CMAP_UI_DEPTH + 10));
+
+  const title = isVictory ? 'Victory!' : 'Defeated';
+  const desc  = isVictory
+    ? 'The Green Road is cleared.'
+    : 'Your forces were overcome.';
+  const titleColor = isVictory ? CMAP_WIN_COLOR : CMAP_LOSE_COLOR;
+
+  addCmapNode(sceneRef.add.text(
+    GAME_WIDTH / 2, oy + 60, title,
+    { ...headerTextStyle(), fontSize: '36px', color: titleColor }
+  ).setOrigin(0.5).setDepth(CMAP_UI_DEPTH + 11));
+
+  addCmapNode(sceneRef.add.text(
+    GAME_WIDTH / 2, oy + 120, desc, bodyTextStyle()
+  ).setOrigin(0.5).setDepth(CMAP_UI_DEPTH + 11));
+
+  const bw = 160, bh = 40;
+  const bx = GAME_WIDTH / 2 - bw / 2;
+  const by = oy + oh - bh - 32;
+
+  const newRunBtn = addCmapNode(sceneRef.add.rectangle(bx, by, bw, bh, PHASER_COLORS.sp)
+    .setOrigin(0)
+    .setAlpha(0.88)
+    .setStrokeStyle(1, PHASER_COLORS.panelBorder)
+    .setInteractive({ useHandCursor: true })
+    .setDepth(CMAP_UI_DEPTH + 11));
+
+  const newRunTxt = addCmapNode(sceneRef.add.text(
+    GAME_WIDTH / 2, by + bh / 2, 'New Run', combatLogToggleTextStyle()
+  ).setOrigin(0.5)
+    .setInteractive({ useHandCursor: true })
+    .setDepth(CMAP_UI_DEPTH + 12));
+
+  newRunBtn.on('pointerdown', resetCampaignRun);
+  newRunTxt.on('pointerdown', resetCampaignRun);
+}
+
+// ─── Combat Map: bottom-half squad previews ──────────────────────────────────
+
+function renderCmapPlayerSquadPanel() {
+  addCmapNode(sceneRef.add.rectangle(
+    CMAP_PLAYER_X, CMAP_BOTTOM_Y, CMAP_PLAYER_W, CMAP_PLAYER_H,
+    PHASER_COLORS.infoPanel
+  ).setOrigin(0)
+    .setAlpha(0.88)
+    .setStrokeStyle(1, PHASER_COLORS.panelBorder)
+    .setDepth(CMAP_UI_DEPTH + 1));
+
+  addCmapNode(sceneRef.add.text(
+    CMAP_PLAYER_X + 16, CMAP_BOTTOM_Y + 14,
+    'Your Squad',
+    headerTextStyle()
+  ).setDepth(CMAP_UI_DEPTH + 2));
+
+  const squad = campaignState?.campaignSquads?.[0];
+  if (!squad) return;
+
+  const assignedUnits = getSquadAssignedCells(squad)
+    .map((cell) => getArmyRosterUnit(cell.unitId))
+    .filter(Boolean);
+
+  if (assignedUnits.length === 0) {
+    addCmapNode(sceneRef.add.text(
+      CMAP_PLAYER_X + 16, CMAP_BOTTOM_Y + 50,
+      'No units in squad.',
+      bodyTextStyle()
+    ).setDepth(CMAP_UI_DEPTH + 2));
+    return;
+  }
+
+  // If a unit is selected, show its full stats instead of the list.
+  if (cmapSelectedPlayerUnitId) {
+    const selUnit = getArmyRosterUnit(cmapSelectedPlayerUnitId);
+    if (selUnit) {
+      renderCmapUnitStatBlock(selUnit, CMAP_PLAYER_X + 16, CMAP_BOTTOM_Y + 50, true);
+      return;
+    }
+  }
+
+  assignedUnits.forEach((unit, idx) => {
+    renderCmapUnitCard(unit, CMAP_PLAYER_X + 12, CMAP_BOTTOM_Y + 50 + idx * 98, CMAP_PLAYER_W - 24, 88);
+  });
+}
+
+function renderCmapEnemyPanel(nodeId) {
+  addCmapNode(sceneRef.add.rectangle(
+    CMAP_ENEMY_X, CMAP_BOTTOM_Y, CMAP_ENEMY_W, CMAP_ENEMY_H,
+    PHASER_COLORS.infoPanel
+  ).setOrigin(0)
+    .setAlpha(0.88)
+    .setStrokeStyle(1, PHASER_COLORS.panelBorder)
+    .setDepth(CMAP_UI_DEPTH + 1));
+
+  addCmapNode(sceneRef.add.text(
+    CMAP_ENEMY_X + 16, CMAP_BOTTOM_Y + 14,
+    'Enemy',
+    headerTextStyle()
+  ).setDepth(CMAP_UI_DEPTH + 2));
+
+  if (!nodeId) {
+    addCmapNode(sceneRef.add.text(
+      CMAP_ENEMY_X + 16, CMAP_BOTTOM_Y + 50,
+      'No node selected.',
+      bodyTextStyle()
+    ).setDepth(CMAP_UI_DEPTH + 2));
+    return;
+  }
+
+  const node = getCampaignMap().nodes[nodeId];
+  if (!node || !node.enemy || node.enemy.length === 0) {
+    addCmapNode(sceneRef.add.text(
+      CMAP_ENEMY_X + 16, CMAP_BOTTOM_Y + 50,
+      '—',
+      bodyTextStyle()
+    ).setDepth(CMAP_UI_DEPTH + 2));
+    return;
+  }
+
+  // If an enemy is selected, show its full stats instead of the list.
+  if (cmapSelectedEnemyIdx !== null && node.enemy[cmapSelectedEnemyIdx]) {
+    const eCfg = node.enemy[cmapSelectedEnemyIdx];
+    const stats = calculateClassStats(eCfg.unitType, eCfg.equipment || null);
+    const classDef = getClassDefinition(eCfg.unitType);
+    renderCmapEnemyStatBlock(classDef, stats, CMAP_ENEMY_X + 16, CMAP_BOTTOM_Y + 50, true);
+    return;
+  }
+
+  node.enemy.forEach((eCfg, idx) => {
+    renderCmapEnemyCard(eCfg, idx, CMAP_ENEMY_X + 12, CMAP_BOTTOM_Y + 50 + idx * 98, CMAP_ENEMY_W - 24, 88);
+  });
+}
+
+// Compact unit card for squad preview list.
+function renderCmapUnitCard(unit, x, y, w, h) {
+  const isSelected = cmapSelectedPlayerUnitId === unit.id;
+  const bgFill = isSelected ? PHASER_COLORS.sp : PHASER_COLORS.panel;
+
+  const card = addCmapNode(sceneRef.add.rectangle(x, y, w, h, bgFill)
+    .setOrigin(0)
+    .setAlpha(isSelected ? 0.35 : 0.65)
+    .setStrokeStyle(1, PHASER_COLORS.panelBorder)
+    .setInteractive({ useHandCursor: true })
+    .setDepth(CMAP_UI_DEPTH + 2));
+
+  card.on('pointerdown', () => {
+    cmapSelectedPlayerUnitId = isSelected ? null : unit.id;
+    cmapSelectedEnemyIdx = null;
+    renderCombatMapScreen();
+  });
+
+  const classDef = getClassDefinition(unit.unitType);
+  const stats = calculateClassStats(unit.unitType, unit.equipment || null);
+  const curHp = unit.currentHp != null ? unit.currentHp : stats.maxHp;
+  const curSp = unit.currentSp != null ? unit.currentSp : stats.maxSp;
+  const ko = isUnitKo(unit);
+
+  addCmapNode(sceneRef.add.text(x + 10, y + 8,
+    `${unit.name}${ko ? '  (KO)' : ''}`,
+    { ...headerTextStyle(), fontSize: '16px', color: ko ? CMAP_LOSE_COLOR : COLORS.text }
+  ).setDepth(CMAP_UI_DEPTH + 3));
+
+  addCmapNode(sceneRef.add.text(x + 10, y + 30,
+    classDef.name,
+    bodyTextStyle()
+  ).setDepth(CMAP_UI_DEPTH + 3));
+
+  addCmapNode(sceneRef.add.text(x + 10, y + 52,
+    `❤️ ${curHp}/${stats.maxHp}  🛡️ ${curSp}/${stats.maxSp}`,
+    bodyTextStyle()
+  ).setDepth(CMAP_UI_DEPTH + 3));
+}
+
+// Compact enemy card for enemy preview list.
+function renderCmapEnemyCard(eCfg, idx, x, y, w, h) {
+  const isSelected = cmapSelectedEnemyIdx === idx;
+  const bgFill = isSelected ? PHASER_COLORS.hp : PHASER_COLORS.panel;
+
+  const card = addCmapNode(sceneRef.add.rectangle(x, y, w, h, bgFill)
+    .setOrigin(0)
+    .setAlpha(isSelected ? 0.35 : 0.65)
+    .setStrokeStyle(1, PHASER_COLORS.panelBorder)
+    .setInteractive({ useHandCursor: true })
+    .setDepth(CMAP_UI_DEPTH + 2));
+
+  card.on('pointerdown', () => {
+    cmapSelectedEnemyIdx = isSelected ? null : idx;
+    cmapSelectedPlayerUnitId = null;
+    renderCombatMapScreen();
+  });
+
+  const classDef = getClassDefinition(eCfg.unitType);
+  const stats = calculateClassStats(eCfg.unitType, eCfg.equipment || null);
+
+  addCmapNode(sceneRef.add.text(x + 10, y + 8,
+    classDef.name,
+    { ...headerTextStyle(), fontSize: '16px' }
+  ).setDepth(CMAP_UI_DEPTH + 3));
+
+  addCmapNode(sceneRef.add.text(x + 10, y + 30,
+    `Enemy ${idx + 1}`,
+    bodyTextStyle()
+  ).setDepth(CMAP_UI_DEPTH + 3));
+
+  addCmapNode(sceneRef.add.text(x + 10, y + 52,
+    `❤️ ${stats.maxHp}/${stats.maxHp}  🛡️ ${stats.maxSp}/${stats.maxSp}`,
+    bodyTextStyle()
+  ).setDepth(CMAP_UI_DEPTH + 3));
+}
+
+// Full stat block for a selected player unit (replaces the card list).
+function renderCmapUnitStatBlock(unit, x, y, showBack) {
+  if (showBack) {
+    const backBtn = addCmapNode(sceneRef.add.rectangle(x, y, 72, 22, PHASER_COLORS.panel)
+      .setOrigin(0)
+      .setStrokeStyle(1, PHASER_COLORS.panelBorder)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(CMAP_UI_DEPTH + 3));
+    const backTxt = addCmapNode(sceneRef.add.text(x + 36, y + 11, '← Back', bodyTextStyle())
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(CMAP_UI_DEPTH + 4));
+    const clear = () => { cmapSelectedPlayerUnitId = null; renderCombatMapScreen(); };
+    backBtn.on('pointerdown', clear);
+    backTxt.on('pointerdown', clear);
+    y += 32;
+  }
+
+  const classDef = getClassDefinition(unit.unitType);
+  const stats = calculateClassStats(unit.unitType, unit.equipment || null);
+  const curHp = unit.currentHp != null ? unit.currentHp : stats.maxHp;
+  const curSp = unit.currentSp != null ? unit.currentSp : stats.maxSp;
+  const ko = isUnitKo(unit);
+
+  const lines = [
+    { text: `${unit.name}${ko ? '  (KO)' : ''}`, style: { ...headerTextStyle(), color: ko ? CMAP_LOSE_COLOR : COLORS.text } },
+    { text: classDef.name, style: bodyTextStyle() },
+    { text: `❤️ ${curHp} / ${stats.maxHp}`, style: bodyTextStyle() },
+    { text: `🛡️ ${curSp} / ${stats.maxSp}`, style: bodyTextStyle() },
+    { text: `🔶 ${stats.ap} / ${stats.maxAp}`, style: bodyTextStyle() },
+    { text: `🔷 ${stats.rp} / ${stats.maxRp}`, style: bodyTextStyle() }
+  ];
+
+  lines.forEach((line, i) => {
+    addCmapNode(sceneRef.add.text(x, y + i * 24, line.text, line.style)
+      .setDepth(CMAP_UI_DEPTH + 3));
+  });
+}
+
+// Full stat block for a selected enemy (replaces the card list).
+function renderCmapEnemyStatBlock(classDef, stats, x, y, showBack) {
+  if (showBack) {
+    const backBtn = addCmapNode(sceneRef.add.rectangle(x, y, 72, 22, PHASER_COLORS.panel)
+      .setOrigin(0)
+      .setStrokeStyle(1, PHASER_COLORS.panelBorder)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(CMAP_UI_DEPTH + 3));
+    const backTxt = addCmapNode(sceneRef.add.text(x + 36, y + 11, '← Back', bodyTextStyle())
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(CMAP_UI_DEPTH + 4));
+    const clear = () => { cmapSelectedEnemyIdx = null; renderCombatMapScreen(); };
+    backBtn.on('pointerdown', clear);
+    backTxt.on('pointerdown', clear);
+    y += 32;
+  }
+
+  const lines = [
+    { text: classDef.name, style: headerTextStyle() },
+    { text: `❤️ ${stats.maxHp} / ${stats.maxHp}`, style: bodyTextStyle() },
+    { text: `🛡️ ${stats.maxSp} / ${stats.maxSp}`, style: bodyTextStyle() },
+    { text: `🔶 ${stats.ap} / ${stats.maxAp}`, style: bodyTextStyle() },
+    { text: `🔷 ${stats.rp} / ${stats.maxRp}`, style: bodyTextStyle() }
+  ];
+
+  lines.forEach((line, i) => {
+    addCmapNode(sceneRef.add.text(x, y + i * 24, line.text, line.style)
+      .setDepth(CMAP_UI_DEPTH + 3));
+  });
+}
+
+// ─── Combat Map: interaction ─────────────────────────────────────────────────
+
+function handleCmapNodeClick(nodeId) {
+  if (!campaignState) return;
+  campaignState.selectedNodeId = nodeId;
+  renderCombatMapScreen();
+}
+
+function handleCmapNodeAction(nodeId) {
+  if (!campaignState || !nodeId) return;
+  const mapDef = getCampaignMap();
+  const node = mapDef.nodes[nodeId];
+  if (!node) return;
+
+  const isUnlocked = campaignState.unlockedNodeIds.has(nodeId);
+  const isCleared  = campaignState.clearedNodeIds.has(nodeId);
+  if (!isUnlocked || isCleared) return;
+
+  switch (node.type) {
+    case 'battle':
+    case 'boss':
+      startCampaignBattle(nodeId);
+      break;
+    case 'recruit':
+      claimRecruitNode(nodeId);
+      break;
+    case 'commandLevel':
+      claimCommandLevelNode(nodeId);
+      break;
+    case 'armory':
+      claimArmoryNode(nodeId);
+      break;
+    case 'camp':
+      claimCampNode(nodeId);
+      break;
+    default:
+      break;
+  }
 }
 
