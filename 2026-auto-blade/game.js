@@ -809,23 +809,31 @@ function generateGreenRoad(seed) {
     });
   }
 
+  // Pre-CL node: 55% battle (archers only), 45% recruit
+  function makePreCl(id, layer, pos, of) {
+    if (rng() < 0.55) {
+      return makeBattle(id, layer, pos, of, ARCHER_ENEMY);
+    }
+    return makeRecruit(id, layer, pos, of);
+  }
+
   // ─── Build nodes ───────────────────────────────────────────────────────────
   const nodes = {};
 
   // Layer 0: start
   nodes.L1N1 = { id: 'L1N1', layer: 0, pos: 0, of: 1, type: 'start', label: 'Start' };
 
-  // Layers 1-4: pre-CL, archers only — no recruits, no squires
-  nodes.L2N1 = makeBattle('L2N1', 1, 0, 2, ARCHER_ENEMY);
-  nodes.L2N2 = makeBattle('L2N2', 1, 1, 2, ARCHER_ENEMY);
-  nodes.L3N1 = makeBattle('L3N1', 2, 0, 3, ARCHER_ENEMY);
-  nodes.L3N2 = makeBattle('L3N2', 2, 1, 3, ARCHER_ENEMY);
-  nodes.L3N3 = makeBattle('L3N3', 2, 2, 3, ARCHER_ENEMY);
-  nodes.L4N1 = makeBattle('L4N1', 3, 0, 3, ARCHER_ENEMY);
-  nodes.L4N2 = makeBattle('L4N2', 3, 1, 3, ARCHER_ENEMY);
-  nodes.L4N3 = makeBattle('L4N3', 3, 2, 3, ARCHER_ENEMY);
-  nodes.L5N1 = makeBattle('L5N1', 4, 0, 2, ARCHER_ENEMY);
-  nodes.L5N2 = makeBattle('L5N2', 4, 1, 2, ARCHER_ENEMY);
+  // Layers 1-4: pre-CL, Battle vs Recruit choices; enemy is always Archer
+  nodes.L2N1 = makePreCl('L2N1', 1, 0, 2);
+  nodes.L2N2 = makePreCl('L2N2', 1, 1, 2);
+  nodes.L3N1 = makePreCl('L3N1', 2, 0, 3);
+  nodes.L3N2 = makePreCl('L3N2', 2, 1, 3);
+  nodes.L3N3 = makePreCl('L3N3', 2, 2, 3);
+  nodes.L4N1 = makePreCl('L4N1', 3, 0, 3);
+  nodes.L4N2 = makePreCl('L4N2', 3, 1, 3);
+  nodes.L4N3 = makePreCl('L4N3', 3, 2, 3);
+  nodes.L5N1 = makePreCl('L5N1', 4, 0, 2);
+  nodes.L5N2 = makePreCl('L5N2', 4, 1, 2);
 
   // Layer 5: single central Command Level node (all routes converge here)
   nodes.L6N1 = { id: 'L6N1', layer: 5, pos: 0, of: 1, type: 'commandLevel', label: '👑 LVL UP' };
@@ -6960,7 +6968,7 @@ function initCampaignState() {
     clearedNodeIds: new Set(['L1N1']),         // start node pre-cleared
     unlockedNodeIds: new Set(['L2N1', 'L2N2']),// layer-2 nodes unlocked from start
     activeEncounterNodeId: null,
-    commandLevel: 1,                           // starts at 1 for Map 1
+    commandLevel: 2,                           // starts at 2 for Map 1
     gold: 0,                                   // +1 per enemy defeated in campaign battles
     maxSquads: 1,                              // only Squad 1 for Map 1
     campaignRoster: [
@@ -7012,6 +7020,23 @@ function claimRecruitNode(nodeId) {
       equipment: { ...r.equipment }
     });
     armyRoster = campaignState.campaignRoster;
+
+    // Auto-slot into Squad 1 if there is an open slot within the command level cap
+    const squad1 = campaignState.campaignSquads[0];
+    if (squad1) {
+      const occupied = squad1.cells.flat().filter(Boolean).length;
+      if (occupied < campaignState.commandLevel) {
+        let slotted = false;
+        for (let row = 0; row < SQUAD_BOARD_ROWS && !slotted; row += 1) {
+          for (let col = 0; col < SQUAD_BOARD_COLS && !slotted; col += 1) {
+            if (!squad1.cells[row][col]) {
+              squad1.cells[row][col] = unitId;
+              slotted = true;
+            }
+          }
+        }
+      }
+    }
   }
 
   campaignState.clearedNodeIds.add(nodeId);
@@ -7021,9 +7046,9 @@ function claimRecruitNode(nodeId) {
 }
 
 function claimCommandLevelNode(nodeId) {
-  if (campaignState.commandLevel < 2) {
-    campaignState.commandLevel = 2;
-    commandLevel = 2;
+  if (campaignState.commandLevel < 3) {
+    campaignState.commandLevel = 3;
+    commandLevel = 3;
   }
   campaignState.clearedNodeIds.add(nodeId);
   unlockNodeOutgoing(nodeId);
@@ -7459,7 +7484,7 @@ function renderCmapDetailPanel(nodeId) {
     start:        'The beginning of the road.',
     battle:       'Defeat the enemy to proceed.',
     recruit:      'Add a unit to your roster. Restores stance.',
-    commandLevel: 'Command Level 1 → 2. Restores stance.',
+    commandLevel: 'Command Level 2 → 3. Restores stance.',
     boss:         'The final challenge. Two Archers.',
     armory:       'Salvage gear from the field. Restores stance.',
     camp:         'Rest before the boss. Full HP and SP recovery.'
