@@ -883,7 +883,169 @@ function generateGreenRoad(seed) {
     L10N3: ['L11N1']
   };
 
-  return { id: 'greenRoad', name: 'Green Road', nodes, connections };
+  return { id: 'greenRoad', name: 'Stage 1: Green Road', nodes, connections };
+}
+
+// ─── Desert Sietch: Stage 2 map generator ────────────────────────────────────
+
+const DESERT_SIETCH_ARCHER_RECRUITS = [
+  { name: 'Cass',  unitType: 'archer', equipment: { bow: 'shortbow' } },
+  { name: 'Dune',  unitType: 'archer', equipment: { bow: 'shortbow' } },
+  { name: 'Orin',  unitType: 'archer', equipment: { bow: 'shortbow' } },
+];
+const DESERT_SIETCH_SQUIRE_RECRUITS = [
+  { name: 'Garrick', unitType: 'squire', equipment: { sword: 'broadsword', shield: 'buckler' } },
+  { name: 'Lena',    unitType: 'squire', equipment: { sword: 'broadsword', armor: 'chainmail' } },
+  { name: 'Mira',    unitType: 'squire', equipment: { sword: 'broadsword' } },
+];
+const DESERT_SIETCH_THIEF_RECRUITS = [
+  { name: 'Quinn', unitType: 'thief', equipment: { dagger: 'dagger', armor: 'leather' } },
+  { name: 'Tessa', unitType: 'thief', equipment: { dagger: 'dagger' } },
+  { name: 'Ulric', unitType: 'thief', equipment: { dagger: 'dagger', armor: 'leather' } },
+];
+
+function generateDesertSietch(seed) {
+  const rng = makeSeededRng(seed);
+  function rngPick(arr) { return arr[Math.floor(rng() * arr.length)]; }
+
+  const usedNames = new Set();
+  const recruitPool = [
+    ...DESERT_SIETCH_ARCHER_RECRUITS,
+    ...DESERT_SIETCH_SQUIRE_RECRUITS,
+    ...DESERT_SIETCH_THIEF_RECRUITS
+  ];
+  function pickRecruit() {
+    const avail = recruitPool.filter((r) => !usedNames.has(r.name));
+    const r = avail.length ? rngPick(avail) : rngPick(recruitPool);
+    usedNames.add(r.name);
+    return { ...r, equipment: { ...r.equipment } };
+  }
+
+  const ARCHER_E = [{ unitType: 'archer', equipment: { bow: 'shortbow' } }];
+  const SQUIRE_E = [{ unitType: 'squire', equipment: { sword: 'broadsword' } }];
+  const THIEF_E  = [{ unitType: 'thief',  equipment: { dagger: 'dagger', armor: 'leather' } }];
+  // 2-enemy variants
+  const DOUBLE_THIEF  = [{ unitType: 'thief', equipment: { dagger: 'dagger', armor: 'leather' } },
+                         { unitType: 'thief', equipment: { dagger: 'dagger', armor: 'leather' } }];
+
+  const ENEMY_POOL = [ARCHER_E, SQUIRE_E, THIEF_E];
+
+  function makeBattle(id, layer, pos, of, enemy) {
+    return { id, layer, pos, of, type: 'battle', enemy, label: 'Battle' };
+  }
+  function makeRecruit(id, layer, pos, of) {
+    return { id, layer, pos, of, type: 'recruit', recruit: pickRecruit(), label: 'Recruit' };
+  }
+  function makeCamp(id, layer, pos, of) {
+    return { id, layer, pos, of, type: 'camp', label: 'Camp' };
+  }
+
+  // Pick a random enemy group (occasionally 2 enemies in post-CL)
+  function pickEnemy(allowDouble) {
+    if (allowDouble && rng() < 0.30) {
+      // 30% chance of a 2-enemy mixed group in post-CL sections
+      const e1 = rngPick(ENEMY_POOL)[0];
+      const e2 = rngPick(ENEMY_POOL)[0];
+      return [e1, e2];
+    }
+    return rngPick(ENEMY_POOL);
+  }
+
+  function makePreCl(id, layer, pos, of) {
+    return rng() < 0.55
+      ? makeBattle(id, layer, pos, of, rngPick(ENEMY_POOL))
+      : makeRecruit(id, layer, pos, of);
+  }
+  function makePostCl(id, layer, pos, of) {
+    return rng() < 0.55
+      ? makeBattle(id, layer, pos, of, pickEnemy(true))
+      : makeRecruit(id, layer, pos, of);
+  }
+
+  function postCl2(ids, layer) {
+    const ns = ids.map((id, i) => makePostCl(id, layer, i, 2));
+    if (!ns.some((n) => n.type === 'recruit')) {
+      const i = Math.floor(rng() * 2);
+      ns[i] = makeRecruit(ids[i], layer, i, 2);
+    }
+    return ns;
+  }
+  function postCl3(ids, layer) {
+    const ns = ids.map((id, i) => makePostCl(id, layer, i, 3));
+    if (!ns.some((n) => n.type === 'recruit')) {
+      const i = Math.floor(rng() * 3);
+      ns[i] = makeRecruit(ids[i], layer, i, 3);
+    }
+    return ns;
+  }
+  function preBoss3(ids, layer) {
+    const campPos = Math.floor(rng() * 3);
+    return ids.map((id, i) => {
+      if (i === campPos) return makeCamp(id, layer, i, 3);
+      return rng() < 0.55
+        ? makeBattle(id, layer, i, 3, pickEnemy(false))
+        : makeRecruit(id, layer, i, 3);
+    });
+  }
+
+  // ─── Build nodes (same skeleton as Green Road) ──────────────────────────────
+  const nodes = {};
+
+  nodes.L1N1 = { id: 'L1N1', layer: 0, pos: 0, of: 1, type: 'start', label: 'Start' };
+
+  nodes.L2N1 = makePreCl('L2N1', 1, 0, 2);
+  nodes.L2N2 = makePreCl('L2N2', 1, 1, 2);
+  nodes.L3N1 = makePreCl('L3N1', 2, 0, 3);
+  nodes.L3N2 = makePreCl('L3N2', 2, 1, 3);
+  nodes.L3N3 = makePreCl('L3N3', 2, 2, 3);
+  nodes.L4N1 = makePreCl('L4N1', 3, 0, 3);
+  nodes.L4N2 = makePreCl('L4N2', 3, 1, 3);
+  nodes.L4N3 = makePreCl('L4N3', 3, 2, 3);
+  nodes.L5N1 = makePreCl('L5N1', 4, 0, 2);
+  nodes.L5N2 = makePreCl('L5N2', 4, 1, 2);
+
+  nodes.L6N1 = { id: 'L6N1', layer: 5, pos: 0, of: 1, type: 'commandLevel', label: '👑 LVL UP' };
+
+  postCl2(['L7N1', 'L7N2'], 6).forEach((n) => { nodes[n.id] = n; });
+  postCl3(['L8N1', 'L8N2', 'L8N3'], 7).forEach((n) => { nodes[n.id] = n; });
+  postCl3(['L9N1', 'L9N2', 'L9N3'], 8).forEach((n) => { nodes[n.id] = n; });
+
+  preBoss3(['L10N1', 'L10N2', 'L10N3'], 9).forEach((n) => { nodes[n.id] = n; });
+
+  nodes.L11N1 = {
+    id: 'L11N1', layer: 10, pos: 0, of: 1, type: 'boss',
+    enemy: DOUBLE_THIEF,
+    label: 'Boss'
+  };
+
+  // ─── Connections (identical skeleton to Green Road) ──────────────────────────
+  const connections = {
+    L1N1:  ['L2N1', 'L2N2'],
+    L2N1:  ['L3N1', 'L3N2'],
+    L2N2:  ['L3N2', 'L3N3'],
+    L3N1:  ['L4N1', 'L4N2'],
+    L3N2:  ['L4N1', 'L4N2', 'L4N3'],
+    L3N3:  ['L4N2', 'L4N3'],
+    L4N1:  ['L5N1', 'L5N2'],
+    L4N2:  ['L5N1', 'L5N2'],
+    L4N3:  ['L5N1', 'L5N2'],
+    L5N1:  ['L6N1'],
+    L5N2:  ['L6N1'],
+    L6N1:  ['L7N1', 'L7N2'],
+    L7N1:  ['L8N1', 'L8N2'],
+    L7N2:  ['L8N2', 'L8N3'],
+    L8N1:  ['L9N1', 'L9N2'],
+    L8N2:  ['L9N1', 'L9N2', 'L9N3'],
+    L8N3:  ['L9N2', 'L9N3'],
+    L9N1:  ['L10N1', 'L10N2'],
+    L9N2:  ['L10N1', 'L10N2', 'L10N3'],
+    L9N3:  ['L10N2', 'L10N3'],
+    L10N1: ['L11N1'],
+    L10N2: ['L11N1'],
+    L10N3: ['L11N1']
+  };
+
+  return { id: 'desertSietch', name: 'Stage 2: Desert Sietch', nodes, connections };
 }
 
 const PRACTICE_ENEMY_COUNT = CONFIG.practice.enemyCount;
@@ -1321,6 +1483,8 @@ let dynamicTooltipDefinitions = {};
 let formationTooltipPanelNodes = [];
 let formationHoveredTooltipKey = null;
 let formationBackgroundNode = null;
+let battleSkyRect = null;    // saved so applyBattleTheme can recolor it
+let battleGroundRect = null; // saved so applyBattleTheme can recolor it
 let isFormationDisplayMenuOpen = false;
 let utilityMenuButtonNodes = [];
 let commandLevel = STARTING_COMMAND_LEVEL;
@@ -1570,11 +1734,11 @@ function createLayout() {
     grass: { x: 0, y: grassY, w: GAME_WIDTH, h: grassH }
   };
 
-  sceneRef.add.rectangle(layout.battle.x, layout.battle.y, layout.battle.w, layout.grass.y, PHASER_COLORS.sky)
+  battleSkyRect = sceneRef.add.rectangle(layout.battle.x, layout.battle.y, layout.battle.w, layout.grass.y, PHASER_COLORS.sky)
     .setOrigin(0)
     .setDepth(DEPTH_BACKGROUND);
   drawSkyStars();
-  sceneRef.add.rectangle(layout.grass.x, layout.grass.y, layout.grass.w, layout.grass.h, PHASER_COLORS.grass)
+  battleGroundRect = sceneRef.add.rectangle(layout.grass.x, layout.grass.y, layout.grass.w, layout.grass.h, PHASER_COLORS.grass)
     .setOrigin(0)
     .setDepth(DEPTH_BACKGROUND);
   drawBattleFormationGrid('red');
@@ -1594,6 +1758,22 @@ function createLayout() {
     .setDepth(FORMATION_BG_DEPTH);
 
   createPopupButtons();
+}
+
+// Sky/ground colors per map. 0 = use PHASER_COLORS default (green road look).
+const BATTLE_THEMES = {
+  greenRoad:    { sky: null, ground: null },              // defaults (sky/grass colors from config)
+  desertSietch: { sky: 0x7a5a28, ground: 0xb8872a }      // warm sand/dusk tones
+};
+
+function applyBattleTheme(mapId) {
+  const theme = BATTLE_THEMES[mapId] || BATTLE_THEMES.greenRoad;
+  if (battleSkyRect) {
+    battleSkyRect.setFillStyle(theme.sky != null ? theme.sky : PHASER_COLORS.sky);
+  }
+  if (battleGroundRect) {
+    battleGroundRect.setFillStyle(theme.ground != null ? theme.ground : PHASER_COLORS.grass);
+  }
 }
 
 function drawPanel(rect, title) {
@@ -2001,6 +2181,7 @@ function enterSetupPhase() {
   redFormation = [];
   blueFormation = [];
   selectedSetupUnitType = 'knight';
+  applyBattleTheme('greenRoad'); // practice always uses the default green look
   renderSetupUi();
 }
 
@@ -7104,6 +7285,7 @@ function startCampaignBattle(nodeId) {
 
   campaignState.activeEncounterNodeId = nodeId;
   battleSource = 'combatMap';
+  applyBattleTheme(campaignState.activeMapId);
 
   clearCombatMapScreen();
   clearSetupUi();
@@ -7134,6 +7316,17 @@ function startCampaignBattle(nodeId) {
   });
 }
 
+function transitionToStage2() {
+  const newSeed = (Date.now() ^ (Math.random() * 0xffffffff | 0)) >>> 0;
+  campaignState.activeMapId   = 'desertSietch';
+  campaignState.mapDef        = generateDesertSietch(newSeed);
+  campaignState.selectedNodeId = null;
+  campaignState.clearedNodeIds  = new Set(['L1N1']);
+  campaignState.unlockedNodeIds = new Set(['L2N1', 'L2N2']);
+  applyBattleTheme('desertSietch');
+  showCombatMap();
+}
+
 function afterCampaignBattleEnd(playerWon) {
   battleSource = 'practice';
   const nodeId = campaignState.activeEncounterNodeId;
@@ -7148,6 +7341,17 @@ function afterCampaignBattleEnd(playerWon) {
     campaignState.clearedNodeIds.add(nodeId);
     unlockNodeOutgoing(nodeId);
     if (node && node.type === 'boss') {
+      if (campaignState.activeMapId === 'greenRoad') {
+        // Stage 1 complete — carry state into Stage 2
+        const activeIds = getActiveCampaignBattleUnitIds();
+        applyPostCampaignBattleRecovery(activeIds);
+        activeCampaignBattleUnitIds = [];
+        gamePhase = 'setup';
+        redFormation = [];
+        blueFormation = [];
+        transitionToStage2();
+        return;
+      }
       campaignState.runStatus = 'victory';
     }
   } else {
@@ -7419,6 +7623,34 @@ function renderCmapSingleNode(nodeData, x, y) {
     .setStrokeStyle(isUnlocked || isCleared ? 2 : 1, stroke)
     .setDepth(CMAP_UI_DEPTH + 2));
 
+  // Unit sprite icon inside the node for battle / boss / recruit nodes
+  if (!isCleared) {
+    let iconType = null;
+    let iconTint = null;
+    if ((nodeData.type === 'battle' || nodeData.type === 'boss') && nodeData.enemy?.length) {
+      iconType = nodeData.enemy[0].unitType;
+      iconTint = cssHexToNumber(RED_TEAM_UNIT_TINT);
+    } else if (nodeData.type === 'recruit' && nodeData.recruit) {
+      iconType = nodeData.recruit.unitType;
+      iconTint = cssHexToNumber(BLUE_TEAM_UNIT_TINT);
+    }
+    if (iconType) {
+      const texKey = getUnitIdleTextureKey(iconType);
+      const frame  = getUnitIdleDefaultFrame(iconType) ?? 0;
+      addCmapNode(sceneRef.add.image(x, y - 2, texKey, frame)
+        .setScale(1.5)
+        .setTint(iconTint)
+        .setAlpha(labelAlpha)
+        .setDepth(CMAP_UI_DEPTH + 3));
+    }
+    // "x2" badge for 2-enemy nodes
+    if ((nodeData.type === 'battle' || nodeData.type === 'boss') && nodeData.enemy?.length >= 2) {
+      addCmapNode(sceneRef.add.text(x + CMAP_NODE_RADIUS - 2, y - CMAP_NODE_RADIUS + 2, 'x2', {
+        ...combatLogToggleTextStyle(), fontSize: '9px'
+      }).setOrigin(1, 1).setAlpha(labelAlpha).setDepth(CMAP_UI_DEPTH + 4));
+    }
+  }
+
   const labelNode = addCmapNode(sceneRef.add.text(
     x, y + CMAP_NODE_RADIUS + 6,
     nodeData.label,
@@ -7485,7 +7717,9 @@ function renderCmapDetailPanel(nodeId) {
     battle:       'Defeat the enemy to proceed.',
     recruit:      'Add a unit to your roster. Restores stance.',
     commandLevel: 'Command Level 2 → 3. Restores stance.',
-    boss:         'The final challenge. Two Archers.',
+    boss:         getCampaignMap()?.id === 'desertSietch'
+                    ? 'The final challenge. Two Thieves.'
+                    : 'The final challenge. Two Archers.',
     armory:       'Salvage gear from the field. Restores stance.',
     camp:         'Rest before the boss. Full HP and SP recovery.'
   };
@@ -7592,8 +7826,9 @@ function renderCmapEndOverlay(isVictory) {
     .setDepth(CMAP_UI_DEPTH + 10));
 
   const title = isVictory ? 'Victory!' : 'Defeated';
+  const mapId = campaignState?.activeMapId;
   const desc  = isVictory
-    ? 'The Green Road is cleared.'
+    ? (mapId === 'desertSietch' ? 'The Desert Sietch is conquered!' : 'Stage 1 complete — on to Stage 2!')
     : 'Your forces were overcome.';
   const titleColor = isVictory ? CMAP_WIN_COLOR : CMAP_LOSE_COLOR;
 
@@ -7635,13 +7870,13 @@ function renderCmapPlayerSquadPanel() {
     PHASER_COLORS.infoPanel
   ).setOrigin(0)
     .setAlpha(0.88)
-    .setStrokeStyle(1, PHASER_COLORS.panelBorder)
+    .setStrokeStyle(2, PHASER_COLORS.sp)   // blue border — friendly
     .setDepth(CMAP_UI_DEPTH + 1));
 
   addCmapNode(sceneRef.add.text(
     CMAP_PLAYER_X + 16, CMAP_BOTTOM_Y + 14,
     'Your Squad',
-    headerTextStyle()
+    { ...headerTextStyle(), color: COLORS.sp }   // blue title
   ).setDepth(CMAP_UI_DEPTH + 2));
 
   const squad = campaignState?.campaignSquads?.[0];
@@ -7680,13 +7915,13 @@ function renderCmapEnemyPanel(nodeId) {
     PHASER_COLORS.infoPanel
   ).setOrigin(0)
     .setAlpha(0.88)
-    .setStrokeStyle(1, PHASER_COLORS.panelBorder)
+    .setStrokeStyle(2, PHASER_COLORS.hp)   // red border — enemy
     .setDepth(CMAP_UI_DEPTH + 1));
 
   addCmapNode(sceneRef.add.text(
     CMAP_ENEMY_X + 16, CMAP_BOTTOM_Y + 14,
     'Enemy',
-    headerTextStyle()
+    { ...headerTextStyle(), color: COLORS.hp }   // red title
   ).setDepth(CMAP_UI_DEPTH + 2));
 
   if (!nodeId) {
