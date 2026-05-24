@@ -653,7 +653,7 @@ const CMAP_NODE_RADIUS  = 20;
 // Top-half: node map area
 const CMAP_MAP_X1       = 80;
 const CMAP_MAP_X2       = 1840;               // uses full width
-const CMAP_MAP_Y1       = 48;
+const CMAP_MAP_Y1       = 80;                 // push nodes below title + counters
 const CMAP_MAP_Y2       = 570;                // arena top half ~53% of screen
 const CMAP_LAYER_COUNT  = 11;
 const CMAP_LAYER_STEP   = (CMAP_MAP_X2 - CMAP_MAP_X1) / (CMAP_LAYER_COUNT - 1);
@@ -713,84 +713,94 @@ const CMAP_LOSE_COLOR     = '#bb4444';
 // Static campaign map: Green Road (11 layers, left to right)
 // Each node: { id, layer(0-10), pos(0-based index), of(count in layer),
 //              type, label, enemy?, recruit? }
+// Layer 5 has exactly one central Command Level node — all routes converge there.
 const CAMPAIGN_MAP_GREEN_ROAD = {
   id: 'greenRoad',
   name: 'Green Road',
   nodes: {
-    L1N1:  { id: 'L1N1',  layer: 0,  pos: 0, of: 1, type: 'start',        label: 'Start' },
+    // Layer 0: single start
+    L1N1:  { id: 'L1N1',  layer: 0,  pos: 0, of: 1, type: 'start',   label: 'Start' },
+    // Layer 1: two opening battles
     L2N1:  { id: 'L2N1',  layer: 1,  pos: 0, of: 2, type: 'battle',
              enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
     L2N2:  { id: 'L2N2',  layer: 1,  pos: 1, of: 2, type: 'battle',
              enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
-    L3N1:  { id: 'L3N1',  layer: 2,  pos: 0, of: 2, type: 'battle',
+    // Layer 2: top battle, center recruit, bottom battle
+    L3N1:  { id: 'L3N1',  layer: 2,  pos: 0, of: 3, type: 'battle',
              enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
-    L3N2:  { id: 'L3N2',  layer: 2,  pos: 1, of: 2, type: 'armory', label: 'Armory' },
-    L4N1:  { id: 'L4N1',  layer: 3,  pos: 0, of: 3, type: 'armory', label: 'Armory' },
-    L4N2:  { id: 'L4N2',  layer: 3,  pos: 1, of: 3, type: 'battle',
-             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
-    L4N3:  { id: 'L4N3',  layer: 3,  pos: 2, of: 3, type: 'armory', label: 'Armory' },
-    L5N1:  { id: 'L5N1',  layer: 4,  pos: 0, of: 3, type: 'battle',
-             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
-    L5N2:  { id: 'L5N2',  layer: 4,  pos: 1, of: 3, type: 'battle',
-             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
-    L5N3:  { id: 'L5N3',  layer: 4,  pos: 2, of: 3, type: 'battle',
-             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
-    L6N1:  { id: 'L6N1',  layer: 5,  pos: 0, of: 3, type: 'commandLevel', label: 'Lvl Up' },
-    L6N2:  { id: 'L6N2',  layer: 5,  pos: 1, of: 3, type: 'commandLevel', label: 'Lvl Up' },
-    L6N3:  { id: 'L6N3',  layer: 5,  pos: 2, of: 3, type: 'commandLevel', label: 'Lvl Up' },
-    L7N1:  { id: 'L7N1',  layer: 6,  pos: 0, of: 3, type: 'battle',
-             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
-    L7N2:  { id: 'L7N2',  layer: 6,  pos: 1, of: 3, type: 'battle',
-             enemy: [{ unitType: 'squire', equipment: { sword: 'broadsword' } }], label: 'Squire' },
-    L7N3:  { id: 'L7N3',  layer: 6,  pos: 2, of: 3, type: 'battle',
-             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
-    L8N1:  { id: 'L8N1',  layer: 7,  pos: 0, of: 3, type: 'recruit',
+    L3N2:  { id: 'L3N2',  layer: 2,  pos: 1, of: 3, type: 'recruit',
              recruit: { unitType: 'archer', equipment: { bow: 'shortbow' }, name: 'Fay' }, label: 'Recruit' },
+    L3N3:  { id: 'L3N3',  layer: 2,  pos: 2, of: 3, type: 'battle',
+             enemy: [{ unitType: 'squire', equipment: { sword: 'broadsword' } }], label: 'Squire' },
+    // Layer 3: top battle, center camp, bottom battle
+    L4N1:  { id: 'L4N1',  layer: 3,  pos: 0, of: 3, type: 'battle',
+             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
+    L4N2:  { id: 'L4N2',  layer: 3,  pos: 1, of: 3, type: 'camp',   label: 'Camp' },
+    L4N3:  { id: 'L4N3',  layer: 3,  pos: 2, of: 3, type: 'battle',
+             enemy: [{ unitType: 'squire', equipment: { sword: 'broadsword' } }], label: 'Squire' },
+    // Layer 4: two nodes — top lane and bottom lane converge toward Command Level
+    L5N1:  { id: 'L5N1',  layer: 4,  pos: 0, of: 2, type: 'battle',
+             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
+    L5N2:  { id: 'L5N2',  layer: 4,  pos: 1, of: 2, type: 'battle',
+             enemy: [{ unitType: 'squire', equipment: { sword: 'broadsword' } }], label: 'Squire' },
+    // Layer 5: single central Command Level node — ALL routes merge here
+    L6N1:  { id: 'L6N1',  layer: 5,  pos: 0, of: 1, type: 'commandLevel', label: 'Lvl Up' },
+    // Layer 6: two nodes branching from Command Level
+    L7N1:  { id: 'L7N1',  layer: 6,  pos: 0, of: 2, type: 'battle',
+             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
+    L7N2:  { id: 'L7N2',  layer: 6,  pos: 1, of: 2, type: 'battle',
+             enemy: [{ unitType: 'squire', equipment: { sword: 'broadsword' } }], label: 'Squire' },
+    // Layer 7: top recruit, center battle, bottom battle
+    L8N1:  { id: 'L8N1',  layer: 7,  pos: 0, of: 3, type: 'recruit',
+             recruit: { unitType: 'archer', equipment: { bow: 'shortbow' }, name: 'Iris' }, label: 'Recruit' },
     L8N2:  { id: 'L8N2',  layer: 7,  pos: 1, of: 3, type: 'battle',
              enemy: [{ unitType: 'squire', equipment: { sword: 'broadsword' } }], label: 'Squire' },
-    L8N3:  { id: 'L8N3',  layer: 7,  pos: 2, of: 3, type: 'recruit',
-             recruit: { unitType: 'archer', equipment: { bow: 'shortbow' }, name: 'Iris' }, label: 'Recruit' },
+    L8N3:  { id: 'L8N3',  layer: 7,  pos: 2, of: 3, type: 'battle',
+             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
+    // Layer 8: top battle, center camp, bottom battle
     L9N1:  { id: 'L9N1',  layer: 8,  pos: 0, of: 3, type: 'battle',
              enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
-    L9N2:  { id: 'L9N2',  layer: 8,  pos: 1, of: 3, type: 'battle',
-             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
+    L9N2:  { id: 'L9N2',  layer: 8,  pos: 1, of: 3, type: 'camp',   label: 'Camp' },
     L9N3:  { id: 'L9N3',  layer: 8,  pos: 2, of: 3, type: 'battle',
              enemy: [{ unitType: 'squire', equipment: { sword: 'broadsword' } }], label: 'Squire' },
-    L10N1: { id: 'L10N1', layer: 9,  pos: 0, of: 1, type: 'camp',  label: 'Camp' },
+    // Layer 9: two nodes converging toward boss
+    L10N1: { id: 'L10N1', layer: 9,  pos: 0, of: 2, type: 'battle',
+             enemy: [{ unitType: 'archer', equipment: { bow: 'shortbow' } }], label: 'Archer' },
+    L10N2: { id: 'L10N2', layer: 9,  pos: 1, of: 2, type: 'battle',
+             enemy: [{ unitType: 'squire', equipment: { sword: 'broadsword' } }], label: 'Squire' },
+    // Layer 10: single boss
     L11N1: { id: 'L11N1', layer: 10, pos: 0, of: 1, type: 'boss',
              enemy: [
                { unitType: 'archer', equipment: { bow: 'shortbow' } },
                { unitType: 'archer', equipment: { bow: 'shortbow' } }
              ], label: 'Boss' }
   },
-  // Forward-only connections (left to right)
-  // Center nodes connect to all neighbors; outer nodes connect to 2.
-  // Command-level layer (L6) is a full convergence point: every L5 -> every L6 -> every L7.
+  // Forward-only connections (left to right).
+  // Edge nodes: edge lane + one step inward. Center nodes: up + center + down.
+  // Layers 4-5 fully converge at the single Command Level node (L6N1).
   connections: {
     L1N1:  ['L2N1', 'L2N2'],
-    L2N1:  ['L3N1', 'L3N2'],
-    L2N2:  ['L3N1', 'L3N2'],
-    L3N1:  ['L4N1', 'L4N2', 'L4N3'],
-    L3N2:  ['L4N1', 'L4N2', 'L4N3'],
-    L4N1:  ['L5N1', 'L5N2'],
-    L4N2:  ['L5N1', 'L5N2', 'L5N3'],
-    L4N3:  ['L5N2', 'L5N3'],
-    L5N1:  ['L6N1', 'L6N2', 'L6N3'],
-    L5N2:  ['L6N1', 'L6N2', 'L6N3'],
-    L5N3:  ['L6N1', 'L6N2', 'L6N3'],
-    L6N1:  ['L7N1', 'L7N2', 'L7N3'],
-    L6N2:  ['L7N1', 'L7N2', 'L7N3'],
-    L6N3:  ['L7N1', 'L7N2', 'L7N3'],
-    L7N1:  ['L8N1', 'L8N2'],
-    L7N2:  ['L8N1', 'L8N2', 'L8N3'],
-    L7N3:  ['L8N2', 'L8N3'],
-    L8N1:  ['L9N1', 'L9N2'],
-    L8N2:  ['L9N1', 'L9N2', 'L9N3'],
-    L8N3:  ['L9N2', 'L9N3'],
-    L9N1:  ['L10N1'],
-    L9N2:  ['L10N1'],
-    L9N3:  ['L10N1'],
-    L10N1: ['L11N1']
+    L2N1:  ['L3N1', 'L3N2'],           // top: edge + inward
+    L2N2:  ['L3N2', 'L3N3'],           // bottom: inward + edge
+    L3N1:  ['L4N1', 'L4N2'],           // top: edge + inward
+    L3N2:  ['L4N1', 'L4N2', 'L4N3'],   // center: up + center + down
+    L3N3:  ['L4N2', 'L4N3'],           // bottom: inward + edge
+    L4N1:  ['L5N1', 'L5N2'],           // all layer-3 nodes converge to both layer-4 nodes
+    L4N2:  ['L5N1', 'L5N2'],
+    L4N3:  ['L5N1', 'L5N2'],
+    L5N1:  ['L6N1'],                    // only path to Command Level
+    L5N2:  ['L6N1'],                    // only path to Command Level
+    L6N1:  ['L7N1', 'L7N2'],           // CL branches into two lanes
+    L7N1:  ['L8N1', 'L8N2'],           // top: edge + inward
+    L7N2:  ['L8N2', 'L8N3'],           // bottom: inward + edge
+    L8N1:  ['L9N1', 'L9N2'],           // top: edge + inward
+    L8N2:  ['L9N1', 'L9N2', 'L9N3'],   // center: up + center + down
+    L8N3:  ['L9N2', 'L9N3'],           // bottom: inward + edge
+    L9N1:  ['L10N1', 'L10N2'],         // converge: both lanes
+    L9N2:  ['L10N1', 'L10N2'],
+    L9N3:  ['L10N1', 'L10N2'],
+    L10N1: ['L11N1'],
+    L10N2: ['L11N1']
   }
 };
 
@@ -6872,6 +6882,7 @@ function initCampaignState() {
     unlockedNodeIds: new Set(['L2N1', 'L2N2']),// layer-2 nodes unlocked from start
     activeEncounterNodeId: null,
     commandLevel: 1,                           // starts at 1 for Map 1
+    gold: 0,                                   // +1 per enemy defeated in campaign battles
     maxSquads: 1,                              // only Squad 1 for Map 1
     campaignRoster: [
       {
@@ -7025,9 +7036,13 @@ function afterCampaignBattleEnd(playerWon) {
   campaignState.activeEncounterNodeId = null;
 
   if (playerWon) {
+    const node = getCampaignMap().nodes[nodeId];
+    // +1 gold per enemy defeated (all blue units are down when player wins)
+    if (node && node.enemy) {
+      campaignState.gold = (campaignState.gold || 0) + node.enemy.length;
+    }
     campaignState.clearedNodeIds.add(nodeId);
     unlockNodeOutgoing(nodeId);
-    const node = getCampaignMap().nodes[nodeId];
     if (node && node.type === 'boss') {
       campaignState.runStatus = 'victory';
     }
@@ -7132,12 +7147,26 @@ function renderCombatMapScreen() {
   addCmapNode(sceneRef.add.rectangle(0, CMAP_SPLIT_Y, GAME_WIDTH, GAME_HEIGHT - CMAP_SPLIT_Y, PHASER_COLORS.panel)
     .setOrigin(0).setDepth(CMAP_UI_DEPTH));
 
-  // Map title: chunky pixel RPG header
+  // Map title: above the node area, smaller to avoid overlap
   addCmapNode(sceneRef.add.text(
-    GAME_WIDTH / 2, CMAP_MAP_Y1 + 6,
+    GAME_WIDTH / 2, 14,
     mapDef.name,
-    { ...headerTextStyle(), fontSize: '30px' }
+    { ...headerTextStyle(), fontSize: '22px' }
   ).setOrigin(0.5, 0).setDepth(CMAP_UI_DEPTH + 3));
+
+  // Top-right: campaign counters — CL and gold
+  const _cl   = campaignState ? campaignState.commandLevel : 1;
+  const _gold = campaignState ? (campaignState.gold || 0) : 0;
+  addCmapNode(sceneRef.add.text(
+    GAME_WIDTH - 16, 14,
+    `CL: ${_cl}`,
+    bodyTextStyle()
+  ).setOrigin(1, 0).setDepth(CMAP_UI_DEPTH + 3));
+  addCmapNode(sceneRef.add.text(
+    GAME_WIDTH - 16, 36,
+    `Gold: ${_gold}`,
+    bodyTextStyle()
+  ).setOrigin(1, 0).setDepth(CMAP_UI_DEPTH + 3));
 
   // Top-left: hamburger square + Formation nav button
   renderCmapNavButton();
