@@ -14,8 +14,8 @@ export const CONFIG = {
 
   theme: {
     font: {
-      webFamily: 'Oxanium',
-      family: '"Oxanium", system-ui, sans-serif',
+      webFamily: 'Silkscreen',
+      family: '"Silkscreen", monospace',
       loadTimeoutMs: 1200
     }
     ,
