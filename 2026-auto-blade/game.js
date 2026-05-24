@@ -648,7 +648,7 @@ const MAP_NAV_BTN_PAD        = 10;  // horizontal text padding
 
 // Combat map screen depths and layout
 const CMAP_UI_DEPTH     = POPUP_DEPTH + 20;   // above all other UI
-const CMAP_NODE_RADIUS  = 20;
+const CMAP_NODE_RADIUS  = 32;  // enlarged for legible sprite art
 
 // Top-half: node map area
 const CMAP_MAP_X1       = 80;
@@ -7638,7 +7638,7 @@ function renderCmapSingleNode(nodeData, x, y) {
       const texKey = getUnitIdleTextureKey(iconType);
       const frame  = getUnitIdleDefaultFrame(iconType) ?? 0;
       addCmapNode(sceneRef.add.image(x, y - 2, texKey, frame)
-        .setScale(1.5)
+        .setScale(2.5)  // enlarged to fill bigger node circle
         .setTint(iconTint)
         .setAlpha(labelAlpha)
         .setDepth(CMAP_UI_DEPTH + 3));
@@ -7646,7 +7646,7 @@ function renderCmapSingleNode(nodeData, x, y) {
     // "x2" badge for 2-enemy nodes
     if ((nodeData.type === 'battle' || nodeData.type === 'boss') && nodeData.enemy?.length >= 2) {
       addCmapNode(sceneRef.add.text(x + CMAP_NODE_RADIUS - 2, y - CMAP_NODE_RADIUS + 2, 'x2', {
-        ...combatLogToggleTextStyle(), fontSize: '9px'
+        ...combatLogToggleTextStyle(), fontSize: '12px'  // scaled with larger node
       }).setOrigin(1, 1).setAlpha(labelAlpha).setDepth(CMAP_UI_DEPTH + 4));
     }
   }
@@ -7654,7 +7654,7 @@ function renderCmapSingleNode(nodeData, x, y) {
   const labelNode = addCmapNode(sceneRef.add.text(
     x, y + CMAP_NODE_RADIUS + 6,
     nodeData.label,
-    combatLogToggleTextStyle()
+    { ...combatLogToggleTextStyle(), fontSize: '17px' }  // larger label matches bigger node
   ).setOrigin(0.5, 0)
     .setAlpha(labelAlpha)
     .setDepth(CMAP_UI_DEPTH + 3));
