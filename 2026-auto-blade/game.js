@@ -647,7 +647,7 @@ const MAP_NAV_BUTTON_W_FMT   = 96;  // fits 'Formation'
 const MAP_NAV_BTN_PAD        = 10;  // horizontal text padding
 
 // Campaign XP / promotion
-const CAMPAIGN_XP_PER_PROMOTION = 3;  // XP needed for Squire → Knight promotion (test value)
+const CAMPAIGN_XP_PER_PROMOTION = 10; // XP needed for Squire → Knight promotion
 
 // Combat map screen depths and layout
 const CMAP_UI_DEPTH     = POPUP_DEPTH + 20;   // above all other UI
@@ -774,10 +774,14 @@ function generateGreenRoad(seed) {
     return { id, layer, pos, of, type: 'camp', label: 'Camp' };
   }
 
-  // Post-CL node: 55% battle (archer/squire mix), 45% recruit
+  // Post-CL node: 55% battle, 45% recruit; battles are 50% double-enemy
   function makePostCl(id, layer, pos, of) {
     if (rng() < 0.55) {
-      return makeBattle(id, layer, pos, of, rng() < 0.55 ? ARCHER_ENEMY : SQUIRE_ENEMY);
+      const pick = () => (rng() < 0.55 ? ARCHER_ENEMY[0] : SQUIRE_ENEMY[0]);
+      if (rng() < 0.50) {
+        return makeBattle(id, layer, pos, of, [pick(), pick()]);
+      }
+      return makeBattle(id, layer, pos, of, [pick()]);
     }
     return makeRecruit(id, layer, pos, of);
   }
@@ -812,10 +816,10 @@ function generateGreenRoad(seed) {
     });
   }
 
-  // Pre-CL node: 55% battle (archers only), 45% recruit
+  // Pre-CL node: 55% battle (archer or weapon-only squire), 45% recruit; always 1 enemy
   function makePreCl(id, layer, pos, of) {
     if (rng() < 0.55) {
-      return makeBattle(id, layer, pos, of, ARCHER_ENEMY);
+      return makeBattle(id, layer, pos, of, rng() < 0.65 ? ARCHER_ENEMY : SQUIRE_ENEMY);
     }
     return makeRecruit(id, layer, pos, of);
   }
@@ -849,10 +853,11 @@ function generateGreenRoad(seed) {
   // Layer 9: pre-boss (3 nodes, exactly 1 camp)
   preBoss3(['L10N1', 'L10N2', 'L10N3'], 9).forEach((n) => { nodes[n.id] = n; });
 
-  // Layer 10: boss
+  // Layer 10: boss — 3 Archers
   nodes.L11N1 = {
     id: 'L11N1', layer: 10, pos: 0, of: 1, type: 'boss',
     enemy: [
+      { unitType: 'archer', equipment: { bow: 'shortbow' } },
       { unitType: 'archer', equipment: { bow: 'shortbow' } },
       { unitType: 'archer', equipment: { bow: 'shortbow' } }
     ],
@@ -943,9 +948,9 @@ function generateDesertSietch(seed) {
     return { id, layer, pos, of, type: 'camp', label: 'Camp' };
   }
 
-  // Pick a random enemy group (occasionally 2 enemies in post-CL)
+  // Pick a random enemy group (often 2 enemies in post-CL)
   function pickEnemy(allowDouble) {
-    if (allowDouble && rng() < 0.30) {
+    if (allowDouble && rng() < 0.55) {
       // 30% chance of a 2-enemy mixed group in post-CL sections
       const e1 = rngPick(ENEMY_POOL)[0];
       const e2 = rngPick(ENEMY_POOL)[0];
@@ -1007,7 +1012,8 @@ function generateDesertSietch(seed) {
   nodes.L5N1 = makePreCl('L5N1', 4, 0, 2);
   nodes.L5N2 = makePreCl('L5N2', 4, 1, 2);
 
-  nodes.L6N1 = { id: 'L6N1', layer: 5, pos: 0, of: 1, type: 'commandLevel', label: '👑 LVL UP' };
+  // Layer 5: squad upgrade — grants 2nd squad instead of command level
+  nodes.L6N1 = { id: 'L6N1', layer: 5, pos: 0, of: 1, type: 'squadUp', label: '🛡️ SQUAD UP' };
 
   postCl2(['L7N1', 'L7N2'], 6).forEach((n) => { nodes[n.id] = n; });
   postCl3(['L8N1', 'L8N2', 'L8N3'], 7).forEach((n) => { nodes[n.id] = n; });
@@ -1015,9 +1021,14 @@ function generateDesertSietch(seed) {
 
   preBoss3(['L10N1', 'L10N2', 'L10N3'], 9).forEach((n) => { nodes[n.id] = n; });
 
+  // Layer 10: boss — 3 Thieves
   nodes.L11N1 = {
     id: 'L11N1', layer: 10, pos: 0, of: 1, type: 'boss',
-    enemy: DOUBLE_THIEF,
+    enemy: [
+      { unitType: 'thief', equipment: { dagger: 'dagger', armor: 'leather' } },
+      { unitType: 'thief', equipment: { dagger: 'dagger', armor: 'leather' } },
+      { unitType: 'thief', equipment: { dagger: 'dagger', armor: 'leather' } }
+    ],
     label: 'Boss'
   };
 
@@ -7267,10 +7278,25 @@ function claimRecruitNode(nodeId) {
 }
 
 function claimCommandLevelNode(nodeId) {
-  if (campaignState.commandLevel < 3) {
-    campaignState.commandLevel = 3;
-    commandLevel = 3;
+  campaignState.commandLevel += 1;
+  commandLevel = campaignState.commandLevel;
+  campaignState.clearedNodeIds.add(nodeId);
+  unlockNodeOutgoing(nodeId);
+  applyNonBattleNodeRecovery();
+  renderCombatMapScreen();
+}
+
+function claimSquadUpNode(nodeId) {
+  campaignState.maxSquads = (campaignState.maxSquads || 1) + 1;
+  while (campaignState.campaignSquads.length < campaignState.maxSquads) {
+    const idx = campaignState.campaignSquads.length + 1;
+    campaignState.campaignSquads.push({
+      id: `squad-${idx}`,
+      name: `Squad ${idx}`,
+      cells: createEmptySquadCells()
+    });
   }
+  armySquads = campaignState.campaignSquads;
   campaignState.clearedNodeIds.add(nodeId);
   unlockNodeOutgoing(nodeId);
   applyNonBattleNodeRecovery();
@@ -7507,9 +7533,10 @@ function renderCombatMapScreen() {
     { ...headerTextStyle(), fontSize: '22px' }
   ).setOrigin(0.5, 0).setDepth(CMAP_UI_DEPTH + 3));
 
-  // Top-right: campaign counters — CL and gold
+  // Top-right: campaign counters — CL, gold, squad count
   const _cl   = campaignState ? campaignState.commandLevel : 1;
   const _gold = campaignState ? (campaignState.gold || 0) : 0;
+  const _sq   = campaignState ? (campaignState.maxSquads || 1) : 1;
   addCmapNode(sceneRef.add.text(
     GAME_WIDTH - 16, 14,
     `\u{1F451} ${_cl}`,
@@ -7518,6 +7545,11 @@ function renderCombatMapScreen() {
   addCmapNode(sceneRef.add.text(
     GAME_WIDTH - 16, 36,
     `\u{1FA99} ${_gold}`,
+    bodyTextStyle()
+  ).setOrigin(1, 0).setDepth(CMAP_UI_DEPTH + 3));
+  addCmapNode(sceneRef.add.text(
+    GAME_WIDTH - 16, 58,
+    `🛡️ ${_sq}`,
     bodyTextStyle()
   ).setOrigin(1, 0).setDepth(CMAP_UI_DEPTH + 3));
 
@@ -7686,9 +7718,9 @@ function renderCmapSingleNode(nodeData, x, y) {
         .setAlpha(labelAlpha)
         .setDepth(CMAP_UI_DEPTH + 3));
     }
-    // "x2" badge for 2-enemy nodes
+    // Enemy count badge for multi-enemy nodes
     if ((nodeData.type === 'battle' || nodeData.type === 'boss') && nodeData.enemy?.length >= 2) {
-      addCmapNode(sceneRef.add.text(x + CMAP_NODE_RADIUS - 2, y - CMAP_NODE_RADIUS + 2, 'x2', {
+      addCmapNode(sceneRef.add.text(x + CMAP_NODE_RADIUS - 2, y - CMAP_NODE_RADIUS + 2, `x${nodeData.enemy.length}`, {
         ...combatLogToggleTextStyle(), fontSize: '12px'  // scaled with larger node
       }).setOrigin(1, 1).setAlpha(labelAlpha).setDepth(CMAP_UI_DEPTH + 4));
     }
@@ -7760,17 +7792,18 @@ function renderCmapDetailPanel(nodeId) {
 
   const typeLabels = {
     start: 'Start', battle: 'Battle', recruit: 'Recruit',
-    commandLevel: 'Command Level Up', boss: 'Boss Battle',
-    armory: 'Armory', camp: 'Camp'
+    commandLevel: 'Command Level Up', squadUp: 'Squad Up',
+    boss: 'Boss Battle', armory: 'Armory', camp: 'Camp'
   };
   const typeDescs = {
     start:        'The beginning of the road.',
     battle:       'Defeat the enemy to proceed.',
     recruit:      'Add a unit to your roster. Restores stance.',
-    commandLevel: 'Command Level 2 → 3. Restores stance.',
+    commandLevel: 'Raises your Command Level by +1. Restores stance.',
+    squadUp:      'Expands your army to 2 squads. Restores stance.',
     boss:         getCampaignMap()?.id === 'desertSietch'
-                    ? 'The final challenge. Two Thieves.'
-                    : 'The final challenge. Two Archers.',
+                    ? 'The final challenge. Three Thieves.'
+                    : 'The final challenge. Three Archers.',
     armory:       'Salvage gear from the field. Restores stance.',
     camp:         'Rest before the boss. Full HP and SP recovery.'
   };
@@ -7834,6 +7867,7 @@ function renderCmapActionButton(nodeId) {
         boss:         'Enter Boss',
         recruit:      'Recruit',
         commandLevel: 'Claim',
+        squadUp:      'Claim',
         armory:       'Claim',
         camp:         'Rest'
       };
@@ -8185,6 +8219,9 @@ function handleCmapNodeAction(nodeId) {
       break;
     case 'commandLevel':
       claimCommandLevelNode(nodeId);
+      break;
+    case 'squadUp':
+      claimSquadUpNode(nodeId);
       break;
     case 'armory':
       claimArmoryNode(nodeId);
