@@ -646,6 +646,9 @@ const MAP_NAV_BUTTON_W_MAP   = 50;  // fits 'Map'
 const MAP_NAV_BUTTON_W_FMT   = 96;  // fits 'Formation'
 const MAP_NAV_BTN_PAD        = 10;  // horizontal text padding
 
+// Campaign XP / promotion
+const CAMPAIGN_XP_PER_PROMOTION = 3;  // XP needed for Squire → Knight promotion (test value)
+
 // Combat map screen depths and layout
 const CMAP_UI_DEPTH     = POPUP_DEPTH + 20;   // above all other UI
 const CMAP_NODE_RADIUS  = 32;  // enlarged for legible sprite art
@@ -864,9 +867,9 @@ function generateGreenRoad(seed) {
     L3N1:  ['L4N1', 'L4N2'],
     L3N2:  ['L4N1', 'L4N2', 'L4N3'],   // center: all three
     L3N3:  ['L4N2', 'L4N3'],
-    L4N1:  ['L5N1', 'L5N2'],           // all layer-3 nodes converge to both layer-4 nodes
-    L4N2:  ['L5N1', 'L5N2'],
-    L4N3:  ['L5N1', 'L5N2'],
+    L4N1:  ['L5N1'],                    // top edge stays top — no crossing
+    L4N2:  ['L5N1', 'L5N2'],           // center connects both
+    L4N3:  ['L5N2'],                   // bottom edge stays bottom — no crossing
     L5N1:  ['L6N1'],                    // only path to Command Level
     L5N2:  ['L6N1'],
     L6N1:  ['L7N1', 'L7N2'],           // CL branches into two lanes
@@ -1026,9 +1029,9 @@ function generateDesertSietch(seed) {
     L3N1:  ['L4N1', 'L4N2'],
     L3N2:  ['L4N1', 'L4N2', 'L4N3'],
     L3N3:  ['L4N2', 'L4N3'],
-    L4N1:  ['L5N1', 'L5N2'],
-    L4N2:  ['L5N1', 'L5N2'],
-    L4N3:  ['L5N1', 'L5N2'],
+    L4N1:  ['L5N1'],                    // top edge stays top — no crossing
+    L4N2:  ['L5N1', 'L5N2'],           // center connects both
+    L4N3:  ['L5N2'],                   // bottom edge stays bottom — no crossing
     L5N1:  ['L6N1'],
     L5N2:  ['L6N1'],
     L6N1:  ['L7N1', 'L7N2'],
@@ -7135,6 +7138,34 @@ function applyNonBattleNodeRecovery() {
   restoreCampaignStanceForLivingUnits(allIds);
 }
 
+// Grant +enemyCount XP to each living unit that fought. Then check promotions.
+function grantCampaignBattleXp(activeUnitIds, enemyCount) {
+  if (!campaignState || enemyCount <= 0) return;
+  activeUnitIds.forEach((unitId) => {
+    const unit = campaignState.campaignRoster.find((u) => u.id === unitId);
+    if (!unit || isUnitKo(unit)) return;
+    unit.xp = (unit.xp || 0) + enemyCount;
+  });
+  checkAndApplyPromotions();
+}
+
+// Squire → Knight when xp >= threshold. Once only. Clamps HP/SP to new max.
+function checkAndApplyPromotions() {
+  if (!campaignState) return;
+  campaignState.promotionLog = campaignState.promotionLog || [];
+  campaignState.campaignRoster.forEach((unit) => {
+    if (unit.unitType !== 'squire') return;
+    if (unit.promoted) return;                           // already promoted once
+    if ((unit.xp || 0) < CAMPAIGN_XP_PER_PROMOTION) return;
+    unit.unitType = 'knight';
+    unit.promoted = true;
+    const newStats = calculateClassStats('knight', unit.equipment || null);
+    if (unit.currentHp != null) unit.currentHp = Math.min(unit.currentHp, newStats.maxHp);
+    if (unit.currentSp != null) unit.currentSp = Math.min(unit.currentSp, newStats.maxSp);
+    campaignState.promotionLog.push(`${unit.name} promoted to Knight!`);
+  });
+}
+
 function initCampaignState() {
   // Squad 1: auto-slot Alden at front-center position (boardRow=1, boardCol=2 → front row, col 1)
   const squad1Cells = createEmptySquadCells();
@@ -7157,12 +7188,14 @@ function initCampaignState() {
         id: 'squire-alden',
         name: 'Alden',
         unitType: 'squire',
-        equipment: { sword: 'broadsword', shield: 'buckler', armor: 'chainmail' }
+        equipment: { sword: 'broadsword', shield: 'buckler', armor: 'chainmail' },
+        xp: 0
       }
     ],
     campaignSquads: [
       { id: 'squad-1', name: 'Squad 1', cells: squad1Cells }
     ],
+    promotionLog: [],   // messages shown once on the map after battle
     runStatus: 'active'
   };
 }
@@ -7194,11 +7227,18 @@ function claimRecruitNode(nodeId) {
   const r = node.recruit;
   const unitId = `campaign-${r.unitType}-${r.name.toLowerCase()}`;
   if (!campaignState.campaignRoster.find((u) => u.id === unitId)) {
+    // Recruit joins at avg roster XP - 1, minimum 0
+    const existingXps = campaignState.campaignRoster.map((u) => u.xp || 0);
+    const avgXp = existingXps.length
+      ? existingXps.reduce((sum, v) => sum + v, 0) / existingXps.length
+      : 0;
+    const recruitXp = Math.max(0, Math.floor(avgXp) - 1);
     campaignState.campaignRoster.push({
       id: unitId,
       name: r.name,
       unitType: r.unitType,
-      equipment: { ...r.equipment }
+      equipment: { ...r.equipment },
+      xp: recruitXp
     });
     armyRoster = campaignState.campaignRoster;
 
@@ -7334,9 +7374,10 @@ function afterCampaignBattleEnd(playerWon) {
 
   if (playerWon) {
     const node = getCampaignMap().nodes[nodeId];
-    // +1 gold per enemy defeated (all blue units are down when player wins)
+    // +1 gold per enemy defeated; +XP to living active units
     if (node && node.enemy) {
       campaignState.gold = (campaignState.gold || 0) + node.enemy.length;
+      grantCampaignBattleXp(activeCampaignBattleUnitIds, node.enemy.length);
     }
     campaignState.clearedNodeIds.add(nodeId);
     unlockNodeOutgoing(nodeId);
@@ -7400,6 +7441,8 @@ function showCombatMap() {
   showFullGameView();
   setFormationScreenVisible(true);
   renderCombatMapScreen();
+  // Clear promo messages after first render; they show once per return from battle.
+  if (campaignState) campaignState.promotionLog = [];
 }
 
 function showFormationFromMap() {
@@ -7696,7 +7739,15 @@ function renderCmapDetailPanel(nodeId) {
   if (!nodeId) {
     addCmapNode(sceneRef.add.text(px, py, mapDef.name, headerTextStyle())
       .setDepth(CMAP_UI_DEPTH + 2));
-    addCmapNode(sceneRef.add.text(px, py + 30, 'Select a node to see details.', bodyTextStyle())
+    py += 30;
+    // Show any pending promotion messages (cleared after this render).
+    (campaignState.promotionLog || []).forEach((msg) => {
+      addCmapNode(sceneRef.add.text(px, py, msg, {
+        ...bodyTextStyle(), color: '#88cc44'
+      }).setDepth(CMAP_UI_DEPTH + 2));
+      py += 20;
+    });
+    addCmapNode(sceneRef.add.text(px, py, 'Select a node to see details.', bodyTextStyle())
       .setDepth(CMAP_UI_DEPTH + 2));
     return;
   }
@@ -7987,7 +8038,7 @@ function renderCmapUnitCard(unit, x, y, w, h) {
   ).setDepth(CMAP_UI_DEPTH + 3));
 
   addCmapNode(sceneRef.add.text(x + 10, y + 30,
-    classDef.name,
+    `${classDef.name}  ·  XP ${unit.xp || 0}/${CAMPAIGN_XP_PER_PROMOTION}`,
     bodyTextStyle()
   ).setDepth(CMAP_UI_DEPTH + 3));
 
@@ -8061,6 +8112,7 @@ function renderCmapUnitStatBlock(unit, x, y, showBack) {
   const lines = [
     { text: `${unit.name}${ko ? '  (KO)' : ''}`, style: { ...headerTextStyle(), color: ko ? CMAP_LOSE_COLOR : COLORS.text } },
     { text: classDef.name, style: bodyTextStyle() },
+    { text: `⭐ XP: ${unit.xp || 0} / ${CAMPAIGN_XP_PER_PROMOTION}`, style: bodyTextStyle() },
     { text: `❤️ ${curHp} / ${stats.maxHp}`, style: bodyTextStyle() },
     { text: `🛡️ ${curSp} / ${stats.maxSp}`, style: bodyTextStyle() },
     { text: `🔶 ${stats.ap} / ${stats.maxAp}`, style: bodyTextStyle() },
