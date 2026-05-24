@@ -622,7 +622,7 @@ const CLASS_TOOLTIPS = {
 };
 
 const UNIT_QUIPS = {
-  Alten: 'Still believes one clean block can fix anything.',
+  Alden: 'Still believes one clean block can fix anything.',
   Alvin: 'Volunteers first, then asks what the plan is.',
   Bria: 'Keeps a spare knife and a sharper comeback.',
   Cedric: 'Polishes his gear before every bad idea.',
@@ -1392,7 +1392,7 @@ function create() {
   sceneRef.input.on('pointerup', handleArmyRosterDragEnd);
   sceneRef.input.on('wheel', handleSetupSquadWheel);
 
-  enterSetupPhase();
+  showCombatMap();
 }
 
 function createClassAnimations() {
