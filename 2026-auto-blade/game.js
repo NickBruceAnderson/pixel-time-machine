@@ -7110,6 +7110,22 @@ function getCampaignMap() {
   return campaignState ? campaignState.mapDef : null;
 }
 
+function getCampaignNodeById(nodeId) {
+  const mapDef = getCampaignMap();
+  return mapDef ? mapDef.nodes[nodeId] : null;
+}
+
+function getReachableCampaignNodeIds(currentNodeId) {
+  const mapDef = getCampaignMap();
+  if (!mapDef || !currentNodeId) return new Set();
+  return new Set(mapDef.connections[currentNodeId] || []);
+}
+
+function isCampaignNodeReachableFromCurrent(nodeId) {
+  if (!campaignState) return false;
+  return getReachableCampaignNodeIds(campaignState.currentNodeId).has(nodeId);
+}
+
 // ─── Campaign: stance / SP recovery ─────────────────────────────────────────
 
 function getActiveCampaignBattleUnitIds() {
@@ -7187,6 +7203,7 @@ function initCampaignState() {
     activeMapId: 'greenRoad',
     mapSeed,
     mapDef: generateGreenRoad(mapSeed),        // generated once; stable for entire run
+    currentNodeId: 'L1N1',
     selectedNodeId: null,
     clearedNodeIds: new Set(['L1N1']),         // start node pre-cleared
     unlockedNodeIds: new Set(['L2N1', 'L2N2']),// layer-2 nodes unlocked from start
@@ -7272,6 +7289,7 @@ function claimRecruitNode(nodeId) {
   }
 
   campaignState.clearedNodeIds.add(nodeId);
+  campaignState.currentNodeId = nodeId;
   unlockNodeOutgoing(nodeId);
   applyNonBattleNodeRecovery();
   renderCombatMapScreen();
@@ -7281,6 +7299,7 @@ function claimCommandLevelNode(nodeId) {
   campaignState.commandLevel += 1;
   commandLevel = campaignState.commandLevel;
   campaignState.clearedNodeIds.add(nodeId);
+  campaignState.currentNodeId = nodeId;
   unlockNodeOutgoing(nodeId);
   applyNonBattleNodeRecovery();
   renderCombatMapScreen();
@@ -7298,6 +7317,7 @@ function claimSquadUpNode(nodeId) {
   }
   armySquads = campaignState.campaignSquads;
   campaignState.clearedNodeIds.add(nodeId);
+  campaignState.currentNodeId = nodeId;
   unlockNodeOutgoing(nodeId);
   applyNonBattleNodeRecovery();
   renderCombatMapScreen();
@@ -7306,6 +7326,7 @@ function claimSquadUpNode(nodeId) {
 function claimArmoryNode(nodeId) {
   // No equipment inventory yet — show placeholder and mark cleared.
   campaignState.clearedNodeIds.add(nodeId);
+  campaignState.currentNodeId = nodeId;
   unlockNodeOutgoing(nodeId);
   applyNonBattleNodeRecovery();
   renderCombatMapScreen();
@@ -7323,6 +7344,7 @@ function claimCampNode(nodeId) {
     });
   }
   campaignState.clearedNodeIds.add(nodeId);
+  campaignState.currentNodeId = nodeId;
   unlockNodeOutgoing(nodeId);
   renderCombatMapScreen();
 }
@@ -7386,6 +7408,7 @@ function transitionToStage2() {
   const newSeed = (Date.now() ^ (Math.random() * 0xffffffff | 0)) >>> 0;
   campaignState.activeMapId   = 'desertSietch';
   campaignState.mapDef        = generateDesertSietch(newSeed);
+  campaignState.currentNodeId  = 'L1N1';
   campaignState.selectedNodeId = null;
   campaignState.clearedNodeIds  = new Set(['L1N1']);
   campaignState.unlockedNodeIds = new Set(['L2N1', 'L2N2']);
@@ -7406,6 +7429,7 @@ function afterCampaignBattleEnd(playerWon) {
       grantCampaignBattleXp(activeCampaignBattleUnitIds, node.enemy.length);
     }
     campaignState.clearedNodeIds.add(nodeId);
+    campaignState.currentNodeId = nodeId;
     unlockNodeOutgoing(nodeId);
     if (node && node.type === 'boss') {
       if (campaignState.activeMapId === 'greenRoad') {
@@ -7492,12 +7516,12 @@ function getCmapNodeY(posIndex, posCount) {
 function getCmapNodeColors(nodeData) {
   const id = nodeData.id;
   const isCleared  = campaignState.clearedNodeIds.has(id);
-  const isUnlocked = campaignState.unlockedNodeIds.has(id);
+  const isReachable = isCampaignNodeReachableFromCurrent(id);
   const isSelected = campaignState.selectedNodeId === id;
 
   if (isCleared) return { fill: CMAP_FILL_CLEARED, stroke: CMAP_STROKE_CLEARED };
   if (isSelected) return { fill: CMAP_FILL_SELECTED, stroke: CMAP_STROKE_SEL };
-  if (!isUnlocked) return { fill: CMAP_FILL_LOCKED, stroke: CMAP_STROKE_LOCKED };
+  if (!isReachable) return { fill: CMAP_FILL_LOCKED, stroke: CMAP_STROKE_LOCKED };
 
   const typeColor = {
     start:        CMAP_FILL_START,
@@ -7664,13 +7688,13 @@ function renderCmapEdges(mapDef) {
       const toX = getCmapNodeX(toNode.layer);
       const toY = getCmapNodeY(toNode.pos, toNode.of);
       const toCleared   = campaignState.clearedNodeIds.has(toId);
-      const toUnlocked  = campaignState.unlockedNodeIds.has(toId);
+      const toReachable = fromId === campaignState.currentNodeId && isCampaignNodeReachableFromCurrent(toId);
 
       // Three-state edge: cleared path > available > locked/future
       let color, width, alpha;
       if (fromCleared && toCleared) {
         color = CMAP_EDGE_CLEARED; width = 3; alpha = 0.90; // walked path
-      } else if (fromCleared && (toUnlocked || toCleared)) {
+      } else if (fromCleared && toReachable) {
         color = CMAP_EDGE_LIT;     width = 2; alpha = 0.80; // next step available
       } else {
         color = CMAP_EDGE_DIM;     width = 1; alpha = 0.55; // locked future path
@@ -7690,12 +7714,12 @@ function renderCmapEdges(mapDef) {
 function renderCmapSingleNode(nodeData, x, y) {
   const id = nodeData.id;
   const isCleared  = campaignState.clearedNodeIds.has(id);
-  const isUnlocked = campaignState.unlockedNodeIds.has(id);
+  const isReachable = isCampaignNodeReachableFromCurrent(id);
   const { fill, stroke } = getCmapNodeColors(nodeData);
-  const labelAlpha = (isUnlocked || isCleared) ? 1 : 0.35;
+  const labelAlpha = (isReachable || isCleared) ? 1 : 0.35;
 
   const circle = addCmapNode(sceneRef.add.circle(x, y, CMAP_NODE_RADIUS, fill)
-    .setStrokeStyle(isUnlocked || isCleared ? 2 : 1, stroke)
+    .setStrokeStyle(isReachable || isCleared ? 2 : 1, stroke)
     .setDepth(CMAP_UI_DEPTH + 2));
 
   // Unit sprite icon inside the node for battle / boss / recruit nodes
@@ -7734,7 +7758,7 @@ function renderCmapSingleNode(nodeData, x, y) {
     .setAlpha(labelAlpha)
     .setDepth(CMAP_UI_DEPTH + 3));
 
-  if (isUnlocked && !isCleared) {
+  if (isReachable && !isCleared) {
     // Single click → select; double click → perform node action immediately
     const onPress = () => {
       const now = Date.now();
@@ -7788,7 +7812,7 @@ function renderCmapDetailPanel(nodeId) {
   if (!node) return;
 
   const isCleared  = campaignState.clearedNodeIds.has(nodeId);
-  const isUnlocked = campaignState.unlockedNodeIds.has(nodeId);
+  const isReachable = isCampaignNodeReachableFromCurrent(nodeId);
 
   const typeLabels = {
     start: 'Start', battle: 'Battle', recruit: 'Recruit',
@@ -7838,8 +7862,8 @@ function renderCmapDetailPanel(nodeId) {
   py += 28;
 
   // Row 4: status
-  const statusText = isCleared ? 'Cleared' : (isUnlocked ? 'Ready' : 'Locked');
-  const statusColor = isCleared ? CMAP_WIN_COLOR : (isUnlocked ? COLORS.text : CMAP_DETAIL_MUTED);
+  const statusText = isCleared ? 'Cleared' : (isReachable ? 'Ready' : 'Locked');
+  const statusColor = isCleared ? CMAP_WIN_COLOR : (isReachable ? COLORS.text : CMAP_DETAIL_MUTED);
   addCmapNode(sceneRef.add.text(px, py, `Status: ${statusText}`, {
     ...bodyTextStyle(),
     color: statusColor
@@ -7854,11 +7878,11 @@ function renderCmapActionButton(nodeId) {
   if (nodeId) {
     const node = mapDef.nodes[nodeId];
     const isCleared  = campaignState.clearedNodeIds.has(nodeId);
-    const isUnlocked = campaignState.unlockedNodeIds.has(nodeId);
+    const isReachable = isCampaignNodeReachableFromCurrent(nodeId);
 
     if (isCleared) {
       label = 'Cleared';
-    } else if (!isUnlocked) {
+    } else if (!isReachable) {
       label = 'Locked';
     } else {
       isActive = true;
@@ -8195,6 +8219,8 @@ function renderCmapEnemyStatBlock(classDef, stats, x, y, showBack) {
 
 function handleCmapNodeClick(nodeId) {
   if (!campaignState) return;
+  if (!isCampaignNodeReachableFromCurrent(nodeId)) return;
+  if (campaignState.clearedNodeIds.has(nodeId)) return;
   campaignState.selectedNodeId = nodeId;
   renderCombatMapScreen();
 }
@@ -8205,9 +8231,8 @@ function handleCmapNodeAction(nodeId) {
   const node = mapDef.nodes[nodeId];
   if (!node) return;
 
-  const isUnlocked = campaignState.unlockedNodeIds.has(nodeId);
   const isCleared  = campaignState.clearedNodeIds.has(nodeId);
-  if (!isUnlocked || isCleared) return;
+  if (!isCampaignNodeReachableFromCurrent(nodeId) || isCleared) return;
 
   switch (node.type) {
     case 'battle':
