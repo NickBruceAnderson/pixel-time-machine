@@ -255,10 +255,10 @@ const SETUP_UNIT_CARD_COST_ICON_X_OFFSET = CONFIG.ui.setupCardCostRow.iconXOffse
 // HUD: CAST
 const CAST_TITLE_FONT_SIZE = CONFIG.theme.textSize.castTitle;
 const CAST_CALLOUT_Y_OFFSET = 0;
-const CAST_CALLOUT_WIDTH = 160;
-const CAST_CALLOUT_HEIGHT = 35;
+const CAST_CALLOUT_WIDTH = 200;
+const CAST_CALLOUT_HEIGHT = 42;
 const CAST_CALLOUT_SEGMENT_GAP = 10;
-const CAST_CALLOUT_TEXT_Y_OFFSET = 0;
+const CAST_CALLOUT_TEXT_Y_OFFSET = -1;
 const CAST_CALLOUT_BORDER_COLOR = '#ffffff';
 const CAST_CALLOUT_BACKGROUND_COLOR = '#050506';
 
@@ -332,10 +332,10 @@ const ROUND_START_BANNER_BACKGROUND_COLOR = '#071b35';
 const ROUND_START_BANNER_BORDER_COLOR = '#58a6ff';
 const ROUND_START_BANNER_TITLE_COLOR = '#d8ecff';
 const ROUND_START_BANNER_SUBTITLE_COLOR = '#9dccff';
-const FATIGUE_START_ROUND = 5;
+const FATIGUE_START_ROUND = 3;
 const FATIGUE_INTERVAL_ROUNDS = 5;
 const FATIGUE_RP_RECOVERY_PENALTY = 1;
-const EXHAUSTION_START_ROUND = 10;
+const EXHAUSTION_START_ROUND = 5;
 const EXHAUSTION_INTERVAL_ROUNDS = 5;
 const EXHAUSTION_RP_DRAIN = 1;
 
@@ -1030,7 +1030,7 @@ function generateDesertSietch(seed) {
   nodes.L5N2 = makePreCl('L5N2', 4, 1, 2);
 
   // Layer 5: squad upgrade — grants 2nd squad instead of command level
-  nodes.L6N1 = { id: 'L6N1', layer: 5, pos: 0, of: 1, type: 'squadUp', label: '🛡️ SQUAD UP' };
+  nodes.L6N1 = { id: 'L6N1', layer: 5, pos: 0, of: 1, type: 'squadUp', label: '👥 SQUAD UP' };
 
   postCl2(['L7N1', 'L7N2'], 6).forEach((n) => { nodes[n.id] = n; });
   postCl3(['L8N1', 'L8N2', 'L8N3'], 7).forEach((n) => { nodes[n.id] = n; });
@@ -7622,7 +7622,7 @@ function renderCombatMapScreen() {
   ).setOrigin(1, 0).setDepth(CMAP_UI_DEPTH + 3));
   addCmapNode(sceneRef.add.text(
     GAME_WIDTH - 16, 58,
-    `🛡️ ${_sq}`,
+     `👥 ${_sq}`,
     bodyTextStyle()
   ).setOrigin(1, 0).setDepth(CMAP_UI_DEPTH + 3));
 
