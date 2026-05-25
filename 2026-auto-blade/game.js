@@ -241,7 +241,8 @@ const CAST_TITLE_FONT_SIZE = CONFIG.theme.textSize.castTitle;
 const CAST_CALLOUT_Y_OFFSET = 0;
 const CAST_CALLOUT_WIDTH = 160;
 const CAST_CALLOUT_HEIGHT = 35;
-const CAST_CALLOUT_PADDING = 6;
+const CAST_CALLOUT_SEGMENT_GAP = 10;
+const CAST_CALLOUT_TEXT_Y_OFFSET = 0;
 const CAST_CALLOUT_BORDER_COLOR = '#ffffff';
 const CAST_CALLOUT_BACKGROUND_COLOR = '#050506';
 
@@ -5300,7 +5301,7 @@ function showReactionCastEffect(effect) {
   if ((effect.reaction.lpCost || 0) > 0) {
     reactionSegments.push({ text: RESOURCE_ICONS.lp.repeat(effect.reaction.lpCost), color: getResourceIconColor('lp') });
   }
-  reactionSegments.push({ text: ` ${effect.reaction.name}`, color: COLORS.text });
+  reactionSegments.push({ text: effect.reaction.name, color: COLORS.text });
   const callout = createCombatCallout({
     unit: effect.unit,
     segments: reactionSegments,
@@ -5340,7 +5341,7 @@ function showActionCastEffect(effect) {
     unit: effect.unit,
     segments: [
       { text: RESOURCE_ICONS.ap, color: getResourceIconColor('ap') },
-      { text: ` ${effect.action.name}`, color: COLORS.text }
+      { text: effect.action.name, color: COLORS.text }
     ],
     yOffset: CAST_CALLOUT_Y_OFFSET
   });
@@ -5481,8 +5482,7 @@ function createCombatCallout({ unit, segments, yOffset }) {
   const nodes = [];
   const x = unit.shadow.x;
   const y = unit.rect.y - UNIT_SIZE / 2 - yOffset;
-  const top = y - CAST_CALLOUT_HEIGHT / 2;
-  const textY = top + CAST_CALLOUT_PADDING + 1;
+  const textY = y + CAST_CALLOUT_TEXT_Y_OFFSET;
 
   const background = sceneRef.add.rectangle(
     x,
@@ -5502,15 +5502,16 @@ function createCombatCallout({ unit, segments, yOffset }) {
       resolution: getUiTextResolution(),
       color: seg.color
     })
-      .setOrigin(0, 0)
+      .setOrigin(0, 0.5)
       .setDepth(DEPTH_COMBAT_CALLOUT)
   );
 
-  const totalWidth = segmentNodes.reduce((sum, node) => sum + node.width, 0);
+  const totalWidth = segmentNodes.reduce((sum, node) => sum + node.width, 0)
+    + Math.max(0, segmentNodes.length - 1) * CAST_CALLOUT_SEGMENT_GAP;
   let cursorX = x - totalWidth / 2;
-  segmentNodes.forEach((node) => {
+  segmentNodes.forEach((node, index) => {
     node.setX(cursorX);
-    cursorX += node.width;
+    cursorX += node.width + (index < segmentNodes.length - 1 ? CAST_CALLOUT_SEGMENT_GAP : 0);
     nodes.push(node);
   });
 
