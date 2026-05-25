@@ -2245,6 +2245,28 @@ function getAllFormationCells() {
   return FORMATION_ROWS.flatMap((row) => FORMATION_COLS.map((col) => ({ row, col })));
 }
 
+function getUniqueEnemyFormationSlots(count) {
+  const seen = new Set();
+  const slots = [];
+
+  const addSlot = (slot) => {
+    if (!slot) return;
+    const key = `${slot.row}:${slot.col}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    slots.push({ row: slot.row, col: slot.col });
+  };
+
+  PRACTICE_ENEMY_FORMATION_SLOTS.forEach(addSlot);
+  getAllFormationCells().forEach(addSlot);
+
+  if (slots.length < count) {
+    console.warn(`Not enough unique enemy formation slots for ${count} enemies.`);
+  }
+
+  return slots.slice(0, count);
+}
+
 function regenerateBlueAiFormation() {
   const cells = getAllFormationCells();
   for (let index = cells.length - 1; index > 0; index -= 1) {
@@ -3605,13 +3627,18 @@ function buildPracticeCombatFormations() {
 }
 
 function createRandomPracticeEnemyFormation() {
+  const enemySlots = getUniqueEnemyFormationSlots(PRACTICE_ENEMY_COUNT);
   return Array.from({ length: PRACTICE_ENEMY_COUNT }, (_, index) => {
     const unitType = PRACTICE_ENEMY_ALLOWED_CLASSES[
       Math.floor(Math.random() * PRACTICE_ENEMY_ALLOWED_CLASSES.length)
     ];
-    const position = PRACTICE_ENEMY_FORMATION_SLOTS[index % PRACTICE_ENEMY_FORMATION_SLOTS.length];
+    const position = enemySlots[index];
+    if (!position) {
+      console.warn(`Skipping practice enemy ${index}; no unique formation slot available.`);
+      return null;
+    }
     return createPlacement('blue', position.row, position.col, false, unitType);
-  });
+  }).filter(Boolean);
 }
 
 function renderSetupPanel() {
@@ -7367,10 +7394,15 @@ function startCampaignBattle(nodeId) {
     .map((p) => p.rosterUnitId);
 
   // Override enemy side from node config
+  const enemySlots = getUniqueEnemyFormationSlots(node.enemy.length);
   blueFormation = node.enemy.map((cfg, i) => {
-    const pos = PRACTICE_ENEMY_FORMATION_SLOTS[i % PRACTICE_ENEMY_FORMATION_SLOTS.length];
+    const pos = enemySlots[i];
+    if (!pos) {
+      console.warn(`Skipping enemy ${i}; no unique formation slot available.`);
+      return null;
+    }
     return createPlacement('blue', pos.row, pos.col, false, cfg.unitType, null, cfg.equipment);
-  });
+  }).filter(Boolean);
 
   campaignState.activeEncounterNodeId = nodeId;
   battleSource = 'combatMap';
