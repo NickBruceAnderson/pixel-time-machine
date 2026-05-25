@@ -1,7 +1,7 @@
 export const CONFIG = {
   display: {
     storageKey: 'autoBladeDisplaySize',
-    defaultSizeKey: '1080p',
+    defaultSizeKey: 'auto',
     sizes: {
       '720p': { width: 1280, height: 720 },
       '1080p': { width: 1920, height: 1080 },

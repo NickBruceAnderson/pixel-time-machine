@@ -6,24 +6,40 @@ import { CONFIG } from './config.js';
 const DISPLAY_SIZE_STORAGE_KEY = CONFIG.display.storageKey;
 const DEFAULT_DISPLAY_SIZE_KEY = CONFIG.display.defaultSizeKey;
 const DISPLAY_SIZES = CONFIG.display.sizes;
+const DISPLAY_SIZE_AUTO_KEY = 'auto';
+const GAME_WIDTH = CONFIG.display.gameWidth;
+const GAME_HEIGHT = CONFIG.display.gameHeight;
 
 function getSavedDisplaySizeKey() {
   try {
     const saved = globalThis.localStorage?.getItem(DISPLAY_SIZE_STORAGE_KEY);
-    if (DISPLAY_SIZES[saved]) {
-      globalThis.localStorage?.removeItem(DISPLAY_SIZE_STORAGE_KEY);
+    if (saved === DISPLAY_SIZE_AUTO_KEY || DISPLAY_SIZES[saved]) {
       return saved;
     }
   } catch {}
   return DEFAULT_DISPLAY_SIZE_KEY;
 }
 
+function getAutoDisplaySize() {
+  const viewportW = Math.max(1, globalThis.innerWidth || GAME_WIDTH);
+  const viewportH = Math.max(1, globalThis.innerHeight || GAME_HEIGHT);
+  const dpr = Math.max(1, Math.min(globalThis.devicePixelRatio || 1, 2));
+  const targetPixels = viewportW * dpr * viewportH * dpr;
+  const candidates = Object.values(DISPLAY_SIZES)
+    .filter((size) => size && Number.isFinite(size.width) && Number.isFinite(size.height))
+    .sort((a, b) => (a.width * a.height) - (b.width * b.height));
+
+  return candidates.find((size) => size.width * size.height >= targetPixels) ||
+    candidates[candidates.length - 1] ||
+    { width: GAME_WIDTH, height: GAME_HEIGHT };
+}
+
 const activeDisplaySizeKey = getSavedDisplaySizeKey();
-const activeDisplaySize = DISPLAY_SIZES[activeDisplaySizeKey];
+const activeDisplaySize = activeDisplaySizeKey === DISPLAY_SIZE_AUTO_KEY
+  ? getAutoDisplaySize()
+  : DISPLAY_SIZES[activeDisplaySizeKey];
 const RENDER_WIDTH = activeDisplaySize.width;
 const RENDER_HEIGHT = activeDisplaySize.height;
-const GAME_WIDTH = CONFIG.display.gameWidth;
-const GAME_HEIGHT = CONFIG.display.gameHeight;
 const GAME_VIEW_SCALE = Math.min(RENDER_WIDTH / GAME_WIDTH, RENDER_HEIGHT / GAME_HEIGHT);
 const SHOW_CANVAS_RENDER_DEBUG = true;
 
@@ -151,7 +167,7 @@ const FORMATION_MENU_BUTTON_SIZE = 34;
 const FORMATION_MENU_PANEL_X = FORMATION_MENU_BUTTON_X;
 const FORMATION_MENU_PANEL_Y = FORMATION_MENU_BUTTON_Y + FORMATION_MENU_BUTTON_SIZE + 8;
 const FORMATION_MENU_PANEL_WIDTH = 150;
-const FORMATION_MENU_PANEL_HEIGHT = 204;
+const FORMATION_MENU_PANEL_HEIGHT = 242;
 const FORMATION_MENU_TITLE_Y_OFFSET = 16;
 const FORMATION_MENU_OPTION_HEIGHT = 32;
 const FORMATION_MENU_OPTION_GAP = 6;
@@ -1563,7 +1579,7 @@ const config = {
     roundPixels: true
   },
   scale: {
-    mode: Phaser.Scale.NONE,
+    mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH
   },
   scene: {
@@ -2416,7 +2432,7 @@ function renderFormationDisplayMenu() {
     bodyTextStyle()
   ).setDepth(SETUP_UI_DEPTH + 4));
 
-  Object.keys(DISPLAY_SIZES).forEach((key, index) => {
+  [DISPLAY_SIZE_AUTO_KEY, ...Object.keys(DISPLAY_SIZES)].forEach((key, index) => {
     const optionY = FORMATION_MENU_PANEL_Y + FORMATION_MENU_OPTION_Y_OFFSET +
       index * (FORMATION_MENU_OPTION_HEIGHT + FORMATION_MENU_OPTION_GAP);
     const isSelected = key === activeDisplaySizeKey;
@@ -2448,7 +2464,7 @@ function renderFormationDisplayMenu() {
 }
 
 function selectDisplaySize(key) {
-  if (!DISPLAY_SIZES[key]) {
+  if (key !== DISPLAY_SIZE_AUTO_KEY && !DISPLAY_SIZES[key]) {
     return;
   }
 
