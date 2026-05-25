@@ -2348,8 +2348,6 @@ function renderSetupUi() {
 }
 
 function renderArmyManagementScreen() {
-  renderFormationDisplayButton();
-
   addSetupNode(sceneRef.add.rectangle(
     SETUP_PANEL_X,
     SETUP_PANEL_Y,
@@ -7702,23 +7700,29 @@ function renderCmapNavButton() {
 }
 
 function renderFormationMapNavButton() {
-  // Hamburger square (visual, mirrors Map screen top-left pattern)
-  addSetupNode(sceneRef.add.rectangle(
+  // Hamburger square — clickable, returns to map (whole top-left group is the nav)
+  const hbg = addSetupNode(sceneRef.add.rectangle(
     UTILITY_MENU_BUTTON_X, UTILITY_MENU_BUTTON_Y,
     UTILITY_MENU_BUTTON_SIZE, UTILITY_MENU_BUTTON_SIZE,
     PHASER_COLORS.infoPanel
   ).setOrigin(0)
     .setStrokeStyle(1, PHASER_COLORS.panelBorder)
+    .setInteractive({ useHandCursor: true })
     .setDepth(SETUP_UI_DEPTH + 3));
 
-  addSetupNode(sceneRef.add.text(
+  const hbl = addSetupNode(sceneRef.add.text(
     UTILITY_MENU_BUTTON_X + UTILITY_MENU_BUTTON_SIZE / 2,
     UTILITY_MENU_BUTTON_Y + UTILITY_MENU_BUTTON_SIZE / 2,
     UTILITY_MENU_LABEL,
     combatLogToggleTextStyle()
-  ).setOrigin(0.5).setDepth(SETUP_UI_DEPTH + 4));
+  ).setOrigin(0.5)
+    .setInteractive({ useHandCursor: true })
+    .setDepth(SETUP_UI_DEPTH + 4));
 
-  // Map nav button (right of hamburger)
+  hbg.on('pointerdown', showCombatMap);
+  hbl.on('pointerdown', showCombatMap);
+
+  // Map label button (right of hamburger)
   const label = 'Map';
   const btn = addSetupNode(sceneRef.add.rectangle(
     MAP_NAV_BUTTON_X, MAP_NAV_BUTTON_Y,
