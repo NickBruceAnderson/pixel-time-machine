@@ -7193,6 +7193,12 @@ function restoreCampaignStanceForLivingUnits(unitIds) {
   });
 }
 
+// True if at least one campaign roster unit is not KO.
+function hasCampaignUnitsRemaining() {
+  if (!campaignState) return false;
+  return campaignState.campaignRoster.some((u) => !isUnitKo(u));
+}
+
 // After a campaign battle: fighters keep SP damage; living benched units restore SP.
 function applyPostCampaignBattleRecovery(activeIds) {
   const benchedIds = getBenchedCampaignUnitIds(activeIds);
@@ -7253,6 +7259,7 @@ function initCampaignState() {
     commandLevel: 2,                           // starts at 2 for Map 1
     gold: 0,                                   // +1 per enemy defeated in campaign battles
     maxSquads: 1,                              // only Squad 1 for Map 1
+    activeSquadIndex: 0,                       // which squad is selected on the campaign map
     campaignRoster: [
       {
         id: 'squire-alden',
@@ -7398,6 +7405,12 @@ function startCampaignBattle(nodeId) {
   const node = mapDef.nodes[nodeId];
   if (!node) return;
 
+  // Ensure battle uses the active campaign squad.
+  selectedArmySquadIndex = campaignState.activeSquadIndex ?? 0;
+
+  // Block battle if the active squad is empty.
+  if (!canActiveSquadEnterBattle()) return;
+
   // Build player side from selected squad
   buildPracticeCombatFormations();
   if (!isSetupReady()) return; // player must have at least one unit placed
@@ -7493,7 +7506,12 @@ function afterCampaignBattleEnd(playerWon) {
       campaignState.runStatus = 'victory';
     }
   } else {
-    campaignState.runStatus = 'defeat';
+    // writeBackBattleStateToRoster + cleanupFormationAfterKo already ran in endBattle.
+    // Only show lose screen if every roster unit is now KO.
+    if (!hasCampaignUnitsRemaining()) {
+      campaignState.runStatus = 'defeat';
+    }
+    // else: runStatus stays 'active' — player returns to map with node uncleared.
   }
 
   // Fighters keep SP damage; living benched units restore SP.
@@ -7528,6 +7546,12 @@ function showCombatMap() {
   }
   // Sync armyRoster / armySquads / commandLevel from campaign state.
   initializeArmyManagement();
+  // Capture Formation's squad selection, then clamp and mirror it.
+  if (campaignState) {
+    const clamped = Math.max(0, Math.min(selectedArmySquadIndex, (campaignState.maxSquads || 1) - 1));
+    campaignState.activeSquadIndex = clamped;
+    selectedArmySquadIndex = clamped;
+  }
   cmapSelectedPlayerUnitId = null;
   cmapSelectedEnemyIdx     = null;
   cmapLastClickNodeId      = null;
@@ -7660,23 +7684,29 @@ function renderCombatMapScreen() {
 }
 
 function renderCmapNavButton() {
-  // Hamburger square (visual, matches formation screen)
-  addCmapNode(sceneRef.add.rectangle(
+  // Hamburger square — opens settings menu
+  const hbg = addCmapNode(sceneRef.add.rectangle(
     UTILITY_MENU_BUTTON_X, UTILITY_MENU_BUTTON_Y,
     UTILITY_MENU_BUTTON_SIZE, UTILITY_MENU_BUTTON_SIZE,
     PHASER_COLORS.infoPanel
   ).setOrigin(0)
     .setStrokeStyle(1, PHASER_COLORS.panelBorder)
+    .setInteractive({ useHandCursor: true })
     .setDepth(CMAP_UI_DEPTH + 4));
 
-  addCmapNode(sceneRef.add.text(
+  const hbl = addCmapNode(sceneRef.add.text(
     UTILITY_MENU_BUTTON_X + UTILITY_MENU_BUTTON_SIZE / 2,
     UTILITY_MENU_BUTTON_Y + UTILITY_MENU_BUTTON_SIZE / 2,
     UTILITY_MENU_LABEL,
     combatLogToggleTextStyle()
-  ).setOrigin(0.5).setDepth(CMAP_UI_DEPTH + 5));
+  ).setOrigin(0.5)
+    .setInteractive({ useHandCursor: true })
+    .setDepth(CMAP_UI_DEPTH + 5));
 
-  // Formation nav button (right of hamburger)
+  hbg.on('pointerdown', toggleUtilityMenu);
+  hbl.on('pointerdown', toggleUtilityMenu);
+
+  // Formation label button (right of hamburger)
   const btn = addCmapNode(sceneRef.add.rectangle(
     MAP_NAV_BUTTON_X, MAP_NAV_BUTTON_Y,
     MAP_NAV_BUTTON_W_FMT, MAP_NAV_BUTTON_HEIGHT,
@@ -7700,7 +7730,7 @@ function renderCmapNavButton() {
 }
 
 function renderFormationMapNavButton() {
-  // Hamburger square — clickable, returns to map (whole top-left group is the nav)
+  // Hamburger square — opens settings menu
   const hbg = addSetupNode(sceneRef.add.rectangle(
     UTILITY_MENU_BUTTON_X, UTILITY_MENU_BUTTON_Y,
     UTILITY_MENU_BUTTON_SIZE, UTILITY_MENU_BUTTON_SIZE,
@@ -7719,8 +7749,8 @@ function renderFormationMapNavButton() {
     .setInteractive({ useHandCursor: true })
     .setDepth(SETUP_UI_DEPTH + 4));
 
-  hbg.on('pointerdown', showCombatMap);
-  hbl.on('pointerdown', showCombatMap);
+  hbg.on('pointerdown', toggleUtilityMenu);
+  hbl.on('pointerdown', toggleUtilityMenu);
 
   // Map label button (right of hamburger)
   const label = 'Map';
@@ -8043,36 +8073,83 @@ function renderCmapEndOverlay(isVictory) {
 
 // ─── Combat Map: bottom-half squad previews ──────────────────────────────────
 
+function getActiveSquad() {
+  const idx = campaignState?.activeSquadIndex ?? 0;
+  return campaignState?.campaignSquads?.[idx] ?? null;
+}
+
+function isSquadEmpty(squad) {
+  if (!squad) return true;
+  return getSquadAssignedCells(squad).length === 0;
+}
+
+function canActiveSquadEnterBattle() {
+  return !isSquadEmpty(getActiveSquad());
+}
+
+function setActiveSquadIndex(index) {
+  if (!campaignState) return;
+  const max = (campaignState.maxSquads || 1) - 1;
+  campaignState.activeSquadIndex = Math.max(0, Math.min(index, max));
+  selectedArmySquadIndex = campaignState.activeSquadIndex;
+  cmapSelectedPlayerUnitId = null;   // clear stale unit selection
+  renderCombatMapScreen();
+}
+
 function renderCmapPlayerSquadPanel() {
   addCmapNode(sceneRef.add.rectangle(
     CMAP_PLAYER_X, CMAP_BOTTOM_Y, CMAP_PLAYER_W, CMAP_PLAYER_H,
     PHASER_COLORS.infoPanel
   ).setOrigin(0)
     .setAlpha(0.88)
-    .setStrokeStyle(2, PHASER_COLORS.sp)   // blue border — friendly
+    .setStrokeStyle(2, PHASER_COLORS.sp)
     .setDepth(CMAP_UI_DEPTH + 1));
 
+  const activeIdx  = campaignState?.activeSquadIndex ?? 0;
+  const maxSquads  = campaignState?.maxSquads ?? 1;
+  const titleY     = CMAP_BOTTOM_Y + 14;
+
   addCmapNode(sceneRef.add.text(
-    CMAP_PLAYER_X + 16, CMAP_BOTTOM_Y + 14,
-    'Your Squad',
-    { ...headerTextStyle(), color: COLORS.sp }   // blue title
+    CMAP_PLAYER_X + 16, titleY,
+    `SQUAD ${activeIdx + 1}`,
+    { ...headerTextStyle(), color: COLORS.sp }
   ).setDepth(CMAP_UI_DEPTH + 2));
 
-  const squad = campaignState?.campaignSquads?.[0];
+  // Left / right arrow buttons when 2+ squads are unlocked.
+  if (maxSquads > 1) {
+    if (activeIdx > 0) {
+      const leftBtn = addCmapNode(sceneRef.add.text(
+        CMAP_PLAYER_X + CMAP_PLAYER_W - 52, titleY,
+        '◀', headerTextStyle()
+      ).setInteractive({ useHandCursor: true })
+        .setDepth(CMAP_UI_DEPTH + 3));
+      leftBtn.on('pointerdown', () => setActiveSquadIndex(activeIdx - 1));
+    }
+    if (activeIdx < maxSquads - 1) {
+      const rightBtn = addCmapNode(sceneRef.add.text(
+        CMAP_PLAYER_X + CMAP_PLAYER_W - 24, titleY,
+        '▶', headerTextStyle()
+      ).setInteractive({ useHandCursor: true })
+        .setDepth(CMAP_UI_DEPTH + 3));
+      rightBtn.on('pointerdown', () => setActiveSquadIndex(activeIdx + 1));
+    }
+  }
+
+  const squad = getActiveSquad();
   if (!squad) return;
+
+  if (isSquadEmpty(squad)) {
+    addCmapNode(sceneRef.add.text(
+      CMAP_PLAYER_X + 16, CMAP_BOTTOM_Y + 50,
+      'EMPTY',
+      { ...bodyTextStyle(), color: COLORS.mutedText }
+    ).setDepth(CMAP_UI_DEPTH + 2));
+    return;
+  }
 
   const assignedUnits = getSquadAssignedCells(squad)
     .map((cell) => getArmyRosterUnit(cell.unitId))
     .filter(Boolean);
-
-  if (assignedUnits.length === 0) {
-    addCmapNode(sceneRef.add.text(
-      CMAP_PLAYER_X + 16, CMAP_BOTTOM_Y + 50,
-      'No units in squad.',
-      bodyTextStyle()
-    ).setDepth(CMAP_UI_DEPTH + 2));
-    return;
-  }
 
   // If a unit is selected, show its full stats instead of the list.
   if (cmapSelectedPlayerUnitId) {
@@ -8083,8 +8160,8 @@ function renderCmapPlayerSquadPanel() {
     }
   }
 
-  assignedUnits.forEach((unit, idx) => {
-    renderCmapUnitCard(unit, CMAP_PLAYER_X + 12, CMAP_BOTTOM_Y + 50 + idx * 98, CMAP_PLAYER_W - 24, 88);
+  assignedUnits.forEach((unit, i) => {
+    renderCmapUnitCard(unit, CMAP_PLAYER_X + 12, CMAP_BOTTOM_Y + 50 + i * 98, CMAP_PLAYER_W - 24, 88);
   });
 }
 
