@@ -2538,6 +2538,14 @@ function renderFormationSelectedUnitStatsPanel() {
     .setDepth(POPUP_DEPTH));
   addSetupNode(sceneRef.add.text(rect.x + POPUP_PANEL_PADDING, rect.y + 10, unit.name, headerTextStyle())
     .setDepth(POPUP_DEPTH + 1));
+  // XP display — campaign units only (practice roster has no xp field).
+  if (unit.xp !== undefined) {
+    addSetupNode(sceneRef.add.text(
+      rect.x + rect.w - POPUP_PANEL_PADDING, rect.y + 14,
+      `XP: ${unit.xp || 0}/${CAMPAIGN_XP_PER_PROMOTION}`,
+      bodyTextStyle()
+    ).setOrigin(1, 0).setDepth(POPUP_DEPTH + 1));
+  }
   addSetupNode(sceneRef.add.text(rect.x + POPUP_PANEL_PADDING, rect.y + 36, detailUnit.className, {
     ...smallTextStyle(),
     fontSize: `${FORMATION_SELECTED_UNIT_CLASS_FONT_SIZE}px`
