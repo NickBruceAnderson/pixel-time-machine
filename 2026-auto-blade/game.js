@@ -1079,6 +1079,174 @@ function generateDesertSietch(seed) {
   return { id: 'desertSietch', name: 'Stage 2: Desert Sietch', nodes, connections };
 }
 
+// ─── Stage 3: Mountain Pass ──────────────────────────────────────────────────
+
+const MOUNTAIN_PASS_SQUIRE_RECRUITS = [
+  { name: 'Bryn',  unitType: 'squire', equipment: { sword: 'broadsword', armor: 'chainmail' } },
+  { name: 'Colt',  unitType: 'squire', equipment: { sword: 'broadsword', shield: 'buckler' } },
+  { name: 'Dag',   unitType: 'squire', equipment: { sword: 'broadsword', armor: 'chainmail' } },
+  { name: 'Fen',   unitType: 'squire', equipment: { sword: 'broadsword', shield: 'buckler' } },
+];
+const MOUNTAIN_PASS_THIEF_RECRUITS = [
+  { name: 'Ash',   unitType: 'thief', equipment: { dagger: 'dagger', armor: 'leather' } },
+  { name: 'Coal',  unitType: 'thief', equipment: { dagger: 'dagger', armor: 'leather' } },
+  { name: 'Edda',  unitType: 'thief', equipment: { dagger: 'dagger' } },
+];
+const MOUNTAIN_PASS_ARCHER_RECRUITS = [
+  { name: 'Finn',  unitType: 'archer', equipment: { bow: 'shortbow' } },
+  { name: 'Gale',  unitType: 'archer', equipment: { bow: 'shortbow' } },
+  { name: 'Holt',  unitType: 'archer', equipment: { bow: 'shortbow' } },
+];
+
+function generateMountainPass(seed) {
+  const rng = makeSeededRng(seed);
+  function rngPick(arr) { return arr[Math.floor(rng() * arr.length)]; }
+
+  const usedNames = new Set();
+  const recruitPool = [
+    ...MOUNTAIN_PASS_SQUIRE_RECRUITS,
+    ...MOUNTAIN_PASS_THIEF_RECRUITS,
+    ...MOUNTAIN_PASS_ARCHER_RECRUITS
+  ];
+  function pickRecruit() {
+    const avail = recruitPool.filter((r) => !usedNames.has(r.name));
+    const r = avail.length ? rngPick(avail) : rngPick(recruitPool);
+    usedNames.add(r.name);
+    return { ...r, equipment: { ...r.equipment } };
+  }
+
+  const SQUIRE_E = { unitType: 'squire', equipment: { sword: 'broadsword', armor: 'chainmail' } };
+  const ARCHER_E = { unitType: 'archer', equipment: { bow: 'shortbow' } };
+  const THIEF_E  = { unitType: 'thief',  equipment: { dagger: 'dagger', armor: 'leather' } };
+  const KNIGHT_E = { unitType: 'knight', equipment: { sword: 'longsword', shield: 'buckler', armor: 'plateMail' } };
+  const LIGHT_POOL = [SQUIRE_E, ARCHER_E, THIEF_E];
+
+  function makeBattle(id, layer, pos, of, enemy) {
+    return { id, layer, pos, of, type: 'battle', enemy, label: 'Battle' };
+  }
+  function makeRecruit(id, layer, pos, of) {
+    return { id, layer, pos, of, type: 'recruit', recruit: pickRecruit(), label: 'Recruit' };
+  }
+  function makeCamp(id, layer, pos, of) {
+    return { id, layer, pos, of, type: 'camp', label: 'Camp' };
+  }
+
+  // Pre-CL: 1-2 enemies drawn from light pool (no knights on approach)
+  function makePreCl(id, layer, pos, of) {
+    if (rng() < 0.60) {
+      const e1 = rngPick(LIGHT_POOL);
+      const enemy = rng() < 0.50 ? [e1, rngPick(LIGHT_POOL)] : [e1];
+      return makeBattle(id, layer, pos, of, enemy);
+    }
+    return makeRecruit(id, layer, pos, of);
+  }
+
+  // Post-CL: 2-3 enemies; first slot is a knight ~25% of the time
+  function pickPostEnemy() {
+    const count = rng() < 0.40 ? 3 : 2;
+    const enemies = [];
+    for (let i = 0; i < count; i++) {
+      enemies.push(i === 0 && rng() < 0.25 ? KNIGHT_E : rngPick(LIGHT_POOL));
+    }
+    return enemies;
+  }
+  function makePostCl(id, layer, pos, of) {
+    return rng() < 0.60
+      ? makeBattle(id, layer, pos, of, pickPostEnemy())
+      : makeRecruit(id, layer, pos, of);
+  }
+
+  function postCl2(ids, layer) {
+    const ns = ids.map((id, i) => makePostCl(id, layer, i, 2));
+    if (!ns.some((n) => n.type === 'recruit')) {
+      const i = Math.floor(rng() * 2);
+      ns[i] = makeRecruit(ids[i], layer, i, 2);
+    }
+    return ns;
+  }
+  function postCl3(ids, layer) {
+    const ns = ids.map((id, i) => makePostCl(id, layer, i, 3));
+    if (!ns.some((n) => n.type === 'recruit')) {
+      const i = Math.floor(rng() * 3);
+      ns[i] = makeRecruit(ids[i], layer, i, 3);
+    }
+    return ns;
+  }
+  function preBoss3(ids, layer) {
+    const campPos = Math.floor(rng() * 3);
+    return ids.map((id, i) => {
+      if (i === campPos) return makeCamp(id, layer, i, 3);
+      if (rng() < 0.55) {
+        const e1 = rngPick(LIGHT_POOL);
+        const enemy = rng() < 0.60 ? [e1, rngPick(LIGHT_POOL)] : [e1];
+        return makeBattle(id, layer, i, 3, enemy);
+      }
+      return makeRecruit(id, layer, i, 3);
+    });
+  }
+
+  // ─── Build nodes ─────────────────────────────────────────────────────────────
+  const nodes = {};
+
+  nodes.L1N1 = { id: 'L1N1', layer: 0, pos: 0, of: 1, type: 'start', label: 'Start' };
+
+  nodes.L2N1 = makePreCl('L2N1', 1, 0, 2);
+  nodes.L2N2 = makePreCl('L2N2', 1, 1, 2);
+  nodes.L3N1 = makePreCl('L3N1', 2, 0, 3);
+  nodes.L3N2 = makePreCl('L3N2', 2, 1, 3);
+  nodes.L3N3 = makePreCl('L3N3', 2, 2, 3);
+  nodes.L4N1 = makePreCl('L4N1', 3, 0, 3);
+  nodes.L4N2 = makePreCl('L4N2', 3, 1, 3);
+  nodes.L4N3 = makePreCl('L4N3', 3, 2, 3);
+  nodes.L5N1 = makePreCl('L5N1', 4, 0, 2);
+  nodes.L5N2 = makePreCl('L5N2', 4, 1, 2);
+
+  // Layer 5: Command Level (+1 from current)
+  nodes.L6N1 = { id: 'L6N1', layer: 5, pos: 0, of: 1, type: 'commandLevel', label: '👑 LVL UP' };
+
+  postCl2(['L7N1', 'L7N2'], 6).forEach((n) => { nodes[n.id] = n; });
+  postCl3(['L8N1', 'L8N2', 'L8N3'], 7).forEach((n) => { nodes[n.id] = n; });
+  postCl3(['L9N1', 'L9N2', 'L9N3'], 8).forEach((n) => { nodes[n.id] = n; });
+
+  preBoss3(['L10N1', 'L10N2', 'L10N3'], 9).forEach((n) => { nodes[n.id] = n; });
+
+  // Layer 10: boss — 1 Knight + 3 mixed light enemies (4 total)
+  nodes.L11N1 = {
+    id: 'L11N1', layer: 10, pos: 0, of: 1, type: 'boss',
+    enemy: [KNIGHT_E, rngPick(LIGHT_POOL), rngPick(LIGHT_POOL), rngPick(LIGHT_POOL)],
+    label: 'Boss'
+  };
+
+  // ─── Connections (same skeleton as previous maps) ────────────────────────────
+  const connections = {
+    L1N1:  ['L2N1', 'L2N2'],
+    L2N1:  ['L3N1', 'L3N2'],
+    L2N2:  ['L3N2', 'L3N3'],
+    L3N1:  ['L4N1', 'L4N2'],
+    L3N2:  ['L4N1', 'L4N2', 'L4N3'],
+    L3N3:  ['L4N2', 'L4N3'],
+    L4N1:  ['L5N1'],
+    L4N2:  ['L5N1', 'L5N2'],
+    L4N3:  ['L5N2'],
+    L5N1:  ['L6N1'],
+    L5N2:  ['L6N1'],
+    L6N1:  ['L7N1', 'L7N2'],
+    L7N1:  ['L8N1', 'L8N2'],
+    L7N2:  ['L8N2', 'L8N3'],
+    L8N1:  ['L9N1', 'L9N2'],
+    L8N2:  ['L9N1', 'L9N2', 'L9N3'],
+    L8N3:  ['L9N2', 'L9N3'],
+    L9N1:  ['L10N1', 'L10N2'],
+    L9N2:  ['L10N1', 'L10N2', 'L10N3'],
+    L9N3:  ['L10N2', 'L10N3'],
+    L10N1: ['L11N1'],
+    L10N2: ['L11N1'],
+    L10N3: ['L11N1']
+  };
+
+  return { id: 'mountainPass', name: 'Stage 3: Mountain Pass', nodes, connections };
+}
+
 const PRACTICE_ENEMY_COUNT = CONFIG.practice.enemyCount;
 const PRACTICE_ENEMY_ALLOWED_CLASSES = CONFIG.practice.enemyAllowedClasses;
 const PRACTICE_ENEMY_FORMATION_SLOTS = CONFIG.practice.enemyFormationSlots;
@@ -1794,7 +1962,8 @@ function createLayout() {
 // Sky/ground colors per map. 0 = use PHASER_COLORS default (green road look).
 const BATTLE_THEMES = {
   greenRoad:    { sky: null, ground: null },              // defaults (sky/grass colors from config)
-  desertSietch: { sky: 0x7a5a28, ground: 0xb8872a }      // warm sand/dusk tones
+  desertSietch: { sky: 0x7a5a28, ground: 0xb8872a },     // warm sand/dusk tones
+  mountainPass: { sky: 0x4a5060, ground: 0x7a7060 }      // cold overcast / gray stone
 };
 
 function applyBattleTheme(mapId) {
@@ -7484,6 +7653,18 @@ function transitionToStage2() {
   showCombatMap();
 }
 
+function transitionToStage3() {
+  const newSeed = (Date.now() ^ (Math.random() * 0xffffffff | 0)) >>> 0;
+  campaignState.activeMapId   = 'mountainPass';
+  campaignState.mapDef        = generateMountainPass(newSeed);
+  campaignState.currentNodeId  = 'L1N1';
+  campaignState.selectedNodeId = null;
+  campaignState.clearedNodeIds  = new Set(['L1N1']);
+  campaignState.unlockedNodeIds = new Set(['L2N1', 'L2N2']);
+  applyBattleTheme('mountainPass');
+  showCombatMap();
+}
+
 function afterCampaignBattleEnd(playerWon) {
   battleSource = 'practice';
   const nodeId = campaignState.activeEncounterNodeId;
@@ -7509,6 +7690,17 @@ function afterCampaignBattleEnd(playerWon) {
         redFormation = [];
         blueFormation = [];
         transitionToStage2();
+        return;
+      }
+      if (campaignState.activeMapId === 'desertSietch') {
+        // Stage 2 complete — carry state into Stage 3
+        const activeIds = getActiveCampaignBattleUnitIds();
+        applyPostCampaignBattleRecovery(activeIds);
+        activeCampaignBattleUnitIds = [];
+        gamePhase = 'setup';
+        redFormation = [];
+        blueFormation = [];
+        transitionToStage3();
         return;
       }
       campaignState.runStatus = 'victory';
@@ -7933,7 +8125,9 @@ function renderCmapDetailPanel(nodeId) {
     recruit:      'Add a unit to your roster. Restores stance.',
     commandLevel: 'Raises your Command Level by +1. Restores stance.',
     squadUp:      'Expands your army to 2 squads. Restores stance.',
-    boss:         getCampaignMap()?.id === 'desertSietch'
+    boss:         getCampaignMap()?.id === 'mountainPass'
+                    ? 'The summit guardian. Four enemies — one a Knight.'
+                    : getCampaignMap()?.id === 'desertSietch'
                     ? 'The final challenge. Three Thieves.'
                     : 'The final challenge. Three Archers.',
     armory:       'Salvage gear from the field. Restores stance.',
@@ -8045,7 +8239,8 @@ function renderCmapEndOverlay(isVictory) {
   const title = isVictory ? 'Victory!' : 'Defeated';
   const mapId = campaignState?.activeMapId;
   const desc  = isVictory
-    ? (mapId === 'desertSietch' ? 'The Desert Sietch is conquered!' : 'Stage 1 complete — on to Stage 2!')
+    ? (mapId === 'mountainPass' ? 'The Mountain Pass is conquered!'
+      : 'Stage cleared!')
     : 'Your forces were overcome.';
   const titleColor = isVictory ? CMAP_WIN_COLOR : CMAP_LOSE_COLOR;
 
