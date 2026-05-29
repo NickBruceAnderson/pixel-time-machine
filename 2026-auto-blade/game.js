@@ -1416,6 +1416,194 @@ function generateRuinedCitadel(seed) {
   return { id: 'ruinedCitadel', name: 'Stage 4: Ruined Citadel', nodes, connections };
 }
 
+// ─── Stage 5: Ashen Wastes ───────────────────────────────────────────────────
+
+const ASHEN_WASTES_SQUIRE_RECRUITS = [
+  { name: 'Baldr', unitType: 'squire', equipment: { sword: 'broadsword', armor: 'chainmail' } },
+  { name: 'Crag',  unitType: 'squire', equipment: { sword: 'broadsword', shield: 'buckler' } },
+  { name: 'Dusk',  unitType: 'squire', equipment: { sword: 'broadsword', armor: 'chainmail' } },
+  { name: 'Ern',   unitType: 'squire', equipment: { sword: 'broadsword', shield: 'buckler' } },
+];
+const ASHEN_WASTES_THIEF_RECRUITS = [
+  { name: 'Flint', unitType: 'thief', equipment: { dagger: 'dagger', armor: 'leather' } },
+  { name: 'Grit',  unitType: 'thief', equipment: { dagger: 'dagger', armor: 'leather' } },
+  { name: 'Haze',  unitType: 'thief', equipment: { dagger: 'dagger' } },
+  { name: 'Scorch',unitType: 'thief', equipment: { dagger: 'dagger', armor: 'leather' } },
+];
+const ASHEN_WASTES_ARCHER_RECRUITS = [
+  { name: 'Sear',  unitType: 'archer', equipment: { bow: 'shortbow' } },
+  { name: 'Tind',  unitType: 'archer', equipment: { bow: 'shortbow' } },
+  { name: 'Emb',   unitType: 'archer', equipment: { bow: 'shortbow' } },
+  { name: 'Kest',  unitType: 'archer', equipment: { bow: 'shortbow' } },
+];
+
+function generateAshenWastes(seed) {
+  const rng = makeSeededRng(seed);
+  function rngPick(arr) { return arr[Math.floor(rng() * arr.length)]; }
+
+  const usedNames = new Set();
+  const recruitPool = [
+    ...ASHEN_WASTES_SQUIRE_RECRUITS,
+    ...ASHEN_WASTES_THIEF_RECRUITS,
+    ...ASHEN_WASTES_ARCHER_RECRUITS
+  ];
+  function pickRecruit() {
+    const avail = recruitPool.filter((r) => !usedNames.has(r.name));
+    const r = avail.length ? rngPick(avail) : rngPick(recruitPool);
+    usedNames.add(r.name);
+    return { ...r, equipment: { ...r.equipment } };
+  }
+
+  const SQUIRE_E = { unitType: 'squire', equipment: { sword: 'broadsword', armor: 'chainmail' } };
+  const ARCHER_E = { unitType: 'archer', equipment: { bow: 'shortbow' } };
+  const THIEF_E  = { unitType: 'thief',  equipment: { dagger: 'dagger', armor: 'leather' } };
+  const KNIGHT_E = { unitType: 'knight', equipment: { sword: 'longsword', shield: 'buckler', armor: 'plateMail' } };
+  const LIGHT_POOL = [SQUIRE_E, ARCHER_E, THIEF_E];
+
+  function pickMaybeKnight(knightChance) {
+    return rng() < knightChance ? KNIGHT_E : rngPick(LIGHT_POOL);
+  }
+
+  function makeBattle(id, layer, pos, of, enemy) {
+    return { id, layer, pos, of, type: 'battle', enemy, label: 'Battle' };
+  }
+  function makeRecruit(id, layer, pos, of) {
+    return { id, layer, pos, of, type: 'recruit', recruit: pickRecruit(), label: 'Recruit' };
+  }
+  function makeCamp(id, layer, pos, of) {
+    return { id, layer, pos, of, type: 'camp', label: 'Camp' };
+  }
+
+  // Pre-CL: 2-3 enemies, 20% knight per slot
+  function makePreCl(id, layer, pos, of) {
+    if (rng() < 0.65) {
+      const count = rng() < 0.40 ? 3 : 2;
+      const enemy = Array.from({ length: count }, () => pickMaybeKnight(0.20));
+      return makeBattle(id, layer, pos, of, enemy);
+    }
+    return makeRecruit(id, layer, pos, of);
+  }
+
+  // Post-CL normal: 3-4 enemies, 35% knight per slot
+  function makePostCl(id, layer, pos, of) {
+    if (rng() < 0.65) {
+      const count = rng() < 0.50 ? 4 : 3;
+      const enemy = Array.from({ length: count }, () => pickMaybeKnight(0.35));
+      return makeBattle(id, layer, pos, of, enemy);
+    }
+    return makeRecruit(id, layer, pos, of);
+  }
+
+  function postCl4(ids, layer) {
+    const ns = ids.map((id, i) => makePostCl(id, layer, i, 4));
+    if (!ns.some((n) => n.type === 'recruit')) {
+      const i = Math.floor(rng() * 4);
+      ns[i] = makeRecruit(ids[i], layer, i, 4);
+    }
+    return ns;
+  }
+  function postCl3(ids, layer) {
+    const ns = ids.map((id, i) => makePostCl(id, layer, i, 3));
+    if (!ns.some((n) => n.type === 'recruit')) {
+      const i = Math.floor(rng() * 3);
+      ns[i] = makeRecruit(ids[i], layer, i, 3);
+    }
+    return ns;
+  }
+  function preBoss3(ids, layer) {
+    const campPos = Math.floor(rng() * 3);
+    return ids.map((id, i) => {
+      if (i === campPos) return makeCamp(id, layer, i, 3);
+      if (rng() < 0.65) {
+        const count = rng() < 0.50 ? 4 : 3;
+        const enemy = Array.from({ length: count }, () => pickMaybeKnight(0.40));
+        return makeBattle(id, layer, i, 3, enemy);
+      }
+      return makeRecruit(id, layer, i, 3);
+    });
+  }
+
+  // ─── Build nodes ─────────────────────────────────────────────────────────────
+  const nodes = {};
+
+  // Same pre-CL skeleton as prior maps
+  nodes.L1N1 = { id: 'L1N1', layer: 0, pos: 0, of: 1, type: 'start', label: 'Start' };
+
+  nodes.L2N1 = makePreCl('L2N1', 1, 0, 2);
+  nodes.L2N2 = makePreCl('L2N2', 1, 1, 2);
+  nodes.L3N1 = makePreCl('L3N1', 2, 0, 3);
+  nodes.L3N2 = makePreCl('L3N2', 2, 1, 3);
+  nodes.L3N3 = makePreCl('L3N3', 2, 2, 3);
+  nodes.L4N1 = makePreCl('L4N1', 3, 0, 3);
+  nodes.L4N2 = makePreCl('L4N2', 3, 1, 3);
+  nodes.L4N3 = makePreCl('L4N3', 3, 2, 3);
+  nodes.L5N1 = makePreCl('L5N1', 4, 0, 2);
+  nodes.L5N2 = makePreCl('L5N2', 4, 1, 2);
+
+  // Layer 5: Squad Up (+1 squad)
+  nodes.L6N1 = { id: 'L6N1', layer: 5, pos: 0, of: 1, type: 'squadUp', label: '👥 SQUAD UP' };
+
+  // Layer 6: 4 nodes — first is the elite hard fight (avoidable), others are normal post-CL
+  // Elite: 4 enemies with 2 Knights guaranteed
+  nodes.L7N1 = makeBattle('L7N1', 6, 0, 4, [KNIGHT_E, KNIGHT_E, ARCHER_E, THIEF_E]);
+  nodes.L7N2 = makePostCl('L7N2', 6, 1, 4);
+  nodes.L7N3 = makePostCl('L7N3', 6, 2, 4);
+  nodes.L7N4 = makePostCl('L7N4', 6, 3, 4);
+  // Guarantee at least one recruit among L7N2-L7N4
+  if (![nodes.L7N2, nodes.L7N3, nodes.L7N4].some((n) => n.type === 'recruit')) {
+    const pick = rng() < 0.5 ? 'L7N2' : (rng() < 0.5 ? 'L7N3' : 'L7N4');
+    const pickIdx = { L7N2: 1, L7N3: 2, L7N4: 3 }[pick];
+    nodes[pick] = makeRecruit(pick, 6, pickIdx, 4);
+  }
+
+  postCl3(['L8N1', 'L8N2', 'L8N3'], 7).forEach((n) => { nodes[n.id] = n; });
+  postCl3(['L9N1', 'L9N2', 'L9N3'], 8).forEach((n) => { nodes[n.id] = n; });
+
+  preBoss3(['L10N1', 'L10N2', 'L10N3'], 9).forEach((n) => { nodes[n.id] = n; });
+
+  // Layer 10: boss — 2 Knights + 1 Archer + 1 Thief (hardest fight so far)
+  nodes.L11N1 = {
+    id: 'L11N1', layer: 10, pos: 0, of: 1, type: 'boss',
+    enemy: [KNIGHT_E, KNIGHT_E, ARCHER_E, THIEF_E],
+    label: 'Boss'
+  };
+
+  // ─── Connections ─────────────────────────────────────────────────────────────
+  // Pre-CL: same as previous maps
+  // Layer 6 expands to 4 nodes; connections follow no-crossing rule
+  const connections = {
+    L1N1:  ['L2N1', 'L2N2'],
+    L2N1:  ['L3N1', 'L3N2'],
+    L2N2:  ['L3N2', 'L3N3'],
+    L3N1:  ['L4N1', 'L4N2'],
+    L3N2:  ['L4N1', 'L4N2', 'L4N3'],
+    L3N3:  ['L4N2', 'L4N3'],
+    L4N1:  ['L5N1'],
+    L4N2:  ['L5N1', 'L5N2'],
+    L4N3:  ['L5N2'],
+    L5N1:  ['L6N1'],
+    L5N2:  ['L6N1'],
+    // Squad Up fans out to all 4 post-reward nodes
+    L6N1:  ['L7N1', 'L7N2', 'L7N3', 'L7N4'],
+    // 4 nodes → 3: top pair connects to top+mid, bottom pair to mid+bottom
+    L7N1:  ['L8N1', 'L8N2'],
+    L7N2:  ['L8N1', 'L8N2'],
+    L7N3:  ['L8N2', 'L8N3'],
+    L7N4:  ['L8N2', 'L8N3'],
+    L8N1:  ['L9N1', 'L9N2'],
+    L8N2:  ['L9N1', 'L9N2', 'L9N3'],
+    L8N3:  ['L9N2', 'L9N3'],
+    L9N1:  ['L10N1', 'L10N2'],
+    L9N2:  ['L10N1', 'L10N2', 'L10N3'],
+    L9N3:  ['L10N2', 'L10N3'],
+    L10N1: ['L11N1'],
+    L10N2: ['L11N1'],
+    L10N3: ['L11N1']
+  };
+
+  return { id: 'ashenWastes', name: 'Stage 5: Ashen Wastes', nodes, connections };
+}
+
 const PRACTICE_ENEMY_COUNT = CONFIG.practice.enemyCount;
 const PRACTICE_ENEMY_ALLOWED_CLASSES = CONFIG.practice.enemyAllowedClasses;
 const PRACTICE_ENEMY_FORMATION_SLOTS = CONFIG.practice.enemyFormationSlots;
@@ -2133,7 +2321,8 @@ const BATTLE_THEMES = {
   greenRoad:    { sky: null, ground: null },              // defaults (sky/grass colors from config)
   desertSietch: { sky: 0x7a5a28, ground: 0xb8872a },     // warm sand/dusk tones
   mountainPass:  { sky: 0x4a5060, ground: 0x7a7060 },     // cold overcast / gray stone
-  ruinedCitadel: { sky: 0x2c2a38, ground: 0x54465a }      // dark purple-gray / ruined stone
+  ruinedCitadel: { sky: 0x2c2a38, ground: 0x54465a },     // dark purple-gray / ruined stone
+  ashenWastes:   { sky: 0x382015, ground: 0x1e1a12 }      // scorched sienna sky / charcoal ash
 };
 
 function applyBattleTheme(mapId) {
@@ -7847,6 +8036,18 @@ function transitionToStage4() {
   showCombatMap();
 }
 
+function transitionToStage5() {
+  const newSeed = (Date.now() ^ (Math.random() * 0xffffffff | 0)) >>> 0;
+  campaignState.activeMapId   = 'ashenWastes';
+  campaignState.mapDef        = generateAshenWastes(newSeed);
+  campaignState.currentNodeId  = 'L1N1';
+  campaignState.selectedNodeId = null;
+  campaignState.clearedNodeIds  = new Set(['L1N1']);
+  campaignState.unlockedNodeIds = new Set(['L2N1', 'L2N2']);
+  applyBattleTheme('ashenWastes');
+  showCombatMap();
+}
+
 function afterCampaignBattleEnd(playerWon) {
   battleSource = 'practice';
   const nodeId = campaignState.activeEncounterNodeId;
@@ -7894,6 +8095,17 @@ function afterCampaignBattleEnd(playerWon) {
         redFormation = [];
         blueFormation = [];
         transitionToStage4();
+        return;
+      }
+      if (campaignState.activeMapId === 'ruinedCitadel') {
+        // Stage 4 complete — carry state into Stage 5
+        const activeIds = getActiveCampaignBattleUnitIds();
+        applyPostCampaignBattleRecovery(activeIds);
+        activeCampaignBattleUnitIds = [];
+        gamePhase = 'setup';
+        redFormation = [];
+        blueFormation = [];
+        transitionToStage5();
         return;
       }
       campaignState.runStatus = 'victory';
@@ -8317,8 +8529,10 @@ function renderCmapDetailPanel(nodeId) {
     battle:       'Defeat the enemy to proceed.',
     recruit:      'Add a unit to your roster. Restores stance.',
     commandLevel: 'Raises your Command Level by +1. Restores stance.',
-    squadUp:      'Expands your army to 2 squads. Restores stance.',
-    boss:         getCampaignMap()?.id === 'ruinedCitadel'
+    squadUp:      'Expands your army by +1 squad. Restores stance.',
+    boss:         getCampaignMap()?.id === 'ashenWastes'
+                    ? 'The warlord of the wastes. Two Knights lead the charge.'
+                    : getCampaignMap()?.id === 'ruinedCitadel'
                     ? 'The citadel commander. All four classes present.'
                     : getCampaignMap()?.id === 'mountainPass'
                     ? 'The summit guardian. Four enemies — one a Knight.'
@@ -8434,7 +8648,8 @@ function renderCmapEndOverlay(isVictory) {
   const title = isVictory ? 'Victory!' : 'Defeated';
   const mapId = campaignState?.activeMapId;
   const desc  = isVictory
-    ? (mapId === 'ruinedCitadel' ? 'The Ruined Citadel is taken!'
+    ? (mapId === 'ashenWastes'   ? 'The Ashen Wastes are yours!'
+      : mapId === 'ruinedCitadel' ? 'The Ruined Citadel is taken!'
       : mapId === 'mountainPass' ? 'The Mountain Pass is conquered!'
       : 'Stage cleared!')
     : 'Your forces were overcome.';
