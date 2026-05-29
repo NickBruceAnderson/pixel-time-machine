@@ -230,6 +230,18 @@ const FORMATION_TOOLTIP_TITLE_FONT_SIZE = CONFIG.theme.textSize.formationTooltip
 const FORMATION_TOOLTIP_BODY_FONT_SIZE = CONFIG.theme.textSize.formationTooltipBody;
 const FORMATION_TOOLTIP_BODY_Y_OFFSET = CONFIG.ui.tooltip.formationBodyYOffset;
 
+// Equipment selector
+const EQUIP_ICON_BOX_W    = CONFIG.equipSelector.iconBoxWidth;
+const EQUIP_ICON_BOX_H    = CONFIG.equipSelector.iconBoxHeight;
+const EQUIP_ICON_FONT_SZ  = CONFIG.equipSelector.iconFontSize;
+const EQUIP_ICON_GAP      = CONFIG.equipSelector.iconGap;
+const EQUIP_MENU_W        = CONFIG.equipSelector.menuWidth;
+const EQUIP_MENU_ROW_H    = CONFIG.equipSelector.menuRowHeight;
+const EQUIP_MENU_PAD      = CONFIG.equipSelector.menuPadding;
+const EQUIP_MENU_FONT_SZ  = CONFIG.equipSelector.menuFontSize;
+const EQUIP_MENU_DEPTH    = CONFIG.equipSelector.menuDepth;
+const EQUIP_MENU_OFFSET_Y = CONFIG.equipSelector.menuOffsetY;
+
 // Resource rows (setup cards and stats popup)
 const RESOURCE_ROW_LABEL_FONT_SIZE = CONFIG.theme.textSize.resourceRowLabel;
 const RESOURCE_ROW_ICON_FONT_SIZE = CONFIG.theme.textSize.resourceRowIcon;
@@ -2093,6 +2105,10 @@ let popupButtons = {};
 let popupPanelNodes = [];
 let activePopupKey = null;
 
+// Equipment selector — floating menu state (not in setupNodes/combatMapScreenNodes)
+let activeEquipMenuNodes = [];
+let equipMenuOpenKey = null;   // 'unitId:slotKey' of the currently open menu
+
 const config = {
   type: Phaser.AUTO,
   width: RENDER_WIDTH,
@@ -2852,6 +2868,10 @@ function isSetupReady() {
 }
 
 function clearSetupUi() {
+  // Destroy any floating equipment menu nodes (not tracked by setupNodes).
+  activeEquipMenuNodes.forEach((n) => { if (n?.scene) n.destroy(); });
+  activeEquipMenuNodes = [];
+  equipMenuOpenKey = null;
   clearSetupCpTooltip();
   formationHoverTargets = [];
   dynamicTooltipDefinitions = {};
@@ -3078,6 +3098,17 @@ function renderFormationSelectedUnitStatsPanel() {
     ...smallTextStyle(),
     fontSize: `${FORMATION_SELECTED_UNIT_CLASS_FONT_SIZE}px`
   }).setDepth(POPUP_DEPTH + 1));
+
+  // Equipment slot icon buttons — right-aligned on the class-name row.
+  renderEquipSlotIcons(
+    unit,
+    rect.x + rect.w - POPUP_PANEL_PADDING,
+    rect.y + 34,
+    addSetupNode,
+    POPUP_DEPTH + 2,
+    renderSetupUi
+  );
+
   registerDynamicHoverTooltip(
     `selected-unit-header:${unit.id}`,
     { x: rect.x, y: rect.y, w: rect.w, h: 58 },
@@ -8139,6 +8170,10 @@ function addCmapNode(node) {
 }
 
 function clearCombatMapScreen() {
+  // Destroy any floating equipment menu nodes (not tracked by combatMapScreenNodes).
+  activeEquipMenuNodes.forEach((n) => { if (n?.scene) n.destroy(); });
+  activeEquipMenuNodes = [];
+  equipMenuOpenKey = null;
   combatMapScreenNodes.forEach((node) => {
     if (node && node.scene) node.destroy();
   });
@@ -8685,6 +8720,131 @@ function renderCmapEndOverlay(isVictory) {
   newRunTxt.on('pointerdown', resetCampaignRun);
 }
 
+// ─── Equipment selector ───────────────────────────────────────────────────────
+
+// All EQUIPMENT items that can go in a given slot (slotKey = 'sword', 'armor', etc.)
+function getEquipOptionsForSlot(slotKey) {
+  return Object.values(EQUIPMENT).filter((e) => e.slotType === slotKey);
+}
+
+// Plain-text abbreviation for slot icon buttons (avoids emoji sizing issues).
+const EQUIP_SLOT_ABBR = { sword: 'SWD', dagger: 'DGR', bow: 'BOW', shield: 'SHD', armor: 'ARM' };
+function getEquipSlotAbbr(slotKey) {
+  return EQUIP_SLOT_ABBR[slotKey] || slotKey.slice(0, 3).toUpperCase();
+}
+
+// Destroy the floating menu and clear tracking state.
+function closeEquipMenu() {
+  activeEquipMenuNodes.forEach((n) => { if (n?.scene) n.destroy(); });
+  activeEquipMenuNodes = [];
+  equipMenuOpenKey = null;
+}
+
+// Create a floating equipment option menu below (anchorX, anchorY).
+// nodeAdder (addSetupNode | addCmapNode) registers nodes for auto-cleanup on re-render.
+// rerenderFn is called after the player picks an option.
+function openEquipMenu(unit, slotKey, anchorX, anchorY, nodeAdder, rerenderFn) {
+  closeEquipMenu();
+
+  const options = getEquipOptionsForSlot(slotKey);
+  if (options.length === 0) return;
+
+  equipMenuOpenKey = `${unit.id}:${slotKey}`;
+
+  const currentKey = (unit.equipment || {})[slotKey];
+  const menuH = options.length * EQUIP_MENU_ROW_H + EQUIP_MENU_PAD * 2;
+  const menuX = Math.min(anchorX, GAME_WIDTH - EQUIP_MENU_W - 4);
+  const menuY = anchorY + EQUIP_MENU_OFFSET_Y;
+
+  const bg = sceneRef.add.rectangle(menuX, menuY, EQUIP_MENU_W, menuH, PHASER_COLORS.panel)
+    .setOrigin(0).setAlpha(0.96).setStrokeStyle(1, PHASER_COLORS.panelBorder)
+    .setDepth(EQUIP_MENU_DEPTH);
+  nodeAdder(bg);
+  activeEquipMenuNodes.push(bg);
+
+  options.forEach((item, i) => {
+    const rowY = menuY + EQUIP_MENU_PAD + i * EQUIP_MENU_ROW_H;
+    const isEquipped = item.key === currentKey;
+
+    const rowBg = sceneRef.add.rectangle(menuX + 2, rowY, EQUIP_MENU_W - 4, EQUIP_MENU_ROW_H - 2,
+      isEquipped ? PHASER_COLORS.sp : PHASER_COLORS.infoPanel
+    ).setOrigin(0).setAlpha(isEquipped ? 0.50 : 0.30)
+      .setInteractive({ useHandCursor: !isEquipped })
+      .setDepth(EQUIP_MENU_DEPTH + 1);
+
+    const rowTxt = sceneRef.add.text(
+      menuX + EQUIP_MENU_PAD, rowY + EQUIP_MENU_ROW_H / 2,
+      `${item.name}${isEquipped ? '  ✓' : ''}`,
+      {
+        fontFamily: UI_FONT_FAMILY,
+        fontSize: `${EQUIP_MENU_FONT_SZ}px`,
+        resolution: getUiTextResolution(),
+        color: isEquipped ? COLORS.sp : COLORS.text
+      }
+    ).setOrigin(0, 0.5).setDepth(EQUIP_MENU_DEPTH + 2);
+
+    nodeAdder(rowBg);
+    nodeAdder(rowTxt);
+    activeEquipMenuNodes.push(rowBg, rowTxt);
+
+    if (!isEquipped) {
+      const equip = () => {
+        unit.equipment = unit.equipment || {};
+        unit.equipment[slotKey] = item.key;
+        rerenderFn();
+      };
+      rowBg.on('pointerdown', equip);
+      rowTxt.on('pointerdown', equip);
+    }
+  });
+}
+
+// Render a row of clickable slot-icon buttons starting from the right edge.
+// One button per gear slot; stacks left-to-right (rightmost = slot 0).
+function renderEquipSlotIcons(unit, iconRightX, iconTopY, nodeAdder, depth, rerenderFn) {
+  const classDef = getClassDefinition(unit.unitType);
+  const slots = classDef.gearSlots || [];
+
+  slots.forEach((slotKey, i) => {
+    const bx = iconRightX - (i + 1) * (EQUIP_ICON_BOX_W + EQUIP_ICON_GAP);
+    const by = iconTopY;
+    const menuKey = `${unit.id}:${slotKey}`;
+    const isOpen  = equipMenuOpenKey === menuKey;
+
+    const btnBg = sceneRef.add.rectangle(bx, by, EQUIP_ICON_BOX_W, EQUIP_ICON_BOX_H,
+      isOpen ? PHASER_COLORS.sp : PHASER_COLORS.infoPanel
+    ).setOrigin(0).setAlpha(isOpen ? 0.55 : 0.80)
+      .setStrokeStyle(1, PHASER_COLORS.panelBorder)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(depth);
+
+    const btnTxt = sceneRef.add.text(
+      bx + EQUIP_ICON_BOX_W / 2, by + EQUIP_ICON_BOX_H / 2,
+      getEquipSlotAbbr(slotKey),
+      {
+        fontFamily: UI_FONT_FAMILY,
+        fontSize: `${EQUIP_ICON_FONT_SZ}px`,
+        resolution: getUiTextResolution(),
+        color: isOpen ? COLORS.sp : COLORS.mutedText
+      }
+    ).setOrigin(0.5).setDepth(depth + 1);
+
+    nodeAdder(btnBg);
+    nodeAdder(btnTxt);
+
+    const onClick = () => {
+      if (isOpen) {
+        closeEquipMenu();
+        rerenderFn();
+      } else {
+        openEquipMenu(unit, slotKey, bx, by + EQUIP_ICON_BOX_H, nodeAdder, rerenderFn);
+      }
+    };
+    btnBg.on('pointerdown', onClick);
+    btnTxt.on('pointerdown', onClick);
+  });
+}
+
 // ─── Combat Map: bottom-half squad previews ──────────────────────────────────
 
 function getActiveSquad() {
@@ -8865,6 +9025,12 @@ function renderCmapUnitCard(unit, x, y, w, h) {
     `❤️ ${curHp}/${stats.maxHp}  🛡️ ${curSp}/${stats.maxSp}`,
     bodyTextStyle()
   ).setDepth(CMAP_UI_DEPTH + 3));
+
+  // Equipment slot icon buttons — right-aligned, top row of card.
+  if (!ko) {
+    renderEquipSlotIcons(unit, x + w - EQUIP_ICON_GAP, y + 8, addCmapNode, CMAP_UI_DEPTH + 4,
+      renderCombatMapScreen);
+  }
 }
 
 // Compact enemy card for enemy preview list.

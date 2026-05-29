@@ -517,6 +517,19 @@ export const CONFIG = {
     startingEnemyXp: 0
   },
 
+  equipSelector: {
+    iconBoxWidth:    28,   // width of each gear slot icon button
+    iconBoxHeight:   20,   // height of each gear slot icon button
+    iconFontSize:    11,   // font size of text inside icon button
+    iconGap:          4,   // horizontal gap between icon buttons
+    menuWidth:       184,  // width of the floating option menu
+    menuRowHeight:   26,   // height of each option row in the menu
+    menuPadding:      8,   // inner padding of the menu
+    menuFontSize:    13,   // font size for option text in the menu
+    menuDepth:       350,  // render depth (above all other UI panels)
+    menuOffsetY:      4    // gap between the icon button bottom and the menu top
+  },
+
   practice: {
     enemyCount: 2,
     enemyAllowedClasses: ['squire', 'thief', 'archer'],
