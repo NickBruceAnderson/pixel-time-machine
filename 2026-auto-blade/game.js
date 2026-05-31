@@ -241,6 +241,8 @@ const EQUIP_MENU_PAD      = CONFIG.equipSelector.menuPadding;
 const EQUIP_MENU_FONT_SZ  = CONFIG.equipSelector.menuFontSize;
 const EQUIP_MENU_DEPTH    = CONFIG.equipSelector.menuDepth;
 const EQUIP_MENU_OFFSET_Y = CONFIG.equipSelector.menuOffsetY;
+const EQUIP_DROP_CHANCE   = CONFIG.equipmentDrop.dropChance;
+const EQUIP_DROP_POOL     = CONFIG.equipmentDrop.dropPool;
 
 // Resource rows (setup cards and stats popup)
 const RESOURCE_ROW_LABEL_FONT_SIZE = CONFIG.theme.textSize.resourceRowLabel;
@@ -7832,7 +7834,7 @@ function initCampaignState() {
         id: 'squire-alden',
         name: 'Alden',
         unitType: 'squire',
-        equipment: { sword: 'broadsword', shield: 'buckler', armor: 'chainmail' },
+        equipment: { sword: 'broadsword' },   // no starting armor
         xp: 0
       }
     ],
@@ -7840,6 +7842,7 @@ function initCampaignState() {
       { id: 'squad-1', name: 'Squad 1', cells: squad1Cells }
     ],
     promotionLog: [],   // messages shown once on the map after battle
+    inventory: { equipment: { broadsword: 1 } },  // items available to equip
     runStatus: 'active'
   };
 }
@@ -8086,10 +8089,11 @@ function afterCampaignBattleEnd(playerWon) {
 
   if (playerWon) {
     const node = getCampaignMap().nodes[nodeId];
-    // +1 gold per enemy defeated; +XP to living active units
+    // +1 gold per enemy defeated; +XP to living active units; chance of equipment drop
     if (node && node.enemy) {
       campaignState.gold = (campaignState.gold || 0) + node.enemy.length;
       grantCampaignBattleXp(activeCampaignBattleUnitIds, node.enemy.length);
+      rollEquipmentDrop();
     }
     campaignState.clearedNodeIds.add(nodeId);
     campaignState.currentNodeId = nodeId;
@@ -8727,6 +8731,37 @@ function getEquipOptionsForSlot(slotKey) {
   return Object.values(EQUIPMENT).filter((e) => e.slotType === slotKey);
 }
 
+// Items available in the selector for a slot:
+// - In campaign: owned inventory items + the currently equipped item.
+// - In practice mode (no campaignState): all items for that slot.
+function getAvailableEquipForSlot(slotKey, currentEquipKey) {
+  if (campaignState?.inventory?.equipment) {
+    const inv = campaignState.inventory.equipment;
+    return Object.values(EQUIPMENT).filter((e) => {
+      if (e.slotType !== slotKey) return false;
+      if (e.key === currentEquipKey) return true;   // always show equipped item
+      return (inv[e.key] || 0) > 0;
+    });
+  }
+  return getEquipOptionsForSlot(slotKey);
+}
+
+// Roll for an equipment drop after a campaign battle win.
+// Adds to campaignState.inventory and queues a "Found: X" promotionLog message.
+function rollEquipmentDrop() {
+  if (!campaignState) return;
+  if (Math.random() > EQUIP_DROP_CHANCE) return;
+  if (!EQUIP_DROP_POOL.length) return;
+  const key  = EQUIP_DROP_POOL[Math.floor(Math.random() * EQUIP_DROP_POOL.length)];
+  const item = EQUIPMENT[key];
+  if (!item) return;
+  campaignState.inventory = campaignState.inventory || { equipment: {} };
+  const inv = campaignState.inventory.equipment;
+  inv[key] = (inv[key] || 0) + 1;
+  campaignState.promotionLog = campaignState.promotionLog || [];
+  campaignState.promotionLog.push(`Found: ${item.name}`);
+}
+
 // Plain-text abbreviation for slot icon buttons (avoids emoji sizing issues).
 const EQUIP_SLOT_ABBR = { sword: 'SWD', dagger: 'DGR', bow: 'BOW', shield: 'SHD', armor: 'ARM' };
 function getEquipSlotAbbr(slotKey) {
@@ -8746,12 +8781,11 @@ function closeEquipMenu() {
 function openEquipMenu(unit, slotKey, anchorX, anchorY, nodeAdder, rerenderFn) {
   closeEquipMenu();
 
-  const options = getEquipOptionsForSlot(slotKey);
+  const currentKey = (unit.equipment || {})[slotKey];
+  const options = getAvailableEquipForSlot(slotKey, currentKey);
   if (options.length === 0) return;
 
   equipMenuOpenKey = `${unit.id}:${slotKey}`;
-
-  const currentKey = (unit.equipment || {})[slotKey];
   const menuH = options.length * EQUIP_MENU_ROW_H + EQUIP_MENU_PAD * 2;
   const menuX = Math.min(anchorX, GAME_WIDTH - EQUIP_MENU_W - 4);
   const menuY = anchorY + EQUIP_MENU_OFFSET_Y;

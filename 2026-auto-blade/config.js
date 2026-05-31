@@ -517,6 +517,12 @@ export const CONFIG = {
     startingEnemyXp: 0
   },
 
+  equipmentDrop: {
+    dropChance:          0.35,  // probability of an equipment drop per battle win
+    dropPool:            ['broadsword', 'longsword', 'buckler', 'chainmail'],
+    messageDurationMs:   0      // 0 = show until next map render (clears with promotionLog)
+  },
+
   equipSelector: {
     iconBoxWidth:    28,   // width of each gear slot icon button
     iconBoxHeight:   20,   // height of each gear slot icon button
