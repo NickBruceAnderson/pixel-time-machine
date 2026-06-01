@@ -235,12 +235,14 @@ const EQUIP_ICON_BOX_W    = CONFIG.equipSelector.iconBoxWidth;
 const EQUIP_ICON_BOX_H    = CONFIG.equipSelector.iconBoxHeight;
 const EQUIP_ICON_FONT_SZ  = CONFIG.equipSelector.iconFontSize;
 const EQUIP_ICON_GAP      = CONFIG.equipSelector.iconGap;
-const EQUIP_MENU_W        = CONFIG.equipSelector.menuWidth;
-const EQUIP_MENU_ROW_H    = CONFIG.equipSelector.menuRowHeight;
 const EQUIP_MENU_PAD      = CONFIG.equipSelector.menuPadding;
-const EQUIP_MENU_FONT_SZ  = CONFIG.equipSelector.menuFontSize;
 const EQUIP_MENU_DEPTH    = CONFIG.equipSelector.menuDepth;
 const EQUIP_MENU_OFFSET_Y = CONFIG.equipSelector.menuOffsetY;
+const EQUIP_GRID_COLS     = CONFIG.equipSelector.gridCols;
+const EQUIP_GRID_CELL_W   = CONFIG.equipSelector.gridCellW;
+const EQUIP_GRID_CELL_H   = CONFIG.equipSelector.gridCellH;
+const EQUIP_GRID_MAX_ROWS = CONFIG.equipSelector.gridMaxRows;
+const EQUIP_GRID_FONT_SZ  = CONFIG.equipSelector.gridFontSize;
 const EQUIP_DROP_CHANCE   = CONFIG.equipmentDrop.dropChance;
 const EQUIP_DROP_POOL     = CONFIG.equipmentDrop.dropPool;
 
@@ -7834,7 +7836,7 @@ function initCampaignState() {
         id: 'squire-alden',
         name: 'Alden',
         unitType: 'squire',
-        equipment: { sword: 'broadsword' },   // no starting armor
+        equipment: { sword: 'broadsword', shield: 'buckler', armor: 'chainmail' },
         xp: 0
       }
     ],
@@ -7842,7 +7844,7 @@ function initCampaignState() {
       { id: 'squad-1', name: 'Squad 1', cells: squad1Cells }
     ],
     promotionLog: [],   // messages shown once on the map after battle
-    inventory: { equipment: { broadsword: 1 } },  // items available to equip
+    inventory: { equipment: { broadsword: 1, buckler: 1, chainmail: 1 } },
     runStatus: 'active'
   };
 }
@@ -8188,6 +8190,8 @@ function showCombatMap() {
   if (!campaignState) {
     initCampaignState();
   }
+  // Inject gear reward node into the current map (idempotent; cleared nodes stay cleared).
+  if (campaignState) injectGearRewardNode(campaignState.mapDef);
   // Sync armyRoster / armySquads / commandLevel from campaign state.
   initializeArmyManagement();
   // Capture Formation's squad selection, then clamp and mirror it.
@@ -8561,7 +8565,8 @@ function renderCmapDetailPanel(nodeId) {
   const typeLabels = {
     start: 'Start', battle: 'Battle', recruit: 'Recruit',
     commandLevel: 'Command Level Up', squadUp: 'Squad Up',
-    boss: 'Boss Battle', armory: 'Armory', camp: 'Camp'
+    boss: 'Boss Battle', armory: 'Armory', camp: 'Camp',
+    gearReward: 'Gear Cache'
   };
   const typeDescs = {
     start:        'The beginning of the road.',
@@ -8579,7 +8584,8 @@ function renderCmapDetailPanel(nodeId) {
                     ? 'The final challenge. Three Thieves.'
                     : 'The final challenge. Three Archers.',
     armory:       'Salvage gear from the field. Restores stance.',
-    camp:         'Rest before the boss. Full HP and SP recovery.'
+    camp:         'Rest before the boss. Full HP and SP recovery.',
+    gearReward:   'A cache of useful gear. Restores stance.'
   };
 
   // Row 1: map name  •  node type
@@ -8602,6 +8608,13 @@ function renderCmapDetailPanel(nodeId) {
     addCmapNode(sceneRef.add.text(px, py, `Recruit: ${r.name} the ${className}`, bodyTextStyle())
       .setDepth(CMAP_UI_DEPTH + 2));
     py += 24;
+  } else if (node.type === 'gearReward' && node.gearKey) {
+    const grItem = EQUIPMENT[node.gearKey];
+    if (grItem) {
+      addCmapNode(sceneRef.add.text(px, py, `Gear: ${grItem.name}`, bodyTextStyle())
+        .setDepth(CMAP_UI_DEPTH + 2));
+      py += 24;
+    }
   }
 
   // Row 3: description
@@ -8643,6 +8656,7 @@ function renderCmapActionButton(nodeId) {
         commandLevel: 'Claim',
         squadUp:      'Claim',
         armory:       'Claim',
+        gearReward:   'Claim',
         camp:         'Rest'
       };
       label = actionLabels[node.type] || 'Enter';
@@ -8726,20 +8740,19 @@ function renderCmapEndOverlay(isVictory) {
 
 // ─── Equipment selector ───────────────────────────────────────────────────────
 
-// All EQUIPMENT items that can go in a given slot (slotKey = 'sword', 'armor', etc.)
+// All EQUIPMENT items that can go in a given slot.
 function getEquipOptionsForSlot(slotKey) {
   return Object.values(EQUIPMENT).filter((e) => e.slotType === slotKey);
 }
 
-// Items available in the selector for a slot:
-// - In campaign: owned inventory items + the currently equipped item.
-// - In practice mode (no campaignState): all items for that slot.
+// In campaign: owned inventory items + currently equipped item.
+// In practice (no campaignState): all items for that slot.
 function getAvailableEquipForSlot(slotKey, currentEquipKey) {
   if (campaignState?.inventory?.equipment) {
     const inv = campaignState.inventory.equipment;
     return Object.values(EQUIPMENT).filter((e) => {
       if (e.slotType !== slotKey) return false;
-      if (e.key === currentEquipKey) return true;   // always show equipped item
+      if (e.key === currentEquipKey) return true;
       return (inv[e.key] || 0) > 0;
     });
   }
@@ -8747,7 +8760,6 @@ function getAvailableEquipForSlot(slotKey, currentEquipKey) {
 }
 
 // Roll for an equipment drop after a campaign battle win.
-// Adds to campaignState.inventory and queues a "Found: X" promotionLog message.
 function rollEquipmentDrop() {
   if (!campaignState) return;
   if (Math.random() > EQUIP_DROP_CHANCE) return;
@@ -8762,79 +8774,195 @@ function rollEquipmentDrop() {
   campaignState.promotionLog.push(`Found: ${item.name}`);
 }
 
-// Plain-text abbreviation for slot icon buttons (avoids emoji sizing issues).
+// ─── Slot badge helpers ───────────────────────────────────────────────────────
+
+// All inventory-available items for a unit's slot (= what appears in the popup).
+function getCompatibleItemsForSlot(unit, slotKey) {
+  return getAvailableEquipForSlot(slotKey, (unit.equipment || {})[slotKey]);
+}
+
+// True if slotKey is a weapon slot (sword / dagger / bow) for this unit.
+const WEAPON_SLOT_KEYS = new Set(['sword', 'dagger', 'bow']);
+function isRequiredWeaponSlot(unit, slotKey) {
+  if (!WEAPON_SLOT_KEYS.has(slotKey)) return false;
+  return (getClassDefinition(unit.unitType).gearSlots || []).includes(slotKey);
+}
+
+// True if the slot can be cleared (shields + armor can; weapons cannot).
+function canUnequipSlot(unit, slotKey) {
+  if (!(unit.equipment || {})[slotKey]) return false;
+  return !isRequiredWeaponSlot(unit, slotKey);
+}
+
+// True when the badge should be bright and clickable.
+// Dim when: empty slot with no compatible gear AND not a required weapon.
+function isSlotBadgeActionable(unit, slotKey) {
+  if (canUnequipSlot(unit, slotKey)) return true;
+  const currentKey = (unit.equipment || {})[slotKey];
+  const items = getCompatibleItemsForSlot(unit, slotKey);
+  if (items.some((item) => item.key !== currentKey)) return true;
+  // Required weapon with an equipped item → open for inspect even if no alternatives.
+  if (isRequiredWeaponSlot(unit, slotKey) && currentKey) return true;
+  return false;
+}
+
+// ─── Gear reward helpers ──────────────────────────────────────────────────────
+
+// Add a gear item to campaign inventory and queue a "Found: X" message.
+function grantGearReward(gearKey) {
+  const item = EQUIPMENT[gearKey];
+  if (!item || !campaignState) return;
+  campaignState.inventory = campaignState.inventory || { equipment: {} };
+  const inv = campaignState.inventory.equipment;
+  inv[gearKey] = (inv[gearKey] || 0) + 1;
+  campaignState.promotionLog = campaignState.promotionLog || [];
+  campaignState.promotionLog.push(`Found: ${item.name}`);
+}
+
+function claimGearRewardNode(nodeId) {
+  const node = getCampaignMap().nodes[nodeId];
+  if (!node || node.type !== 'gearReward' || !node.gearKey) return;
+  grantGearReward(node.gearKey);
+  campaignState.clearedNodeIds.add(nodeId);
+  campaignState.currentNodeId = nodeId;
+  unlockNodeOutgoing(nodeId);
+  applyNonBattleNodeRecovery();
+  renderCombatMapScreen();
+}
+
+// One deterministic gear reward per map, injected into L7N1 (L7N2 for Ashen Wastes).
+// Idempotent — safe to call on an already-generated or re-loaded map.
+const GEAR_REWARD_BY_MAP = {
+  greenRoad:    'chainmail',
+  desertSietch: 'buckler',
+  mountainPass: 'longsword',
+  ruinedCitadel:'plateMail',
+  ashenWastes:  'longsword'
+};
+
+function injectGearRewardNode(mapDef) {
+  if (!mapDef) return;
+  const gearKey  = GEAR_REWARD_BY_MAP[mapDef.id];
+  if (!gearKey) return;
+  const targetId = mapDef.id === 'ashenWastes' ? 'L7N2' : 'L7N1';
+  const n = mapDef.nodes[targetId];
+  if (!n) return;
+  mapDef.nodes[targetId] = { id: n.id, layer: n.layer, pos: n.pos, of: n.of,
+    type: 'gearReward', gearKey, label: '⚙ GEAR' };
+}
+
+// ─── Slot icon buttons + grid popup ──────────────────────────────────────────
+
 const EQUIP_SLOT_ABBR = { sword: 'SWD', dagger: 'DGR', bow: 'BOW', shield: 'SHD', armor: 'ARM' };
 function getEquipSlotAbbr(slotKey) {
   return EQUIP_SLOT_ABBR[slotKey] || slotKey.slice(0, 3).toUpperCase();
 }
 
-// Destroy the floating menu and clear tracking state.
+// Destroy the floating grid popup and clear tracking state.
 function closeEquipMenu() {
   activeEquipMenuNodes.forEach((n) => { if (n?.scene) n.destroy(); });
   activeEquipMenuNodes = [];
   equipMenuOpenKey = null;
 }
 
-// Create a floating equipment option menu below (anchorX, anchorY).
-// nodeAdder (addSetupNode | addCmapNode) registers nodes for auto-cleanup on re-render.
-// rerenderFn is called after the player picks an option.
-function openEquipMenu(unit, slotKey, anchorX, anchorY, nodeAdder, rerenderFn) {
+// Open a compact 4×4 grid popup below the clicked slot badge.
+// Menu nodes are NOT registered with nodeAdder — they persist through re-renders
+// and are cleaned up only by closeEquipMenu() or clearSetupUi/clearCombatMapScreen.
+function openEquipMenu(unit, slotKey, anchorX, anchorY, rerenderFn) {
   closeEquipMenu();
 
+  if (!isSlotBadgeActionable(unit, slotKey)) return;
+
   const currentKey = (unit.equipment || {})[slotKey];
-  const options = getAvailableEquipForSlot(slotKey, currentKey);
-  if (options.length === 0) return;
+  const items = getAvailableEquipForSlot(slotKey, currentKey);
+
+  // Build cell list: compatible items + optional unequip
+  const cells = [...items];
+  if (canUnequipSlot(unit, slotKey)) cells.push({ key: '__unequip__', name: 'None' });
+  if (cells.length === 0) return;
 
   equipMenuOpenKey = `${unit.id}:${slotKey}`;
-  const menuH = options.length * EQUIP_MENU_ROW_H + EQUIP_MENU_PAD * 2;
-  const menuX = Math.min(anchorX, GAME_WIDTH - EQUIP_MENU_W - 4);
-  const menuY = anchorY + EQUIP_MENU_OFFSET_Y;
 
-  const bg = sceneRef.add.rectangle(menuX, menuY, EQUIP_MENU_W, menuH, PHASER_COLORS.panel)
-    .setOrigin(0).setAlpha(0.96).setStrokeStyle(1, PHASER_COLORS.panelBorder)
+  const cols   = EQUIP_GRID_COLS;
+  const cellW  = EQUIP_GRID_CELL_W;
+  const cellH  = EQUIP_GRID_CELL_H;
+  const rows   = Math.min(EQUIP_GRID_MAX_ROWS, Math.ceil(cells.length / cols));
+  const popupW = cols * cellW + EQUIP_MENU_PAD * 2;
+  const popupH = rows * cellH + EQUIP_MENU_PAD * 2;
+
+  let popupX = Math.min(anchorX, GAME_WIDTH - 4 - popupW);
+  let popupY = anchorY + EQUIP_MENU_OFFSET_Y;
+  if (popupY + popupH > GAME_HEIGHT - 4) {
+    popupY = anchorY - EQUIP_ICON_BOX_H - EQUIP_MENU_OFFSET_Y - popupH;
+  }
+
+  // Transparent full-screen overlay for click-outside-to-close.
+  const overlay = sceneRef.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000)
+    .setOrigin(0).setAlpha(0.001)
+    .setInteractive({ useHandCursor: false })
+    .setDepth(EQUIP_MENU_DEPTH - 1);
+  activeEquipMenuNodes.push(overlay);
+  overlay.on('pointerdown', () => { closeEquipMenu(); rerenderFn(); });
+
+  // Popup background panel.
+  const bg = sceneRef.add.rectangle(popupX, popupY, popupW, popupH, PHASER_COLORS.panel)
+    .setOrigin(0).setAlpha(0.97).setStrokeStyle(1, PHASER_COLORS.panelBorder)
     .setDepth(EQUIP_MENU_DEPTH);
-  nodeAdder(bg);
   activeEquipMenuNodes.push(bg);
 
-  options.forEach((item, i) => {
-    const rowY = menuY + EQUIP_MENU_PAD + i * EQUIP_MENU_ROW_H;
-    const isEquipped = item.key === currentKey;
+  // Grid cells.
+  cells.forEach((cell, idx) => {
+    const col = idx % cols;
+    const row = Math.floor(idx / cols);
+    if (row >= EQUIP_GRID_MAX_ROWS) return; // TODO: scroll indicator
 
-    const rowBg = sceneRef.add.rectangle(menuX + 2, rowY, EQUIP_MENU_W - 4, EQUIP_MENU_ROW_H - 2,
+    const cx = popupX + EQUIP_MENU_PAD + col * cellW;
+    const cy = popupY + EQUIP_MENU_PAD + row * cellH;
+    const isEquipped = cell.key === currentKey;
+    const isUnequip  = cell.key === '__unequip__';
+
+    const cellBg = sceneRef.add.rectangle(cx + 1, cy + 1, cellW - 2, cellH - 2,
       isEquipped ? PHASER_COLORS.sp : PHASER_COLORS.infoPanel
-    ).setOrigin(0).setAlpha(isEquipped ? 0.50 : 0.30)
-      .setInteractive({ useHandCursor: !isEquipped })
+    ).setOrigin(0)
+      .setAlpha(isEquipped ? 0.55 : 0.25)
+      .setStrokeStyle(1, isEquipped ? PHASER_COLORS.sp : PHASER_COLORS.panelBorder)
+      .setInteractive({ useHandCursor: true })
       .setDepth(EQUIP_MENU_DEPTH + 1);
 
-    const rowTxt = sceneRef.add.text(
-      menuX + EQUIP_MENU_PAD, rowY + EQUIP_MENU_ROW_H / 2,
-      `${item.name}${isEquipped ? '  ✓' : ''}`,
+    const label = isUnequip ? '—' : cell.name.slice(0, 4);
+    const cellTxt = sceneRef.add.text(
+      cx + cellW / 2, cy + cellH / 2, label,
       {
         fontFamily: UI_FONT_FAMILY,
-        fontSize: `${EQUIP_MENU_FONT_SZ}px`,
+        fontSize:   `${EQUIP_GRID_FONT_SZ}px`,
         resolution: getUiTextResolution(),
-        color: isEquipped ? COLORS.sp : COLORS.text
+        color: isEquipped ? COLORS.sp : (isUnequip ? COLORS.mutedText : COLORS.text)
       }
-    ).setOrigin(0, 0.5).setDepth(EQUIP_MENU_DEPTH + 2);
+    ).setOrigin(0.5).setDepth(EQUIP_MENU_DEPTH + 2);
 
-    nodeAdder(rowBg);
-    nodeAdder(rowTxt);
-    activeEquipMenuNodes.push(rowBg, rowTxt);
+    activeEquipMenuNodes.push(cellBg, cellTxt);
 
-    if (!isEquipped) {
-      const equip = () => {
+    const onCellClick = () => {
+      if (isUnequip) {
         unit.equipment = unit.equipment || {};
-        unit.equipment[slotKey] = item.key;
+        delete unit.equipment[slotKey];
+        closeEquipMenu();
         rerenderFn();
-      };
-      rowBg.on('pointerdown', equip);
-      rowTxt.on('pointerdown', equip);
-    }
+      } else if (!isEquipped) {
+        unit.equipment = unit.equipment || {};
+        unit.equipment[slotKey] = cell.key;
+        closeEquipMenu();
+        rerenderFn();
+      }
+      // Clicking the currently equipped item is a no-op; menu stays open.
+    };
+    cellBg.on('pointerdown', onCellClick);
+    cellTxt.on('pointerdown', onCellClick);
   });
 }
 
-// Render a row of clickable slot-icon buttons starting from the right edge.
-// One button per gear slot; stacks left-to-right (rightmost = slot 0).
+// Render a row of clickable slot-icon badges, right-aligned.
+// Badge color reflects whether the slot is actionable (bright) or inert (dim).
 function renderEquipSlotIcons(unit, iconRightX, iconTopY, nodeAdder, depth, rerenderFn) {
   const classDef = getClassDefinition(unit.unitType);
   const slots = classDef.gearSlots || [];
@@ -8842,14 +8970,14 @@ function renderEquipSlotIcons(unit, iconRightX, iconTopY, nodeAdder, depth, rere
   slots.forEach((slotKey, i) => {
     const bx = iconRightX - (i + 1) * (EQUIP_ICON_BOX_W + EQUIP_ICON_GAP);
     const by = iconTopY;
-    const menuKey = `${unit.id}:${slotKey}`;
-    const isOpen  = equipMenuOpenKey === menuKey;
+    const actionable = isSlotBadgeActionable(unit, slotKey);
 
     const btnBg = sceneRef.add.rectangle(bx, by, EQUIP_ICON_BOX_W, EQUIP_ICON_BOX_H,
-      isOpen ? PHASER_COLORS.sp : PHASER_COLORS.infoPanel
-    ).setOrigin(0).setAlpha(isOpen ? 0.55 : 0.80)
+      PHASER_COLORS.infoPanel
+    ).setOrigin(0)
+      .setAlpha(actionable ? 0.85 : 0.40)
       .setStrokeStyle(1, PHASER_COLORS.panelBorder)
-      .setInteractive({ useHandCursor: true })
+      .setInteractive({ useHandCursor: actionable })
       .setDepth(depth);
 
     const btnTxt = sceneRef.add.text(
@@ -8857,25 +8985,20 @@ function renderEquipSlotIcons(unit, iconRightX, iconTopY, nodeAdder, depth, rere
       getEquipSlotAbbr(slotKey),
       {
         fontFamily: UI_FONT_FAMILY,
-        fontSize: `${EQUIP_ICON_FONT_SZ}px`,
+        fontSize:   `${EQUIP_ICON_FONT_SZ}px`,
         resolution: getUiTextResolution(),
-        color: isOpen ? COLORS.sp : COLORS.mutedText
+        color: actionable ? COLORS.text : COLORS.mutedText
       }
     ).setOrigin(0.5).setDepth(depth + 1);
 
     nodeAdder(btnBg);
     nodeAdder(btnTxt);
 
-    const onClick = () => {
-      if (isOpen) {
-        closeEquipMenu();
-        rerenderFn();
-      } else {
-        openEquipMenu(unit, slotKey, bx, by + EQUIP_ICON_BOX_H, nodeAdder, rerenderFn);
-      }
-    };
-    btnBg.on('pointerdown', onClick);
-    btnTxt.on('pointerdown', onClick);
+    if (actionable) {
+      const onClick = () => openEquipMenu(unit, slotKey, bx, by + EQUIP_ICON_BOX_H, rerenderFn);
+      btnBg.on('pointerdown', onClick);
+      btnTxt.on('pointerdown', onClick);
+    }
   });
 }
 
@@ -9211,6 +9334,9 @@ function handleCmapNodeAction(nodeId) {
       break;
     case 'armory':
       claimArmoryNode(nodeId);
+      break;
+    case 'gearReward':
+      claimGearRewardNode(nodeId);
       break;
     case 'camp':
       claimCampNode(nodeId);

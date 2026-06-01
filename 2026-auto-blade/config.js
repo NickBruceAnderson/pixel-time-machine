@@ -528,12 +528,14 @@ export const CONFIG = {
     iconBoxHeight:   20,   // height of each gear slot icon button
     iconFontSize:    11,   // font size of text inside icon button
     iconGap:          4,   // horizontal gap between icon buttons
-    menuWidth:       184,  // width of the floating option menu
-    menuRowHeight:   26,   // height of each option row in the menu
-    menuPadding:      8,   // inner padding of the menu
-    menuFontSize:    13,   // font size for option text in the menu
+    menuPadding:      4,   // inner padding of the grid popup
     menuDepth:       350,  // render depth (above all other UI panels)
-    menuOffsetY:      4    // gap between the icon button bottom and the menu top
+    menuOffsetY:      4,   // gap between icon button bottom and popup top
+    gridCols:         4,   // columns in the grid popup
+    gridCellW:       44,   // width of each grid cell
+    gridCellH:       44,   // height of each grid cell
+    gridMaxRows:      4,   // max visible rows before scroll (scrolling not yet implemented)
+    gridFontSize:    11    // font size for item labels inside grid cells
   },
 
   practice: {
