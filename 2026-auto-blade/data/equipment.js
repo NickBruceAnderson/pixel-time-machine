@@ -3,6 +3,7 @@ export const EQUIPMENT = {
   broadsword: {
     key: 'broadsword',
     name: 'Broadsword',
+    shortLabel: 'BRDS',
     slotType: 'sword',
     grantsActions: ['slash'],
     shortText: 'Grants Slash',
@@ -11,6 +12,7 @@ export const EQUIPMENT = {
   longsword: {
     key: 'longsword',
     name: 'Longsword',
+    shortLabel: 'LONG',
     slotType: 'sword',
     grantsActions: ['slash', 'thrust'],
     shortText: 'Slash +🛡️, Thrust +❤️',
@@ -27,6 +29,7 @@ export const EQUIPMENT = {
   dagger: {
     key: 'dagger',
     name: 'Dagger',
+    shortLabel: 'DAGR',
     slotType: 'dagger',
     grantsActions: ['shiv'],
     shortText: 'Grants Shiv',
@@ -35,6 +38,7 @@ export const EQUIPMENT = {
   shortbow: {
     key: 'shortbow',
     name: 'Shortbow',
+    shortLabel: 'SBOW',
     slotType: 'bow',
     grantsActions: ['arrowShot'],
     shortText: 'Grants Arrow Shot',
@@ -45,6 +49,7 @@ export const EQUIPMENT = {
   buckler: {
     key: 'buckler',
     name: 'Buckler',
+    shortLabel: 'BUCK',
     slotType: 'shield',
     shortText: 'Block +🛡️',
     tooltip: 'Buckler improves Block by 1. It does not grant Block, Cover, or Parry.',
@@ -59,6 +64,7 @@ export const EQUIPMENT = {
   chainmail: {
     key: 'chainmail',
     name: 'Chainmail',
+    shortLabel: 'CHNM',
     slotType: 'armor',
     armorWeight: 'heavy',
     shortText: '+🛡️',
@@ -72,6 +78,7 @@ export const EQUIPMENT = {
   plateMail: {
     key: 'plateMail',
     name: 'Plate Mail',
+    shortLabel: 'PLTE',
     slotType: 'armor',
     armorWeight: 'heavy',
     shortText: '+🛡️🛡️',
@@ -85,6 +92,7 @@ export const EQUIPMENT = {
   leather: {
     key: 'leather',
     name: 'Leather',
+    shortLabel: 'LTHR',
     slotType: 'armor',
     armorWeight: 'medium',
     moveBonus: 1,

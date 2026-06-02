@@ -1772,40 +1772,40 @@ const REACTION_CAST_EFFECT_FADE_DELAY_MS =
 function buildGambitRows() {
   return [
     {
-      label: 'G1: Parry',
+      label: 'G1:',
       detail: [
-        { text: '[player has ' },
+        { text: 'PARRY  ' },
+        { text: 'when has ' },
         resourceTextSegment('rp'),
-        { text: '] [player has ' },
-        resourceTextSegment('lp'),
-        { text: ']' }
+        { text: ' + ' },
+        resourceTextSegment('lp')
       ]
     },
-  {
-    label: 'G2: Block',
-    detail: [
-      { text: '[player has ' },
-      resourceTextSegment('rp'),
-      { text: ']' }
-    ]
-  },
-  {
-    label: 'G3: Thrust',
-    detail: [
-      { text: '[enemy has 0 ' },
-      resourceTextSegment('sp'),
-      { text: ']' }
-    ]
-  },
-  {
-    label: 'G4: Slash',
-    detail: [
-      { text: '[enemy has 2+' },
-      resourceTextSegment('sp'),
-      { text: ']' }
-    ]
-  }
-];
+    {
+      label: 'G2:',
+      detail: [
+        { text: 'BLOCK  ' },
+        { text: 'when has ' },
+        resourceTextSegment('rp')
+      ]
+    },
+    {
+      label: 'G3:',
+      detail: [
+        { text: 'THRUST  ' },
+        { text: 'when enemy 0 ' },
+        resourceTextSegment('sp')
+      ]
+    },
+    {
+      label: 'G4:',
+      detail: [
+        { text: 'SLASH  ' },
+        { text: 'when enemy 2+ ' },
+        resourceTextSegment('sp')
+      ]
+    }
+  ];
 }
 
 function cloneStats(stats) {
@@ -5675,30 +5675,37 @@ function renderCharacterPanel(unit, x, y, width, height, showHeader = true) {
 
   addPanelLine('Actions:');
   Object.values(unit.actions || {}).forEach((actionData, index) => {
-    addRichSplitLine(`A${index + 1}: ${actionData.name}`, buildActionDetailSegments(unit, actionData), actionData.key);
+    // Layout: A1:  [cost] NAME  [effect]
+    const aRaw  = buildActionDetailSegments(unit, actionData);
+    const aSegs = [aRaw[0], { text: `  ${actionData.name.toUpperCase()}  ` }, ...aRaw.slice(1)];
+    addRichSplitLine(`A${index + 1}:`, aSegs, actionData.key);
   });
 
   addBlankLine();
   addPanelLine('Reactions:');
   Object.values(unit.reactions || {}).forEach((reactionData, index) => {
-    let fallback;
+    // Layout: R1:  [cost] NAME  [effect]
+    let costSeg, effectSegs;
     if (reactionData.isPlaceholder) {
-      fallback = [{ text: 'Block for Ally' }];
+      costSeg    = { text: '' };
+      effectSegs = [{ text: 'Block for Ally' }];
     } else if (reactionData.key === 'truestrike') {
-      fallback = [resourceTextSegment('rp', reactionData.rpCost), { text: ' -> Grants 100% Accuracy' }];
+      costSeg    = resourceTextSegment('rp', reactionData.rpCost);
+      effectSegs = [{ text: '-> 100% Accuracy' }];
     } else if (reactionData.key === 'dodge') {
-      fallback = [resourceTextSegment('rp', reactionData.rpCost), { text: ' -> Grants 100% Evade' }];
+      costSeg    = resourceTextSegment('rp', reactionData.rpCost);
+      effectSegs = [{ text: '-> 100% Evade' }];
     } else {
-      fallback = [
-        resourceTextSegment('rp', reactionData.rpCost),
-        { text: ' -> Blocks ' },
+      costSeg    = resourceTextSegment('rp', reactionData.rpCost);
+      effectSegs = [
+        { text: '-> Blocks ' },
         resourceTextSegment('sp', reactionData.blockAmount),
         { text: ' or ' },
         resourceTextSegment('hp', reactionData.blockAmount)
       ];
     }
-
-    addRichSplitLine(`R${index + 1}: ${reactionData.name}`, fallback, reactionData.key);
+    const rSegs = [costSeg, { text: `  ${reactionData.name.toUpperCase()}  ` }, ...effectSegs];
+    addRichSplitLine(`R${index + 1}:`, rSegs, reactionData.key);
   });
 
   const unitLimits = Object.values(unit.limits || {});
@@ -8858,6 +8865,13 @@ function getEquipSlotAbbr(slotKey) {
   return EQUIP_SLOT_ABBR[slotKey] || slotKey.slice(0, 3).toUpperCase();
 }
 
+// Consistent 4-char short label for an equipment item — reads from item.shortLabel if present.
+function getEquipmentShortLabel(itemKey) {
+  const item = EQUIPMENT[itemKey];
+  if (!item) return itemKey.slice(0, 4).toUpperCase();
+  return item.shortLabel || item.name.slice(0, 4).toUpperCase();
+}
+
 // Destroy the floating grid popup and clear tracking state.
 function closeEquipMenu() {
   activeEquipMenuNodes.forEach((n) => { if (n?.scene) n.destroy(); });
@@ -8910,6 +8924,13 @@ function openEquipMenu(unit, slotKey, anchorX, anchorY, rerenderFn) {
     .setDepth(EQUIP_MENU_DEPTH);
   activeEquipMenuNodes.push(bg);
 
+  // Helper: apply a change and refresh without closing the menu.
+  const doAndRefresh = (changeFn) => {
+    changeFn();
+    rerenderFn();
+    openEquipMenu(unit, slotKey, anchorX, anchorY, rerenderFn);
+  };
+
   // Grid cells.
   cells.forEach((cell, idx) => {
     const col = idx % cols;
@@ -8921,6 +8942,7 @@ function openEquipMenu(unit, slotKey, anchorX, anchorY, rerenderFn) {
     const isEquipped = cell.key === currentKey;
     const isUnequip  = cell.key === '__unequip__';
 
+    // cellBg drawn first so it sits BELOW the text label (z-order: bg < txt).
     const cellBg = sceneRef.add.rectangle(cx + 1, cy + 1, cellW - 2, cellH - 2,
       isEquipped ? PHASER_COLORS.sp : PHASER_COLORS.infoPanel
     ).setOrigin(0)
@@ -8929,35 +8951,44 @@ function openEquipMenu(unit, slotKey, anchorX, anchorY, rerenderFn) {
       .setInteractive({ useHandCursor: true })
       .setDepth(EQUIP_MENU_DEPTH + 1);
 
-    const label = isUnequip ? '—' : cell.name.slice(0, 4);
+    const label = isUnequip ? '—' : getEquipmentShortLabel(cell.key);
     const cellTxt = sceneRef.add.text(
       cx + cellW / 2, cy + cellH / 2, label,
       {
         fontFamily: UI_FONT_FAMILY,
         fontSize:   `${EQUIP_GRID_FONT_SZ}px`,
         resolution: getUiTextResolution(),
-        color: isEquipped ? COLORS.sp : (isUnequip ? COLORS.mutedText : COLORS.text)
+        // Use bright white on the highlighted blue cell so the label is readable.
+        color: isEquipped ? COLORS.text : (isUnequip ? COLORS.mutedText : COLORS.text)
       }
-    ).setOrigin(0.5).setDepth(EQUIP_MENU_DEPTH + 2);
+    ).setOrigin(0.5).setDepth(EQUIP_MENU_DEPTH + 2);  // text always above bg
 
     activeEquipMenuNodes.push(cellBg, cellTxt);
 
-    const onCellClick = () => {
+    // Left-click: equip (non-equipped cell) or unequip (the — cell); menu stays open.
+    const onLeftClick = () => {
       if (isUnequip) {
-        unit.equipment = unit.equipment || {};
-        delete unit.equipment[slotKey];
-        closeEquipMenu();
-        rerenderFn();
+        if (canUnequipSlot(unit, slotKey)) {
+          doAndRefresh(() => { delete unit.equipment[slotKey]; });
+        }
       } else if (!isEquipped) {
-        unit.equipment = unit.equipment || {};
-        unit.equipment[slotKey] = cell.key;
-        closeEquipMenu();
-        rerenderFn();
+        doAndRefresh(() => { (unit.equipment = unit.equipment || {})[slotKey] = cell.key; });
       }
-      // Clicking the currently equipped item is a no-op; menu stays open.
+      // Clicking the already-equipped item: no-op; menu stays open.
     };
-    cellBg.on('pointerdown', onCellClick);
-    cellTxt.on('pointerdown', onCellClick);
+    cellBg.on('pointerdown', onLeftClick);
+    cellTxt.on('pointerdown', onLeftClick);
+
+    // Right-click on the equipped cell: unequip (if the slot allows it); menu stays open.
+    if (isEquipped) {
+      const onRightClick = () => {
+        if (canUnequipSlot(unit, slotKey)) {
+          doAndRefresh(() => { delete unit.equipment[slotKey]; });
+        }
+      };
+      cellBg.on('rightdown', onRightClick);
+      cellTxt.on('rightdown', onRightClick);
+    }
   });
 }
 
