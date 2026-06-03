@@ -8965,21 +8965,26 @@ function openEquipMenu(unit, slotKey, anchorX, anchorY, rerenderFn) {
 
     activeEquipMenuNodes.push(cellBg, cellTxt);
 
-    // Left-click: equip (non-equipped cell) or unequip (the — cell); menu stays open.
+    // Left-click: equip, swap, or toggle off the equipped item; menu stays open.
     const onLeftClick = () => {
       if (isUnequip) {
         if (canUnequipSlot(unit, slotKey)) {
           doAndRefresh(() => { delete unit.equipment[slotKey]; });
         }
-      } else if (!isEquipped) {
+      } else if (isEquipped) {
+        // Toggle off if legal; required weapon slots stay put.
+        if (canUnequipSlot(unit, slotKey)) {
+          doAndRefresh(() => { delete unit.equipment[slotKey]; });
+        }
+      } else {
         doAndRefresh(() => { (unit.equipment = unit.equipment || {})[slotKey] = cell.key; });
       }
-      // Clicking the already-equipped item: no-op; menu stays open.
     };
     cellBg.on('pointerdown', onLeftClick);
     cellTxt.on('pointerdown', onLeftClick);
 
     // Right-click on the equipped cell: unequip (if the slot allows it); menu stays open.
+    // Right-click on unequipped cells: no-op.
     if (isEquipped) {
       const onRightClick = () => {
         if (canUnequipSlot(unit, slotKey)) {
@@ -8988,6 +8993,29 @@ function openEquipMenu(unit, slotKey, anchorX, anchorY, rerenderFn) {
       };
       cellBg.on('rightdown', onRightClick);
       cellTxt.on('rightdown', onRightClick);
+    }
+
+    // Hover: show item description in the formation tooltip panel (setup phase only).
+    if (!isUnequip && gamePhase === 'setup') {
+      const hoverKey = `equip-hover:${cell.key}`;
+      const item = EQUIPMENT[cell.key];
+      const hoverDef = {
+        title: item?.name || cell.key,
+        description: item?.description || item?.tooltip || item?.shortText || ''
+      };
+      const onOver = () => {
+        dynamicTooltipDefinitions[hoverKey] = hoverDef;
+        formationHoveredTooltipKey = hoverKey;
+        renderFormationTooltipPanel(hoverKey);
+      };
+      const onOut = () => {
+        formationHoveredTooltipKey = null;
+        renderFormationTooltipPanel(null);
+      };
+      cellBg.on('pointerover', onOver);
+      cellBg.on('pointerout', onOut);
+      cellTxt.on('pointerover', onOver);
+      cellTxt.on('pointerout', onOut);
     }
   });
 }
