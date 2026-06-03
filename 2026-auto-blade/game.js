@@ -8503,6 +8503,13 @@ function renderCmapSingleNode(nodeData, x, y) {
         ...combatLogToggleTextStyle(), fontSize: '12px'  // scaled with larger node
       }).setOrigin(1, 1).setAlpha(labelAlpha).setDepth(CMAP_UI_DEPTH + 4));
     }
+
+    // Item reward nodes: short label (CHNM, BUCK, etc.) centered in the circle.
+    if (nodeData.type === 'gearReward' && nodeData.gearKey) {
+      addCmapNode(sceneRef.add.text(x, y, getEquipmentShortLabel(nodeData.gearKey), {
+        ...combatLogToggleTextStyle(), fontSize: '15px'
+      }).setOrigin(0.5).setAlpha(labelAlpha).setDepth(CMAP_UI_DEPTH + 3));
+    }
   }
 
   const labelNode = addCmapNode(sceneRef.add.text(
@@ -8573,7 +8580,7 @@ function renderCmapDetailPanel(nodeId) {
     start: 'Start', battle: 'Battle', recruit: 'Recruit',
     commandLevel: 'Command Level Up', squadUp: 'Squad Up',
     boss: 'Boss Battle', armory: 'Armory', camp: 'Camp',
-    gearReward: 'Gear Cache'
+    gearReward: 'Item Reward'
   };
   const typeDescs = {
     start:        'The beginning of the road.',
@@ -8592,7 +8599,7 @@ function renderCmapDetailPanel(nodeId) {
                     : 'The final challenge. Three Archers.',
     armory:       'Salvage gear from the field. Restores stance.',
     camp:         'Rest before the boss. Full HP and SP recovery.',
-    gearReward:   'A cache of useful gear. Restores stance.'
+    gearReward:   'Claim this item reward. Restores stance.'
   };
 
   // Row 1: map name  •  node type
@@ -8618,7 +8625,7 @@ function renderCmapDetailPanel(nodeId) {
   } else if (node.type === 'gearReward' && node.gearKey) {
     const grItem = EQUIPMENT[node.gearKey];
     if (grItem) {
-      addCmapNode(sceneRef.add.text(px, py, `Gear: ${grItem.name}`, bodyTextStyle())
+      addCmapNode(sceneRef.add.text(px, py, `Item: ${grItem.name}`, bodyTextStyle())
         .setDepth(CMAP_UI_DEPTH + 2));
       py += 24;
     }
@@ -8855,7 +8862,7 @@ function injectGearRewardNode(mapDef) {
   const n = mapDef.nodes[targetId];
   if (!n) return;
   mapDef.nodes[targetId] = { id: n.id, layer: n.layer, pos: n.pos, of: n.of,
-    type: 'gearReward', gearKey, label: '⚙ GEAR' };
+    type: 'gearReward', gearKey, label: 'ITEM' };
 }
 
 // ─── Slot icon buttons + grid popup ──────────────────────────────────────────
