@@ -7969,6 +7969,20 @@ function unlockNodeOutgoing(nodeId) {
   });
 }
 
+// Generic recruits receive only their required weapon.
+// Armor and shields are earned through inventory rewards later.
+function createRecruitLoadout(unitType) {
+  const classDef = getClassDefinition(unitType);
+  const equip = {};
+  const weaponSlots = new Set(['sword', 'dagger', 'bow']);
+  (classDef.gearSlots || []).forEach((slot) => {
+    if (!weaponSlots.has(slot)) return;
+    const defId = (classDef.equipment || {})[slot];
+    if (defId) equip[slot] = addInventoryItem(defId).uid;
+  });
+  return equip;
+}
+
 function claimRecruitNode(nodeId) {
   const mapDef = getCampaignMap();
   const node = mapDef.nodes[nodeId];
@@ -7983,11 +7997,7 @@ function claimRecruitNode(nodeId) {
       ? existingXps.reduce((sum, v) => sum + v, 0) / existingXps.length
       : 0;
     const recruitXp = Math.max(0, Math.floor(avgXp) - 1);
-    const recruitEquip = {};
-    Object.entries(r.equipment || {}).forEach(([slot, defId]) => {
-      const it = addInventoryItem(defId);
-      recruitEquip[slot] = it.uid;
-    });
+    const recruitEquip = createRecruitLoadout(r.unitType);
     campaignState.campaignRoster.push({
       id: unitId,
       name: r.name,
