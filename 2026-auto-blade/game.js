@@ -1832,14 +1832,103 @@ function getClassDefinition(characterClass) {
   return CHARACTER_CLASSES[characterClass] || CHARACTER_CLASSES.knight;
 }
 
+// ─── Item-instance inventory helpers ─────────────────────────────────────────
+
+let _itemUidSeq = 0;
+function _resetItemUidSeq() { _itemUidSeq = 0; }
+
+function _genItemUid() {
+  return `item_${String(++_itemUidSeq).padStart(4, '0')}`;
+}
+
+// Create a new item instance object without adding it to any inventory.
+function createInventoryItem(defId) {
+  return { uid: _genItemUid(), defId };
+}
+
+// Create a new item instance and push it into campaignState inventory. Returns the new item.
+function addInventoryItem(defId) {
+  const it = createInventoryItem(defId);
+  campaignState.inventory = campaignState.inventory || { items: [] };
+  campaignState.inventory.items = campaignState.inventory.items || [];
+  campaignState.inventory.items.push(it);
+  return it;
+}
+
+// Look up an item instance by uid. Returns null if not found.
+function getInventoryItem(uid) {
+  if (!uid || !campaignState) return null;
+  return (campaignState.inventory?.items || []).find((it) => it.uid === uid) || null;
+}
+
+// Resolve a slot value (uid in campaign, defId in practice) to an EQUIPMENT definition.
+function resolveSlotValue(value) {
+  if (!value) return null;
+  const inv = getInventoryItem(value);      // returns null in practice mode
+  const defId = inv ? inv.defId : value;    // fallback: treat value as defId (practice)
+  return EQUIPMENT[defId] || null;
+}
+
+// Return the equipment definition for a unit's equipped slot.
+function getEquippedItemDef(unit, slotKey) {
+  return resolveSlotValue((unit.equipment || {})[slotKey]);
+}
+
+// Return all uid values currently equipped across the entire campaign roster.
+function getEquippedItemUids() {
+  const uids = new Set();
+  (campaignState?.campaignRoster || []).forEach((u) => {
+    Object.values(u.equipment || {}).forEach((v) => { if (v) uids.add(v); });
+  });
+  return uids;
+}
+
+// True if the given uid is equipped by any roster unit.
+function isItemEquipped(uid) { return getEquippedItemUids().has(uid); }
+
+// Return the roster unit that has this uid equipped, or null.
+function getEquippedByUnit(uid) {
+  return (campaignState?.campaignRoster || []).find((u) =>
+    Object.values(u.equipment || {}).includes(uid)
+  ) || null;
+}
+
+// For campaign mode: return inventory items compatible with slotKey that are NOT equipped
+// by a different unit. Always includes the item currently equipped by this unit (if any).
+function getAvailableItemsForSlot(unit, slotKey) {
+  const equippedByOthers = new Set();
+  (campaignState?.campaignRoster || []).forEach((u) => {
+    if (u.id === unit.id) return;
+    Object.values(u.equipment || {}).forEach((v) => { if (v) equippedByOthers.add(v); });
+  });
+  return (campaignState?.inventory?.items || []).filter((it) => {
+    const def = EQUIPMENT[it.defId];
+    if (!def || def.slotType !== slotKey) return false;
+    if (equippedByOthers.has(it.uid)) return false;
+    return true;
+  });
+}
+
+// Build a normalised cell list for the equip picker, works in both modes.
+// Each cell: { uid, defId, def } where uid = defId in practice mode (no inventory).
+function buildEquipCells(unit, slotKey) {
+  if (campaignState) {
+    return getAvailableItemsForSlot(unit, slotKey).map((it) => ({
+      uid: it.uid, defId: it.defId, def: EQUIPMENT[it.defId]
+    }));
+  }
+  // Practice mode: all compatible definitions, uid = defId (virtual)
+  return getEquipOptionsForSlot(slotKey).map((def) => ({
+    uid: def.key, defId: def.key, def
+  }));
+}
+
 function getClassEquipmentItems(classDefinition) {
   return [...new Set(Object.values(classDefinition.equipment || {}))]
     .filter(Boolean)
-    .map((equipmentKey) => {
-      const item = EQUIPMENT[equipmentKey];
-      if (!item) {
-        console.warn(`Unknown equipment: ${equipmentKey}`);
-      }
+    .map((value) => {
+      const item = resolveSlotValue(value);
+      if (!item) console.warn(`Unknown equipment: ${value}`);
       return item;
     })
     .filter(Boolean);
@@ -5631,7 +5720,7 @@ function renderCharacterPanel(unit, x, y, width, height, showHeader = true) {
   let equipmentRowCount = 0;
   gearSlots.forEach((slotKey) => {
     const equipmentKey = unitEquipment[slotKey];
-    const item = equipmentKey ? EQUIPMENT[equipmentKey] : null;
+    const item = equipmentKey ? resolveSlotValue(equipmentKey) : null;
     if (item) {
       addRichSplitLine(
         `${getEquipmentSlotDisplay(slotKey, item)}: ${item.name}`,
@@ -7824,6 +7913,11 @@ function initCampaignState() {
   const squad1Cells = createEmptySquadCells();
   squad1Cells[1][2] = 'squire-alden';
 
+  _resetItemUidSeq();
+  const aldenSword  = createInventoryItem('broadsword');
+  const aldenShield = createInventoryItem('buckler');
+  const aldenArmor  = createInventoryItem('chainmail');
+
   const mapSeed = (Date.now() ^ (Math.random() * 0xffffffff | 0)) >>> 0;
   campaignState = {
     activeMapId: 'greenRoad',
@@ -7843,7 +7937,7 @@ function initCampaignState() {
         id: 'squire-alden',
         name: 'Alden',
         unitType: 'squire',
-        equipment: { sword: 'broadsword', shield: 'buckler', armor: 'chainmail' },
+        equipment: { sword: aldenSword.uid, shield: aldenShield.uid, armor: aldenArmor.uid },
         xp: 0
       }
     ],
@@ -7851,7 +7945,7 @@ function initCampaignState() {
       { id: 'squad-1', name: 'Squad 1', cells: squad1Cells }
     ],
     promotionLog: [],   // messages shown once on the map after battle
-    inventory: { equipment: { broadsword: 1, buckler: 1, chainmail: 1 } },
+    inventory: { items: [aldenSword, aldenShield, aldenArmor] },
     runStatus: 'active'
   };
 }
@@ -7889,11 +7983,16 @@ function claimRecruitNode(nodeId) {
       ? existingXps.reduce((sum, v) => sum + v, 0) / existingXps.length
       : 0;
     const recruitXp = Math.max(0, Math.floor(avgXp) - 1);
+    const recruitEquip = {};
+    Object.entries(r.equipment || {}).forEach(([slot, defId]) => {
+      const it = addInventoryItem(defId);
+      recruitEquip[slot] = it.uid;
+    });
     campaignState.campaignRoster.push({
       id: unitId,
       name: r.name,
       unitType: r.unitType,
-      equipment: { ...r.equipment },
+      equipment: recruitEquip,
       xp: recruitXp
     });
     armyRoster = campaignState.campaignRoster;
@@ -8762,12 +8861,15 @@ function getEquipOptionsForSlot(slotKey) {
 // In campaign: owned inventory items + currently equipped item.
 // In practice (no campaignState): all items for that slot.
 function getAvailableEquipForSlot(slotKey, currentEquipKey) {
-  if (campaignState?.inventory?.equipment) {
-    const inv = campaignState.inventory.equipment;
-    return Object.values(EQUIPMENT).filter((e) => {
-      if (e.slotType !== slotKey) return false;
-      if (e.key === currentEquipKey) return true;
-      return (inv[e.key] || 0) > 0;
+  if (campaignState) {
+    // Return def objects for any item in inventory for this slot that is unequipped,
+    // plus the currently equipped item (by resolving currentEquipKey to a defId).
+    const currentDefId = resolveSlotValue(currentEquipKey)?.key;
+    return getEquipOptionsForSlot(slotKey).filter((def) => {
+      const unequippedCount = (campaignState.inventory?.items || [])
+        .filter((it) => it.defId === def.key && !isItemEquipped(it.uid)).length;
+      if (def.key === currentDefId) return true;
+      return unequippedCount > 0;
     });
   }
   return getEquipOptionsForSlot(slotKey);
@@ -8781,9 +8883,7 @@ function rollEquipmentDrop() {
   const key  = EQUIP_DROP_POOL[Math.floor(Math.random() * EQUIP_DROP_POOL.length)];
   const item = EQUIPMENT[key];
   if (!item) return;
-  campaignState.inventory = campaignState.inventory || { equipment: {} };
-  const inv = campaignState.inventory.equipment;
-  inv[key] = (inv[key] || 0) + 1;
+  addInventoryItem(key);
   campaignState.promotionLog = campaignState.promotionLog || [];
   campaignState.promotionLog.push(`Found: ${item.name}`);
 }
@@ -8812,11 +8912,16 @@ function canUnequipSlot(unit, slotKey) {
 // Dim when: empty slot with no compatible gear AND not a required weapon.
 function isSlotBadgeActionable(unit, slotKey) {
   if (canUnequipSlot(unit, slotKey)) return true;
-  const currentKey = (unit.equipment || {})[slotKey];
-  const items = getCompatibleItemsForSlot(unit, slotKey);
-  if (items.some((item) => item.key !== currentKey)) return true;
+  const currentUid = (unit.equipment || {})[slotKey];
+  if (campaignState) {
+    const avail = getAvailableItemsForSlot(unit, slotKey);
+    if (avail.some((it) => it.uid !== currentUid)) return true;
+  } else {
+    const items = getCompatibleItemsForSlot(unit, slotKey);
+    if (items.some((item) => item.key !== currentUid)) return true;
+  }
   // Required weapon with an equipped item → open for inspect even if no alternatives.
-  if (isRequiredWeaponSlot(unit, slotKey) && currentKey) return true;
+  if (isRequiredWeaponSlot(unit, slotKey) && currentUid) return true;
   return false;
 }
 
@@ -8826,9 +8931,7 @@ function isSlotBadgeActionable(unit, slotKey) {
 function grantGearReward(gearKey) {
   const item = EQUIPMENT[gearKey];
   if (!item || !campaignState) return;
-  campaignState.inventory = campaignState.inventory || { equipment: {} };
-  const inv = campaignState.inventory.equipment;
-  inv[gearKey] = (inv[gearKey] || 0) + 1;
+  addInventoryItem(gearKey);
   campaignState.promotionLog = campaignState.promotionLog || [];
   campaignState.promotionLog.push(`Found: ${item.name}`);
 }
@@ -8894,12 +8997,11 @@ function openEquipMenu(unit, slotKey, anchorX, anchorY, rerenderFn) {
 
   if (!isSlotBadgeActionable(unit, slotKey)) return;
 
-  const currentKey = (unit.equipment || {})[slotKey];
-  const items = getAvailableEquipForSlot(slotKey, currentKey);
+  const currentUid = (unit.equipment || {})[slotKey];
 
   // Build cell list: compatible items + optional unequip
-  const cells = [...items];
-  if (canUnequipSlot(unit, slotKey)) cells.push({ key: '__unequip__', name: 'None' });
+  const cells = buildEquipCells(unit, slotKey);
+  if (canUnequipSlot(unit, slotKey)) cells.push({ uid: '__unequip__', defId: '__unequip__', def: null });
   if (cells.length === 0) return;
 
   equipMenuOpenKey = `${unit.id}:${slotKey}`;
@@ -8946,8 +9048,8 @@ function openEquipMenu(unit, slotKey, anchorX, anchorY, rerenderFn) {
 
     const cx = popupX + EQUIP_MENU_PAD + col * cellW;
     const cy = popupY + EQUIP_MENU_PAD + row * cellH;
-    const isEquipped = cell.key === currentKey;
-    const isUnequip  = cell.key === '__unequip__';
+    const isEquipped = cell.uid === currentUid;
+    const isUnequip  = cell.uid === '__unequip__';
 
     // cellBg drawn first so it sits BELOW the text label (z-order: bg < txt).
     const cellBg = sceneRef.add.rectangle(cx + 1, cy + 1, cellW - 2, cellH - 2,
@@ -8958,7 +9060,7 @@ function openEquipMenu(unit, slotKey, anchorX, anchorY, rerenderFn) {
       .setInteractive({ useHandCursor: true })
       .setDepth(EQUIP_MENU_DEPTH + 1);
 
-    const label = isUnequip ? '—' : getEquipmentShortLabel(cell.key);
+    const label = isUnequip ? '—' : getEquipmentShortLabel(cell.defId);
     const cellTxt = sceneRef.add.text(
       cx + cellW / 2, cy + cellH / 2, label,
       {
@@ -8984,7 +9086,7 @@ function openEquipMenu(unit, slotKey, anchorX, anchorY, rerenderFn) {
           doAndRefresh(() => { delete unit.equipment[slotKey]; });
         }
       } else {
-        doAndRefresh(() => { (unit.equipment = unit.equipment || {})[slotKey] = cell.key; });
+        doAndRefresh(() => { (unit.equipment = unit.equipment || {})[slotKey] = cell.uid; });
       }
     };
     cellBg.on('pointerdown', onLeftClick);
@@ -9004,10 +9106,10 @@ function openEquipMenu(unit, slotKey, anchorX, anchorY, rerenderFn) {
 
     // Hover: show item description in the formation tooltip panel (setup phase only).
     if (!isUnequip && gamePhase === 'setup') {
-      const hoverKey = `equip-hover:${cell.key}`;
-      const item = EQUIPMENT[cell.key];
+      const hoverKey = `equip-hover:${cell.defId}`;
+      const item = cell.def;
       const hoverDef = {
-        title: item?.name || cell.key,
+        title: item?.name || cell.defId,
         description: item?.description || item?.tooltip || item?.shortText || ''
       };
       const onOver = () => {
