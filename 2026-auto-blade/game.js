@@ -8613,10 +8613,13 @@ function renderCmapSingleNode(nodeData, x, y) {
       }).setOrigin(1, 1).setAlpha(labelAlpha).setDepth(CMAP_UI_DEPTH + 4));
     }
 
-    // Item reward nodes: short label (CHNM, BUCK, etc.) centered in the circle.
+    // Item reward nodes: item name centered in the circle.
     if (nodeData.type === 'gearReward' && nodeData.gearKey) {
-      addCmapNode(sceneRef.add.text(x, y, getEquipmentShortLabel(nodeData.gearKey), {
-        ...combatLogToggleTextStyle(), fontSize: '15px'
+      const grDef = EQUIPMENT[nodeData.gearKey];
+      const grLabel = grDef ? grDef.name : nodeData.gearKey;
+      addCmapNode(sceneRef.add.text(x, y, grLabel, {
+        ...combatLogToggleTextStyle(), fontSize: '10px',
+        wordWrap: { width: CMAP_NODE_RADIUS * 1.7 }
       }).setOrigin(0.5).setAlpha(labelAlpha).setDepth(CMAP_UI_DEPTH + 3));
     }
   }
